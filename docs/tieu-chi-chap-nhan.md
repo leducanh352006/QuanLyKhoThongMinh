@@ -101,7 +101,12 @@ Hóa đơn nhập kho chính là phiếu nhập kho mua hàng có đơn giá, th
 - **When** `qlk1` hủy phiếu
 - **Then** hủy bị **chặn (422)** kèm lý do lô đã có biến động khác; phiếu **vẫn Hoàn tất**, không ghi dòng đảo nào, và **không có tồn âm** ở bất kỳ vị trí nào (Bảng 1.5). Muốn hủy phải đảo các biến động sau trước, theo quy trình của nhóm
 
-*Nằm ngoài FR01:* nhập hàng trả lại, nhập khác (FR15), tách lệnh nhập theo kho, đề xuất nhập bổ sung G3.
+**FR01-15 · Đơn mua chuyển Hoàn thành khi đủ số đặt, xếp hàng không đổi trạng thái**
+- **Given** đơn mua của `K01` (đóng vai trò lệnh nhập) có một dòng đặt 100; chưa có phiếu nào Hoàn tất
+- **When** `qlk1` xác nhận hoàn tất phiếu thứ nhất nhận 40; rồi xác nhận phiếu thứ hai nhận 60; sau đó `tk1` xếp hàng các lô vừa nhập vào ô
+- **Then** sau phiếu thứ nhất, đơn mua ở **Đang thực hiện** (tổng thực nhập 40 < 100); sau phiếu thứ hai, tổng thực nhập các phiếu **Hoàn tất** là 100 nên đơn chuyển **Hoàn thành** (Bảng 2.14 dòng 1); phiếu **Lưu tạm** hoặc **Đã hủy** **không** được tính vào tổng; việc xếp hàng **không đổi** trạng thái đơn mua, trạng thái do hệ thống tính, không sửa tay
+
+*Nằm ngoài FR01:* nhập hàng trả lại, nhập khác (FR15), đề xuất nhập bổ sung G3. Không có chứng từ lệnh nhập riêng: đơn mua đã gắn một kho đóng vai trò lệnh nhập; đơn có hàng cho nhiều kho thì tách thành nhiều đơn, mỗi đơn một kho.
 
 ## 3. FR09 – Tài khoản và phân quyền
 
@@ -292,7 +297,7 @@ Hóa đơn nhập kho chính là phiếu nhập kho mua hàng có đơn giá, th
 
 **FR11-09 · Kho chưa có vị trí lưu trữ thì chưa nhập hàng được**
 - **Given** kho `K04` vừa tạo, chưa có ô thuộc khu lưu trữ
-- **When** lập lệnh nhập hoặc xếp hàng cho `K04`
+- **When** lập đơn mua gắn kho `K04` hoặc xếp hàng cho `K04`
 - **Then** bị **từ chối** kèm lý do chưa có vị trí lưu trữ (Bảng 2.10 dòng 5)
 
 **FR11-10 · Dữ liệu thử đạt cỡ yêu cầu**
@@ -392,7 +397,7 @@ Quy tắc kiểm tra theo Bảng 2.33: (1) ba chiều đóng gói xếp tăng d�
 
 | FR | Việc triển khai (Bảng 1.9) | Cách kiểm chứng chính |
 |---|---|---|
-| FR01 | S2-03 (API đơn mua, hóa đơn nhập), S2-04 (cổng ghi tồn), S2-05, S2-06 (màn hình) | Unit test tính tiền, ràng buộc; test tích hợp SQL Server cho FR01-08 đến FR01-10 và FR01-14; test không lộ giá cho FR01-13 |
+| FR01 | S2-03 (API đơn mua, hóa đơn nhập), S2-04 (cổng ghi tồn), S2-05, S2-06 (màn hình) | Unit test tính tiền, ràng buộc; test tích hợp SQL Server cho FR01-08 đến FR01-10, FR01-14 và FR01-15; test không lộ giá cho FR01-13 |
 | FR09 | S2-01 (đăng nhập, phân quyền theo vai và kho) | Test phân quyền 4 vai, từng kho; kiểm tra nhật ký |
 | FR10 | S1-03 (ERD, từ điển dữ liệu), S2-02, S2-07 | Unit test API danh mục; kịch bản thêm ngành hàng mới |
 | FR11 | S1-04 (script, dữ liệu thử), S3-01, S3-04 | Script kiểm tra `03_kiem_tra_vitri.sql` (đã có), test API cây vị trí |
@@ -402,12 +407,12 @@ Ca kiểm thử của Sprint 2, 3 (S1-06, TV5) phải phủ **mỗi mã tiêu ch
 
 ## 8. Các điểm đã chốt khi duyệt PR #10
 
-Người duyệt (leducanh352006) đã chốt sáu điểm dưới đây; tài liệu này viết theo đúng các quyết định đó. Báo cáo chưa sửa theo, **chủ báo cáo sẽ cập nhật** Bảng 2.35 dòng 2, Bảng 2.30 dòng 6, Hình 2.5 và quy ước mã lỗi.
+Người duyệt (leducanh352006) đã chốt sáu điểm dưới đây; tài liệu này viết theo đúng các quyết định đó. Báo cáo bản mới đã cập nhật theo các quyết định này (Bảng 2.35 dòng 2, Bảng 2.30 dòng 6, Hình 2.5, quy ước mã lỗi). Đồng thời báo cáo chốt: **không có chứng từ lệnh nhập riêng**, đơn mua đã gắn kho đóng vai trò lệnh nhập (Bảng 2.14 dòng 1, 2).
 
-1. **Giá:** thủ kho **không thấy** đơn giá, thành tiền, tổng tiền; chỉ quản lý kho và quản trị viên thấy và sửa (Bảng 2.1 dòng 5). Áp dụng ở FR01-06 và FR01-13. Báo cáo sẽ sửa Bảng 2.35 dòng 2 (màn hình lập hóa đơn của thủ kho) và Bảng 2.30 dòng 6 cho khớp.
+1. **Giá:** thủ kho **không thấy** đơn giá, thành tiền, tổng tiền; chỉ quản lý kho và quản trị viên thấy và sửa (Bảng 2.1 dòng 5). Áp dụng ở FR01-06 và FR01-13. Báo cáo sửa Bảng 2.35 dòng 2 (màn hình lập hóa đơn của thủ kho) cho khớp.
 2. **Mã HTTP:** **401** chưa đăng nhập hoặc tài khoản bị khóa; **403** không có quyền theo vai hoặc theo kho; **422** lỗi nghiệp vụ; **409** xếp hàng cùng lúc, cần thử lại. Áp dụng ở FR01-11, FR01-12, FR09-05, FR09-06, FR09-07, FR09-12, FR10-12, FR11-08, FR12-12, FR12-15.
 3. **Lô cách ly:** lô ở khu cách ly **không được xếp** vào ô lưu trữ (Hình 2.10). Áp dụng ở FR12-16.
-4. **Trạng thái lệnh nhập:** lệnh nhập chuyển **Hoàn thành** khi **tổng số thực nhập của các phiếu Hoàn tất đủ số yêu cầu** (Bảng 2.14 dòng 2). **Xếp hàng không đổi trạng thái lệnh.** Hình 2.5 sẽ được sửa cho khớp. Tiêu chí về trạng thái lệnh nhập thuộc việc lệnh nhập, không nằm trong FR01 đến FR12 của tài liệu này.
+4. **Trạng thái đơn mua (vai trò lệnh nhập):** đơn mua (đã gắn kho) đóng vai trò lệnh nhập, **không có bảng lệnh nhập riêng** (ERD Hình 2.11 và Bảng 2.35 không có lệnh nhập; FR01-01 lập phiếu thẳng từ đơn mua). Đơn mua chuyển **Hoàn thành** khi tổng số thực nhập của các phiếu Hoàn tất đủ số đặt (Bảng 2.14 dòng 1); **xếp hàng không đổi trạng thái.** Áp dụng ở FR01-15. Bảng 2.30 dòng 6 và Hình 2.5 được sửa cho khớp.
 5. **Xếp đồng thời:** người thua nhận **HTTP 409** với thông báo **"Ô vừa được cập nhật, vui lòng thử lại"** (FR12-12).
 6. **Số liệu thử** (đơn giá, ngưỡng tồn, hệ số 0,85 ở FR12-06) giữ nguyên; đổi được khi nhóm thấy cần.
 

@@ -1,0 +1,47 @@
+@{
+    var tuyChon = new QuetMaOptions("oQuetThu", "Quét hoặc gõ mã rồi nhấn Enter", "Mã vạch biến thể, mã lô hoặc mã ô");
+}
+
+<header class="trang-dau">
+    <h1>@ViewData["Title"]</h1>
+    <p class="mota">
+        Ô nhập tự lấy focus. Máy quét mã vạch hoặc ứng dụng quét trên điện thoại gõ mã rồi gửi Enter; mỗi lần Enter thêm một dòng bên dưới.
+        Trên điện thoại có hỗ trợ camera, nút "Quét bằng camera" hiện ra (cần mở trang bằng HTTPS).
+    </p>
+</header>
+
+<partial name="_QuetMa" model="tuyChon" />
+
+<section class="mt-4" aria-labelledby="tieuDeDanhSach">
+    <h2 id="tieuDeDanhSach" class="h5">Các mã đã quét</h2>
+    <div class="bang-cuon">
+        <table class="table table-sm align-middle" id="bangDaQuet">
+            <thead>
+                <tr><th scope="col">#</th><th scope="col">Mã</th><th scope="col">Nguồn</th><th scope="col">Lúc</th></tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <p class="text-secondary" id="trongDaQuet">Chưa quét mã nào. Gõ một mã vào ô phía trên rồi nhấn Enter.</p>
+</section>
+
+@section Scripts {
+    <script>
+        (function () {
+            var tbody = document.querySelector("#bangDaQuet tbody");
+            var trong = document.getElementById("trongDaQuet");
+            var stt = 0;
+            document.addEventListener("quetma:them", function (e) {
+                trong.hidden = true;
+                var tr = document.createElement("tr");
+                [++stt, e.detail.giaTri, e.detail.nguon === "camera" ? "Camera" : "Bàn phím hoặc máy quét",
+                    new Date().toLocaleTimeString("vi-VN")].forEach(function (v) {
+                    var td = document.createElement("td");
+                    td.textContent = v;
+                    tr.appendChild(td);
+                });
+                tbody.insertBefore(tr, tbody.firstChild);
+            });
+        })();
+    </script>
+}

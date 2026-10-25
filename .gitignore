@@ -1,0 +1,33 @@
+## Build
+bin/
+obj/
+out/
+publish/
+
+## Visual Studio / Rider / VS Code
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userprefs
+*.DotSettings.user
+
+## Bí mật và cấu hình riêng từng máy (chuỗi kết nối để ngoài git)
+appsettings.Development.json
+appsettings.Local.json
+secrets.json
+*.pfx
+
+## Kiểm thử, nhật ký
+TestResults/
+*.log
+coverage*/
+*.trx
+
+## Hệ điều hành
+.DS_Store
+Thumbs.db
+
+## Tệp người dùng tải lên khi chạy thử (mục đính kèm chứng từ)
+src/QuanLyKho.Web/wwwroot/uploads/

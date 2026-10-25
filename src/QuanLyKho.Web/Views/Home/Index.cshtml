@@ -1,0 +1,79 @@
+@model TrangChuViewModel
+
+<header class="trang-dau">
+    <h1>Quản lý kho thông minh</h1>
+    @if (Model.NguoiDung is not null)
+    {
+        <p class="mota">Bạn đang dùng với vai trò <strong>@Model.NguoiDung.TenVaiTro</strong>.</p>
+    }
+    else
+    {
+        <p class="mota">Bạn chưa đăng nhập. Chức năng đăng nhập sẽ được thêm ở việc tiếp theo của Nhóm 1.</p>
+    }
+</header>
+
+@if (Model.Nhom.Count > 0)
+{
+    <section aria-labelledby="tieuDeViec">
+        <h2 id="tieuDeViec" class="h5">Chức năng của bạn</h2>
+        <ul class="danh-sach-viec">
+            @foreach (var nhom in Model.Nhom)
+            {
+                foreach (var muc in nhom.Muc)
+                {
+                    <li>
+                        <a asp-area="@muc.Area" asp-controller="@muc.Controller" asp-action="@muc.Action">
+                            <span class="viec-ten">@nhom.Ten</span>
+                            <span class="viec-mota">@muc.MoTa</span>
+                        </a>
+                    </li>
+                }
+            }
+        </ul>
+    </section>
+}
+
+<section class="mt-4" aria-labelledby="tieuDeTrangThai">
+    <h2 id="tieuDeTrangThai" class="h5">Trạng thái hệ thống</h2>
+    <dl class="trang-thai">
+        <dt>Môi trường</dt>
+        <dd>@Model.MoiTruong</dd>
+
+        <dt>Cơ sở dữ liệu</dt>
+        <dd>
+            @switch (Model.Csdl.TrangThai)
+            {
+                case TrangThaiKetNoi.DaKetNoi:
+                    <span class="nhan nhan-tot">Đã kết nối</span>
+                    break;
+                case TrangThaiKetNoi.Loi:
+                    <span class="nhan nhan-loi">Lỗi kết nối</span>
+                    break;
+                default:
+                    <span class="nhan nhan-chu-y">Chưa cấu hình</span>
+                    break;
+            }
+            <span class="trang-thai-chu-thich">@Model.Csdl.ThongBao</span>
+        </dd>
+
+        @if (Model.LaDevelopment)
+        {
+            <dt>Dữ liệu mẫu</dt>
+            <dd>
+                @Model.DuLieuMau.Kho kho, @Model.DuLieuMau.ViTri vị trí (@Model.DuLieuMau.O ô), @Model.DuLieuMau.SanPham sản phẩm,
+                @Model.DuLieuMau.BienThe biến thể, @Model.DuLieuMau.Lo lô, @Model.DuLieuMau.NguoiDung người dùng.
+            </dd>
+        }
+    </dl>
+</section>
+
+@if (Model.LaDevelopment)
+{
+    <section class="mt-4 ghi-chu-dev" aria-labelledby="tieuDeDev">
+        <h2 id="tieuDeDev" class="h6">Dành cho nhóm phát triển</h2>
+        <p>
+            Chọn vai trò ở góc trên bên phải để xem menu của từng vai trò.
+            <a asp-area="HeThong" asp-controller="ThuNghiem" asp-action="QuetMa">Thử thành phần quét mã</a>.
+        </p>
+    </section>
+}

@@ -1,0 +1,30 @@
+@model MenuViewModel
+
+<nav aria-label="Các khu vực chức năng">
+    <ul class="menu-danh-sach">
+        <li>
+            <a class="menu-muc@(Model.DangODauTrang ? " dang-chon" : "")" asp-area="" asp-controller="Home" asp-action="Index"
+               aria-current="@(Model.DangODauTrang ? "page" : null)">Trang chủ</a>
+        </li>
+    </ul>
+
+    @if (Model.Nhom.Count == 0)
+    {
+        <p class="menu-trong">Chưa có chức năng nào cho tài khoản này.</p>
+    }
+
+    @foreach (var nhom in Model.Nhom)
+    {
+        <h2 class="menu-nhom">@nhom.Ten</h2>
+        <ul class="menu-danh-sach">
+            @foreach (var muc in nhom.Muc)
+            {
+                var dangChon = string.Equals(muc.Area, Model.AreaHienTai, StringComparison.OrdinalIgnoreCase);
+                <li>
+                    <a class="menu-muc@(dangChon ? " dang-chon" : "")" asp-area="@muc.Area" asp-controller="@muc.Controller" asp-action="@muc.Action"
+                       aria-current="@(dangChon ? "page" : null)">@muc.Ten</a>
+                </li>
+            }
+        </ul>
+    }
+</nav>

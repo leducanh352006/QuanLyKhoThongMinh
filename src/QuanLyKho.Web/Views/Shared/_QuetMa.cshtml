@@ -1,0 +1,15 @@
+@model QuetMaOptions
+
+@* Thành phần quét mã dùng chung (Bảng 1.6 dòng 6). Hành vi nằm ở wwwroot/js/quet-ma.js.
+   Cách dùng:   <partial name="_QuetMa" model="new QuetMaOptions("oQuet", "Quét mã biến thể", "Mã vạch")" />
+   Lắng nghe:   document.addEventListener("quetma:them", e => e.detail.giaTri / e.detail.loaiMa / e.detail.nguon); *@
+<div class="quet-ma" data-quet-ma data-loai-ma="@Model.LoaiMa">
+    <label for="@Model.Id" class="form-label fw-semibold">@Model.Nhan</label>
+    <div class="input-group input-group-lg">
+        <input id="@Model.Id" type="text" class="form-control" autocomplete="off" autocapitalize="off" autocorrect="off"
+               spellcheck="false" enterkeyhint="done" placeholder="@Model.GoiY" data-quet-ma-input autofocus />
+        <button type="button" class="btn btn-outline-secondary" data-quet-ma-camera hidden>Quét bằng camera</button>
+    </div>
+    <div class="form-text" role="status" aria-live="polite" data-quet-ma-thongbao></div>
+    <video class="quet-ma-video" data-quet-ma-video playsinline muted hidden></video>
+</div>

@@ -1,0 +1,76 @@
+@inject INguoiDungHienTai NguoiDungHienTai
+@inject IWebHostEnvironment Env
+@{
+    var nguoiDung = NguoiDungHienTai.Lay();
+    var tieuDe = ViewData["Title"] as string;
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@(string.IsNullOrEmpty(tieuDe) ? "" : tieuDe + " - ")Quản lý kho thông minh</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <a class="bo-qua" href="#noiDung">Bỏ qua menu, tới nội dung</a>
+
+    <header class="thanh-tren">
+        <button class="btn nut-menu d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#thanhMenu"
+                aria-controls="thanhMenu" aria-label="Mở menu">
+            <span class="nut-menu-icon" aria-hidden="true"></span><span>Menu</span>
+        </button>
+        <a class="thuong-hieu" asp-area="" asp-controller="Home" asp-action="Index">Quản lý kho thông minh</a>
+
+        <div class="nguoi-dung">
+            @if (nguoiDung is not null)
+            {
+                <span class="nguoi-dung-ten">@nguoiDung.HoTen</span>
+                @if (Env.IsDevelopment())
+                {
+                    <form method="post" asp-area="HeThong" asp-controller="DevVaiTro" asp-action="Chon" class="chon-vai-tro">
+                        <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+                        <label for="chonVaiTro" class="visually-hidden">Vai trò đang dùng (chỉ môi trường Development)</label>
+                        <select id="chonVaiTro" name="maVaiTro" class="form-select form-select-sm" onchange="this.form.submit()">
+                            @foreach (var v in QuanLyKho.Web.SeedData.SeedDataSet.VaiTro)
+                            {
+                                <option value="@v.MaVaiTro" selected="@(v.MaVaiTro == nguoiDung.MaVaiTro)">@v.TenVaiTro</option>
+                            }
+                        </select>
+                        <noscript><button class="btn btn-sm btn-outline-light" type="submit">Đổi vai trò</button></noscript>
+                    </form>
+                }
+                else
+                {
+                    <span class="vai-tro">@nguoiDung.TenVaiTro</span>
+                }
+            }
+            else
+            {
+                <span class="vai-tro">Chưa đăng nhập</span>
+            }
+        </div>
+    </header>
+
+    <div class="khung">
+        <aside class="thanh-menu offcanvas-lg offcanvas-start" tabindex="-1" id="thanhMenu" aria-label="Menu chính">
+            <div class="offcanvas-header d-lg-none">
+                <span class="offcanvas-title">Menu</span>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-target="#thanhMenu" aria-label="Đóng menu"></button>
+            </div>
+            <div class="offcanvas-body">
+                <vc:menu-vai-tro />
+            </div>
+        </aside>
+
+        <main id="noiDung" class="noi-dung" tabindex="-1">
+            @RenderBody()
+        </main>
+    </div>
+
+    <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/quet-ma.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

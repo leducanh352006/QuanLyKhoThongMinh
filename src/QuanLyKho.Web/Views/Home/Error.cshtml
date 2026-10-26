@@ -1,0 +1,12 @@
+@model LoiViewModel
+
+<header class="trang-dau">
+    <h1>Có lỗi xảy ra</h1>
+    <p class="mota">Hệ thống chưa xử lý được yêu cầu này. Hãy thử lại; nếu vẫn lỗi, báo cho người phụ trách kèm mã bên dưới.</p>
+</header>
+
+@if (!string.IsNullOrEmpty(Model.MaYeuCau))
+{
+    <p>Mã yêu cầu: <code>@Model.MaYeuCau</code></p>
+}
+<a class="btn btn-primary" asp-area="" asp-controller="Home" asp-action="Index">Về trang chủ</a>

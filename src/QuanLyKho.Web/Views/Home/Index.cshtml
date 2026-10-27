@@ -8,7 +8,7 @@
     }
     else
     {
-        <p class="mota">Bạn chưa đăng nhập. Chức năng đăng nhập sẽ được thêm ở việc tiếp theo của Nhóm 1.</p>
+        <p class="mota">Bạn chưa đăng nhập. <a asp-area="HeThong" asp-controller="TaiKhoan" asp-action="DangNhap">Đăng nhập</a> để dùng hệ thống.</p>
     }
 </header>
 
@@ -72,7 +72,8 @@
     <section class="mt-4 ghi-chu-dev" aria-labelledby="tieuDeDev">
         <h2 id="tieuDeDev" class="h6">Dành cho nhóm phát triển</h2>
         <p>
-            Chọn vai trò ở góc trên bên phải để xem menu của từng vai trò.
+                        Đăng nhập bằng từng tài khoản mẫu (<code>quantri</code>, <code>quanlykho</code>, <code>thukho</code>, <code>nhanvienbh</code>) để xem menu của từng vai trò.
+            Mật khẩu mẫu đặt bằng User Secrets <code>Auth:SeedPassword</code>, xem <code>Areas/HeThong/README.md</code>.
             <a asp-area="HeThong" asp-controller="ThuNghiem" asp-action="QuetMa">Thử thành phần quét mã</a>.
         </p>
     </section>

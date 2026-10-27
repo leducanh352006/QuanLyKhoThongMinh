@@ -43,9 +43,17 @@ Cần cài: [.NET 10 SDK](https://dotnet.microsoft.com/download), Git, và SQL S
    dotnet run --project src/QuanLyKho.Web --launch-profile https
    ```
 
-   Mở https://localhost:7141 (hoặc địa chỉ in ra trong cửa sổ lệnh). Trang chủ hiện vai trò đang dùng, menu theo vai trò và trạng thái kết nối SQL Server.
+   Mở https://localhost:7141 (hoặc địa chỉ in ra trong cửa sổ lệnh). Chưa đăng nhập sẽ được chuyển tới trang đăng nhập. Sau khi đăng nhập, trang chủ hiện vai trò, menu theo vai trò và trạng thái kết nối SQL Server.
 
-5. Xem menu từng vai trò: ở môi trường Development, chọn vai trò ở góc trên bên phải (Quản trị viên, Quản lý kho, Thủ kho, Nhân viên bán hàng). Đây là bản giả cho đến khi có việc "Đăng nhập".
+5. Đặt mật khẩu cho 4 tài khoản mẫu (không nằm trong repo; mật khẩu cần ít nhất 8 ký tự, có chữ và số), rồi đăng nhập:
+
+   ```
+   cd src/QuanLyKho.Web
+   dotnet user-secrets set "Auth:SeedPassword" "<mật khẩu bạn chọn>"
+   cd ../..
+   ```
+
+   Tài khoản mẫu: `quantri` (Quản trị viên), `quanlykho` (Quản lý kho), `thukho` (Thủ kho), `nhanvienbh` (Nhân viên bán hàng), cùng một mật khẩu ở trên. Mỗi vai trò thấy menu khác nhau. Chưa có SQL Server thì ở môi trường Development ứng dụng dùng kho người dùng trong bộ nhớ nạp từ `SeedData` (mất khi tắt ứng dụng). Chi tiết đăng nhập, phân quyền và cách dùng `[CanQuyen]` trong `src/QuanLyKho.Web/Areas/HeThong/README.md`.
 
 ## Cấu trúc thư mục
 
@@ -80,7 +88,7 @@ tests/QuanLyKho.Tests/    Kiểm thử (xUnit)
 
 | Interface | Nhóm sở hữu (đăng ký bản thật trong module của Area) |
 |---|---|
-| `IStockService`, `ICapacityService`, `ILockService`, `IAuditService`, `IGoiYService`, `INguoiDungHienTai` | HeThong (TV4) |
+| `IStockService`, `ICapacityService`, `ILockService`, `IAuditService`, `IGoiYService`, `INguoiDungHienTai`, `IPhanQuyenService` | HeThong (TV4) |
 | `IHangHoaService` (`TaoLo`) | HangHoa (TV3) |
 | `INhapKhoService` (`TaoPhieuNhapThua`, `TaoPhieuNhapNhap`) | NhapKho (TV1) |
 | `IXuatKhoService` (`TaoPhieuXuatThieu`) | XuatKho (TV2) |
@@ -114,11 +122,11 @@ Thay bản giả bằng bản thật: trong module Area của mình thêm một 
 
 4. Nạp dữ liệu mẫu: viết một lớp `IDbSeeder` cho bảng của mình, đọc từ `SeedDataSet`, đăng ký `services.AddScoped<IDbSeeder, ...>()` trong module Area, rồi bật `Database:SeedOnStartup` (xem `Data/IDbSeeder.cs`). Seeder phải chạy lại được nhiều lần.
 
-`SeedData/SeedDataSet.cs` là nguồn dữ liệu mẫu duy nhất. Mật khẩu của 4 người dùng mẫu không nằm trong repo; việc "Đăng nhập" sẽ tạo từ cấu hình.
+`SeedData/SeedDataSet.cs` là nguồn dữ liệu mẫu duy nhất. Mật khẩu của 4 người dùng mẫu không nằm trong repo: `HeThongSeeder` tạo từ cấu hình `Auth:SeedPassword` (User Secrets hoặc biến môi trường `Auth__SeedPassword`).
 
 ## Menu theo vai trò
 
-Mỗi Area có `Areas/<Area>/Services/<Area>Menu.cs` (implement `IMenuNguon`). Thêm mỗi màn hình một `MenuMuc` kèm danh sách vai trò được thấy, theo Bảng 2.2 của báo cáo. Menu chỉ ẩn/hiện mục; **kiểm tra quyền ở phía máy chủ** cho từng action sẽ làm ở việc phân quyền, đừng dựa vào việc ẩn nút.
+Mỗi Area có `Areas/<Area>/Services/<Area>Menu.cs` (implement `IMenuNguon`). Thêm mỗi màn hình một `MenuMuc` kèm danh sách vai trò được thấy, theo Bảng 2.2 của báo cáo. Menu chỉ ẩn/hiện mục; **kiểm tra quyền ở phía máy chủ** làm bằng `[CanQuyen(LoaiChungTu.XK, QuyenThaoTac.Duyet)]` trên Controller hoặc Action (xem `Areas/HeThong/README.md`), đừng dựa vào việc ẩn nút. Cả ứng dụng mặc định yêu cầu đăng nhập, nên Controller mới tự được bảo vệ.
 
 ## Thành phần quét mã
 

@@ -1,0 +1,24 @@
+@model QuanLyKho.Web.Areas.HeThong.Models.DatLaiMatKhauViewModel
+
+<header class="trang-dau">
+    <h1>Đặt lại mật khẩu</h1>
+    <p class="mota">Đặt mật khẩu mới cho <strong>@Model.TenDangNhap</strong>. Hãy báo mật khẩu cho người đó qua kênh riêng.</p>
+</header>
+
+<form method="post" asp-action="DatLaiMatKhau" class="khung-form" novalidate>
+    <input type="hidden" asp-for="MaND" />
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger" role="alert" asp-validation-summary="All"></div>
+    }
+
+    <div class="mb-3">
+        <label asp-for="MatKhauMoi" class="form-label"></label>
+        <input asp-for="MatKhauMoi" class="form-control" autocomplete="new-password" autofocus />
+        <div class="form-text">Ít nhất 8 ký tự, có cả chữ và số.</div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Đặt lại</button>
+    <a class="btn btn-outline-secondary" asp-action="Index">Hủy</a>
+</form>

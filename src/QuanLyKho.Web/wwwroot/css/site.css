@@ -147,3 +147,8 @@ body { background: var(--k-nen); color: var(--k-chu); line-height: 1.5; }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
+
+/* ---- Đăng nhập, người dùng, phân quyền (việc T4-2) ---- */
+.khung-dang-nhap, .khung-form { max-width: 28rem; }
+.bang-quyen th[scope="row"] { white-space: nowrap; }
+.bang-quyen .form-check-input { width: 1.25rem; height: 1.25rem; }

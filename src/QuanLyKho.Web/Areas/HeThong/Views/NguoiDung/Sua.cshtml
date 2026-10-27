@@ -1,0 +1,35 @@
+@model QuanLyKho.Web.Areas.HeThong.Models.NguoiDungSuaViewModel
+
+<header class="trang-dau">
+    <h1>Sửa người dùng</h1>
+    <p class="mota">Tài khoản <strong>@Model.TenDangNhap</strong>. Tên đăng nhập không đổi được; đổi vai trò có hiệu lực ngay.</p>
+</header>
+
+<form method="post" asp-action="Sua" class="khung-form" novalidate>
+    <input type="hidden" asp-for="MaND" />
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger" role="alert" asp-validation-summary="All"></div>
+    }
+
+    <div class="mb-3">
+        <label asp-for="HoTen" class="form-label"></label>
+        <input asp-for="HoTen" class="form-control" />
+    </div>
+    <div class="mb-3">
+        <label asp-for="Email" class="form-label"></label>
+        <input asp-for="Email" class="form-control" type="email" />
+    </div>
+    <div class="mb-3">
+        <label asp-for="SDT" class="form-label"></label>
+        <input asp-for="SDT" class="form-control" type="tel" />
+    </div>
+    <div class="mb-3">
+        <label asp-for="MaVaiTro" class="form-label"></label>
+        <select asp-for="MaVaiTro" class="form-select" asp-items="@((IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)ViewData["VaiTro"]!)"></select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Lưu</button>
+    <a class="btn btn-outline-secondary" asp-action="Index">Hủy</a>
+</form>

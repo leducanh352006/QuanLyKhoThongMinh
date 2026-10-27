@@ -1,0 +1,77 @@
+@model IReadOnlyList<QuanLyKho.Web.Areas.HeThong.Services.NguoiDungDong>
+@{
+    var maNguoiDangDung = ViewData["MaNguoiDangDung"] as int?;
+}
+
+<header class="trang-dau d-flex flex-wrap justify-content-between align-items-end gap-2">
+    <div>
+        <h1>Người dùng</h1>
+        <p class="mota">Thêm, sửa, khóa tài khoản và đặt lại mật khẩu. Khóa có hiệu lực ngay, kể cả với người đang đăng nhập.</p>
+    </div>
+    <a class="btn btn-primary" asp-action="Them">Thêm người dùng</a>
+</header>
+
+@if (TempData["ThongBao"] is string tb)
+{
+    <div class="alert alert-success" role="status">@tb</div>
+}
+@if (TempData["Loi"] is string loi)
+{
+    <div class="alert alert-danger" role="alert">@loi</div>
+}
+
+<div class="bang-cuon">
+    <table class="table align-middle">
+        <thead>
+            <tr>
+                <th scope="col">Tên đăng nhập</th>
+                <th scope="col">Họ và tên</th>
+                <th scope="col">Vai trò</th>
+                <th scope="col">Email</th>
+                <th scope="col">Trạng thái</th>
+                <th scope="col"><span class="visually-hidden">Thao tác</span></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var n in Model)
+            {
+                <tr>
+                    <td>@n.TenDangNhap</td>
+                    <td>@n.HoTen</td>
+                    <td>@n.TenVaiTro</td>
+                    <td>@n.Email</td>
+                    <td>
+                        @if (n.DangHoatDong)
+                        {
+                            <span class="nhan nhan-tot">Hoạt động</span>
+                        }
+                        else
+                        {
+                            <span class="nhan nhan-loi">Đã khóa</span>
+                        }
+                    </td>
+                    <td class="text-nowrap text-end">
+                        <a class="btn btn-sm btn-outline-secondary" asp-action="Sua" asp-route-id="@n.MaND">Sửa</a>
+                        <a class="btn btn-sm btn-outline-secondary" asp-action="DatLaiMatKhau" asp-route-id="@n.MaND">Đặt lại mật khẩu</a>
+                        @if (n.DangHoatDong)
+                        {
+                            @if (n.MaND != maNguoiDangDung)
+                            {
+                                <form method="post" asp-action="Khoa" asp-route-id="@n.MaND" class="d-inline"
+                                      onsubmit="return confirm('Khóa tài khoản @n.TenDangNhap? Người này sẽ bị đăng xuất ngay.');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Khóa</button>
+                                </form>
+                            }
+                        }
+                        else
+                        {
+                            <form method="post" asp-action="MoKhoa" asp-route-id="@n.MaND" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-outline-success">Mở khóa</button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

@@ -1,9 +1,12 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using QuanLyKho.Web.Contracts;
 
 namespace QuanLyKho.Web.Areas.HeThong.Controllers;
 
 /// <summary>Trang tổng quan tạm của Area. TV4 Lê Đức Anh thay bằng màn hình thật của nhóm khi làm việc của mình.</summary>
 [Area("HeThong")]
+[Authorize(Roles = VaiTroTen.QuanTriVien + "," + VaiTroTen.QuanLyKho)]   // khớp menu: Quản trị viên và Quản lý kho
 public class TrangChuController : Controller
 {
     public IActionResult Index()

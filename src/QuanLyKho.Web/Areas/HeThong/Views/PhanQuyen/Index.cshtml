@@ -1,0 +1,88 @@
+@model QuanLyKho.Web.Areas.HeThong.Models.PhanQuyenViewModel
+
+<header class="trang-dau">
+    <h1>Phân quyền</h1>
+    <p class="mota">Chọn vai trò rồi tích các quyền theo từng loại chứng từ. Quyền duyệt phát sinh của phiếu kiểm chỉ gán cho Quản lý kho. Thay đổi có hiệu lực ngay ở phía máy chủ.</p>
+</header>
+
+@if (TempData["ThongBao"] is string tb)
+{
+    <div class="alert alert-success" role="status">@tb</div>
+}
+@if (TempData["Loi"] is string loi)
+{
+    <div class="alert alert-danger" role="alert">@loi</div>
+}
+
+<form method="get" asp-action="Index" class="mb-3 d-flex flex-wrap align-items-end gap-2">
+    <div>
+        <label for="chonVaiTro" class="form-label">Vai trò</label>
+        <select id="chonVaiTro" name="maVaiTro" class="form-select" onchange="this.form.submit()">
+            @foreach (var v in Model.DanhSachVaiTro)
+            {
+                <option value="@v.MaVaiTro" selected="@(v.MaVaiTro == Model.MaVaiTro)">@v.TenVaiTro</option>
+            }
+        </select>
+    </div>
+    <noscript><button type="submit" class="btn btn-outline-secondary">Xem</button></noscript>
+</form>
+
+<form method="post" asp-action="Luu">
+    <input type="hidden" asp-for="MaVaiTro" />
+
+    <div class="bang-cuon">
+        <table class="table align-middle bang-quyen">
+            <caption class="visually-hidden">Quyền của vai trò @Model.TenVaiTro theo loại chứng từ</caption>
+            <thead>
+                <tr>
+                    <th scope="col">Chứng từ</th>
+                    <th scope="col" class="text-center">Xem</th>
+                    <th scope="col" class="text-center">Thêm</th>
+                    <th scope="col" class="text-center">Sửa</th>
+                    <th scope="col" class="text-center">Xóa / hủy</th>
+                    <th scope="col" class="text-center">Duyệt</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (var i = 0; i < Model.Dong.Count; i++)
+                {
+                    var d = Model.Dong[i];
+                    <tr data-dong>
+                        <th scope="row">
+                            @d.LoaiChungTu: @d.TenChungTu
+                            <input type="hidden" asp-for="Dong[i].LoaiChungTu" />
+                        </th>
+                        <td class="text-center"><input asp-for="Dong[i].CoXem" class="form-check-input" data-quyen="xem" aria-label="Xem @d.TenChungTu" /></td>
+                        <td class="text-center"><input asp-for="Dong[i].CoThem" class="form-check-input" data-quyen="khac" aria-label="Thêm @d.TenChungTu" /></td>
+                        <td class="text-center"><input asp-for="Dong[i].CoSua" class="form-check-input" data-quyen="khac" aria-label="Sửa @d.TenChungTu" /></td>
+                        <td class="text-center"><input asp-for="Dong[i].CoXoa" class="form-check-input" data-quyen="khac" aria-label="Xóa hoặc hủy @d.TenChungTu" /></td>
+                        <td class="text-center">
+                            @if (d.KhoaDuyet)
+                            {
+                                <input asp-for="Dong[i].CoDuyet" class="form-check-input" disabled="disabled" aria-label="Duyệt @d.TenChungTu (chỉ Quản lý kho)" title="Chỉ gán cho Quản lý kho" />
+                            }
+                            else
+                            {
+                                <input asp-for="Dong[i].CoDuyet" class="form-check-input" data-quyen="khac" aria-label="Duyệt @d.TenChungTu" />
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Lưu phân quyền</button>
+</form>
+
+@section Scripts {
+    <script>
+        // Có quyền khác thì phải có Xem; bỏ Xem thì bỏ các quyền còn lại (máy chủ cũng kiểm lại).
+        document.querySelectorAll("tr[data-dong]").forEach(function (dong) {
+            var xem = dong.querySelector('[data-quyen="xem"]');
+            var khac = dong.querySelectorAll('[data-quyen="khac"]');
+            khac.forEach(function (o) { o.addEventListener("change", function () { if (o.checked) xem.checked = true; }); });
+            xem.addEventListener("change", function () { if (!xem.checked) khac.forEach(function (o) { o.checked = false; }); });
+        });
+    </script>
+}

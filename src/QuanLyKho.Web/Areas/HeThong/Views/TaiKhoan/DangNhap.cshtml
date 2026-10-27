@@ -1,0 +1,26 @@
+@model DangNhapViewModel
+@using QuanLyKho.Web.Areas.HeThong.Models
+
+<header class="trang-dau">
+    <h1>Đăng nhập</h1>
+    <p class="mota">Dùng tài khoản do quản trị viên cấp để vào hệ thống quản lý kho.</p>
+</header>
+
+<form method="post" asp-area="HeThong" asp-controller="TaiKhoan" asp-action="DangNhap" class="khung-dang-nhap" novalidate>
+    <input type="hidden" asp-for="ReturnUrl" />
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger" role="alert" asp-validation-summary="All"></div>
+    }
+
+    <div class="mb-3">
+        <label asp-for="TenDangNhap" class="form-label"></label>
+        <input asp-for="TenDangNhap" class="form-control" autocomplete="username" autocapitalize="none" spellcheck="false" autofocus />
+    </div>
+    <div class="mb-3">
+        <label asp-for="MatKhau" class="form-label"></label>
+        <input asp-for="MatKhau" class="form-control" autocomplete="current-password" />
+    </div>
+    <button type="submit" class="btn btn-primary">Đăng nhập</button>
+</form>

@@ -1,0 +1,44 @@
+@model QuanLyKho.Web.Areas.HeThong.Models.NguoiDungThemViewModel
+
+<header class="trang-dau">
+    <h1>Thêm người dùng</h1>
+    <p class="mota">Mật khẩu cần ít nhất 8 ký tự, có cả chữ và số. Hệ thống chỉ lưu bản băm của mật khẩu.</p>
+</header>
+
+<form method="post" asp-action="Them" class="khung-form" novalidate>
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger" role="alert" asp-validation-summary="All"></div>
+    }
+
+    <div class="mb-3">
+        <label asp-for="TenDangNhap" class="form-label"></label>
+        <input asp-for="TenDangNhap" class="form-control" autocomplete="off" autocapitalize="none" spellcheck="false" />
+        <div class="form-text">3 đến 50 ký tự: chữ cái không dấu, số, dấu chấm, gạch dưới hoặc gạch ngang.</div>
+    </div>
+    <div class="mb-3">
+        <label asp-for="MatKhau" class="form-label"></label>
+        <input asp-for="MatKhau" class="form-control" autocomplete="new-password" />
+    </div>
+    <div class="mb-3">
+        <label asp-for="HoTen" class="form-label"></label>
+        <input asp-for="HoTen" class="form-control" />
+    </div>
+    <div class="mb-3">
+        <label asp-for="Email" class="form-label"></label>
+        <input asp-for="Email" class="form-control" type="email" />
+    </div>
+    <div class="mb-3">
+        <label asp-for="SDT" class="form-label"></label>
+        <input asp-for="SDT" class="form-control" type="tel" />
+    </div>
+    <div class="mb-3">
+        <label asp-for="MaVaiTro" class="form-label"></label>
+        <select asp-for="MaVaiTro" class="form-select" asp-items="@((IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)ViewData["VaiTro"]!)">
+            <option value="0">Chọn vai trò</option>
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Thêm</button>
+    <a class="btn btn-outline-secondary" asp-action="Index">Hủy</a>
+</form>

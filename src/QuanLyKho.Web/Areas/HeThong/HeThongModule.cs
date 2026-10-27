@@ -39,12 +39,25 @@ public static class HeThongModule
             throw new InvalidOperationException("Chưa cấu hình ConnectionStrings:KhoDb nên không có nơi lưu người dùng. Xem README, mục \"Chạy lần đầu\".");
         });
         services.AddScoped<IDbSeeder, HeThongSeeder>();
+        services.AddSingleton<BoNhoKhoViTriStore>();
+        services.AddScoped<IKhoViTriStore>(sp =>
+        {
+            var db = sp.GetService<KhoDbContext>();
+            if (db is not null) return new EfKhoViTriStore(db);
+
+            var moiTruong = sp.GetService<IHostEnvironment>();
+            if (moiTruong is null || moiTruong.IsDevelopment()) return sp.GetRequiredService<BoNhoKhoViTriStore>();
+            throw new InvalidOperationException("Chưa cấu hình ConnectionStrings:KhoDb nên không có nơi lưu kho, vị trí. Xem README, mục \"Chạy lần đầu\".");
+        });
+        services.AddScoped<IDbSeeder, KhoViTriSeeder>();
 
         // ---- Nghiệp vụ ----
         services.AddScoped<ITaiKhoanService, TaiKhoanService>();
         services.AddScoped<IPhanQuyenQuanLy, PhanQuyenService>();
         services.AddScoped<IPhanQuyenService>(sp => sp.GetRequiredService<IPhanQuyenQuanLy>());
         services.AddScoped<INguoiDungQuanLy, NguoiDungQuanLyService>();
+        services.AddScoped<IKhoQuanLy, KhoService>();
+        services.AddScoped<IViTriQuanLy, ViTriService>();
         services.AddScoped<INguoiDungHienTai, NguoiDungHienTaiService>();   // đăng ký sau AddKhoInfrastructure nên thay bản giả Development
 
         // ---- Đăng nhập và phân quyền ----

@@ -1,0 +1,79 @@
+@model QuanLyKho.Web.Areas.HeThong.Models.ViTriThemViewModel
+
+<header class="trang-dau">
+    <h1>Thêm vị trí</h1>
+    <p class="mota">Kho <strong>@Model.TenKho</strong>. Cấp con phải thấp hơn cấp cha; có thể bỏ qua cấp (ví dụ kho nhỏ chỉ cần Dãy, Kệ, Ô).</p>
+</header>
+
+<form method="post" asp-action="Them" class="khung-form" novalidate id="form-them-vi-tri">
+    <input type="hidden" asp-for="MaKho" />
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger" role="alert" asp-validation-summary="All"></div>
+    }
+
+    <div class="mb-3">
+        <label asp-for="MaViTriCha" class="form-label"></label>
+        <select asp-for="MaViTriCha" class="form-select" asp-items="@((IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)ViewData["ViTriCha"]!)">
+            <option value="">(Không có — đây là vị trí gốc của kho)</option>
+        </select>
+    </div>
+    <div class="mb-3">
+        <label asp-for="CapViTri" class="form-label"></label>
+        <select asp-for="CapViTri" class="form-select" id="chon-cap" asp-items="@((IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)ViewData["CapViTri"]!)"></select>
+    </div>
+    <div class="mb-3">
+        <label asp-for="TenViTri" class="form-label"></label>
+        <input asp-for="TenViTri" class="form-control" placeholder="Ví dụ: Dãy A, Kệ A1, Ô A1-01" />
+    </div>
+
+    <fieldset id="khung-truong-o" class="mb-3">
+        <legend class="form-label fs-6">Chỉ áp dụng cho cấp Ô</legend>
+        <div class="mb-3">
+            <label asp-for="LoaiViTri" class="form-label"></label>
+            <select asp-for="LoaiViTri" class="form-select" asp-items="@((IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)ViewData["LoaiViTri"]!)">
+                <option value="">Chọn loại ô</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label asp-for="MaVachO" class="form-label"></label>
+            <input asp-for="MaVachO" class="form-control" />
+        </div>
+        <div class="row g-2">
+            <div class="col-6 col-md-3">
+                <label asp-for="Dai" class="form-label"></label>
+                <input asp-for="Dai" class="form-control" type="number" step="0.01" min="0" />
+            </div>
+            <div class="col-6 col-md-3">
+                <label asp-for="Rong" class="form-label"></label>
+                <input asp-for="Rong" class="form-control" type="number" step="0.01" min="0" />
+            </div>
+            <div class="col-6 col-md-3">
+                <label asp-for="Cao" class="form-label"></label>
+                <input asp-for="Cao" class="form-control" type="number" step="0.01" min="0" />
+            </div>
+            <div class="col-6 col-md-3">
+                <label asp-for="KhoiLuongToiDa" class="form-label"></label>
+                <input asp-for="KhoiLuongToiDa" class="form-control" type="number" step="0.001" min="0" />
+            </div>
+        </div>
+        <div class="form-text">Để trống dài, rộng, cao, khối lượng tối đa nếu là ô Tiếp nhận (không giới hạn).</div>
+    </fieldset>
+
+    <button type="submit" class="btn btn-primary">Thêm</button>
+    <a class="btn btn-outline-secondary" asp-action="Index" asp-route-maKho="@Model.MaKho">Hủy</a>
+</form>
+
+@section Scripts {
+    <script>
+        // Chỉ hiển thị khung ô khi chọn cấp "Ô"; máy chủ vẫn kiểm tra lại dù JavaScript tắt.
+        (function () {
+            var chonCap = document.getElementById("chon-cap");
+            var khungO = document.getElementById("khung-truong-o");
+            function capNhat() { khungO.style.display = chonCap.value === "Ô" ? "" : "none"; }
+            chonCap.addEventListener("change", capNhat);
+            capNhat();
+        })();
+    </script>
+}

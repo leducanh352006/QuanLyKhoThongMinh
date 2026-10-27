@@ -1,0 +1,51 @@
+@model IReadOnlyList<QuanLyKho.Web.Areas.HeThong.Services.ViTriCayDto>
+@using QuanLyKho.Web.Contracts
+@{
+    var duocSua = User.IsInRole(VaiTroTen.QuanTriVien) || User.IsInRole(VaiTroTen.QuanLyKho);
+    var maKho = (int)ViewData["MaKho"]!;
+}
+
+<header class="trang-dau">
+    <h1>Vị trí</h1>
+    <p class="mota">Cây vị trí nhiều cấp của kho <strong>@ViewData["TenKho"]</strong>. Đường dẫn đầy đủ hiện khi mở một ô.</p>
+</header>
+
+@if (TempData["ThongBao"] is string tb)
+{
+    <div class="alert alert-success" role="status">@tb</div>
+}
+@if (TempData["Loi"] is string loi)
+{
+    <div class="alert alert-danger" role="alert">@loi</div>
+}
+
+<form method="get" asp-action="Index" class="mb-3 d-flex flex-wrap align-items-end gap-2">
+    <div>
+        <label for="chonKho" class="form-label">Kho</label>
+        <select id="chonKho" name="maKho" class="form-select" onchange="this.form.submit()"
+                asp-items="@((IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)ViewData["DanhSachKho"]!)"></select>
+    </div>
+    <noscript><button type="submit" class="btn btn-outline-secondary">Xem</button></noscript>
+</form>
+
+@if (duocSua)
+{
+    <a class="btn btn-primary mb-3" asp-action="Them" asp-route-maKho="@maKho">Thêm vị trí gốc (Dãy, Tòa... hoặc ô gốc)</a>
+}
+
+@if (Model.Count == 0)
+{
+    <div class="khung-trong">
+        <h2>Kho chưa có vị trí nào</h2>
+        <p>Bấm "Thêm vị trí gốc" để bắt đầu dựng cây, ví dụ một Dãy hoặc trực tiếp một Ô (khu tiếp nhận).</p>
+    </div>
+}
+else
+{
+    <ul class="nut-cay-goc">
+        @foreach (var nut in Model)
+        {
+            @await Html.PartialAsync("_NutCay", nut)
+        }
+    </ul>
+}

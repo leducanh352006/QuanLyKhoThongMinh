@@ -21,6 +21,56 @@ namespace QuanLyKho.Web.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("QuanLyKho.Web.Areas.HeThong.Models.Kho", b =>
+                {
+                    b.Property<int>("MaKho")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MaKho"));
+
+                    b.Property<string>("DiaChi")
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("LoaiKho")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("MaQuanLy")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TenKho")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("ThoiGianCho")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("TrangThai")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Hoạt động");
+
+                    b.HasKey("MaKho");
+
+                    b.HasIndex("MaQuanLy");
+
+                    b.HasIndex("TenKho")
+                        .IsUnique();
+
+                    b.ToTable("Kho", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Kho_LoaiKho", "[LoaiKho] IN (N'Kho bán hàng', N'Kho lưu trữ')");
+
+                            t.HasCheckConstraint("CK_Kho_ThoiGianCho", "[ThoiGianCho] >= 0");
+
+                            t.HasCheckConstraint("CK_Kho_TrangThai", "[TrangThai] IN (N'Hoạt động', N'Ngừng hoạt động')");
+                        });
+                });
+
             modelBuilder.Entity("QuanLyKho.Web.Areas.HeThong.Models.NguoiDung", b =>
                 {
                     b.Property<int>("MaND")
@@ -130,6 +180,92 @@ namespace QuanLyKho.Web.Migrations
                     b.ToTable("VaiTro", (string)null);
                 });
 
+            modelBuilder.Entity("QuanLyKho.Web.Areas.HeThong.Models.ViTri", b =>
+                {
+                    b.Property<int>("MaViTri")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MaViTri"));
+
+                    b.Property<decimal?>("Cao")
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<string>("CapViTri")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<decimal?>("Dai")
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<bool>("DangKhoa")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<decimal?>("KhoiLuongToiDa")
+                        .HasColumnType("decimal(10,3)");
+
+                    b.Property<string>("LoaiViTri")
+                        .HasColumnType("nvarchar(15)");
+
+                    b.Property<int>("MaKho")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MaVachO")
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<int?>("MaViTriCha")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("Rong")
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<string>("TenViTri")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("TrangThai")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Hoạt động");
+
+                    b.HasKey("MaViTri");
+
+                    b.HasIndex("MaVachO")
+                        .IsUnique()
+                        .HasFilter("[MaVachO] IS NOT NULL");
+
+                    b.HasIndex("MaViTriCha", "MaKho");
+
+                    b.HasIndex("MaKho", "MaViTriCha", "TenViTri")
+                        .IsUnique()
+                        .HasFilter("[MaViTriCha] IS NOT NULL");
+
+                    b.ToTable("ViTri", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ViTri_CapViTri", "[CapViTri] IN (N'Tòa', N'Tầng', N'Phòng', N'Dãy', N'Hàng', N'Kệ', N'Ô')");
+
+                            t.HasCheckConstraint("CK_ViTri_ChiOCoLoaiVaMaVach", "([CapViTri] = N'Ô' AND [LoaiViTri] IS NOT NULL AND [MaVachO] IS NOT NULL) OR ([CapViTri] <> N'Ô' AND [LoaiViTri] IS NULL AND [MaVachO] IS NULL)");
+
+                            t.HasCheckConstraint("CK_ViTri_KichThuoc", "([CapViTri] = N'Ô' AND [LoaiViTri] = N'Lưu trữ' AND [Dai] > 0 AND [Rong] > 0 AND [Cao] > 0 AND [KhoiLuongToiDa] > 0) OR ([CapViTri] = N'Ô' AND [LoaiViTri] = N'Tiếp nhận' AND [Dai] IS NULL AND [Rong] IS NULL AND [Cao] IS NULL AND [KhoiLuongToiDa] IS NULL) OR ([CapViTri] <> N'Ô' AND [Dai] IS NULL AND [Rong] IS NULL AND [Cao] IS NULL AND [KhoiLuongToiDa] IS NULL)");
+
+                            t.HasCheckConstraint("CK_ViTri_LoaiViTri", "[LoaiViTri] IS NULL OR [LoaiViTri] IN (N'Lưu trữ', N'Tiếp nhận')");
+
+                            t.HasCheckConstraint("CK_ViTri_TrangThai", "[TrangThai] IN (N'Hoạt động', N'Ngừng hoạt động')");
+                        });
+                });
+
+            modelBuilder.Entity("QuanLyKho.Web.Areas.HeThong.Models.Kho", b =>
+                {
+                    b.HasOne("QuanLyKho.Web.Areas.HeThong.Models.NguoiDung", null)
+                        .WithMany()
+                        .HasForeignKey("MaQuanLy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("QuanLyKho.Web.Areas.HeThong.Models.NguoiDung", b =>
                 {
                     b.HasOne("QuanLyKho.Web.Areas.HeThong.Models.VaiTro", null)
@@ -146,6 +282,21 @@ namespace QuanLyKho.Web.Migrations
                         .HasForeignKey("MaVaiTro")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("QuanLyKho.Web.Areas.HeThong.Models.ViTri", b =>
+                {
+                    b.HasOne("QuanLyKho.Web.Areas.HeThong.Models.Kho", null)
+                        .WithMany()
+                        .HasForeignKey("MaKho")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QuanLyKho.Web.Areas.HeThong.Models.ViTri", null)
+                        .WithMany()
+                        .HasForeignKey("MaViTriCha", "MaKho")
+                        .HasPrincipalKey("MaViTri", "MaKho")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 #pragma warning restore 612, 618
         }

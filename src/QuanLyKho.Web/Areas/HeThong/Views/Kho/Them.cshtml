@@ -1,0 +1,41 @@
+@model QuanLyKho.Web.Areas.HeThong.Models.KhoThemViewModel
+
+<header class="trang-dau">
+    <h1>Thêm kho</h1>
+    <p class="mota">Hệ thống tự tạo một khu tiếp nhận (ô loại Tiếp nhận) cho kho mới.</p>
+</header>
+
+<form method="post" asp-action="Them" class="khung-form" novalidate>
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger" role="alert" asp-validation-summary="All"></div>
+    }
+
+    <div class="mb-3">
+        <label asp-for="TenKho" class="form-label"></label>
+        <input asp-for="TenKho" class="form-control" />
+    </div>
+    <div class="mb-3">
+        <label asp-for="LoaiKho" class="form-label"></label>
+        <select asp-for="LoaiKho" class="form-select" asp-items="@((IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)ViewData["LoaiKho"]!)">
+            <option value="">Chọn loại kho</option>
+        </select>
+    </div>
+    <div class="mb-3">
+        <label asp-for="DiaChi" class="form-label"></label>
+        <input asp-for="DiaChi" class="form-control" />
+    </div>
+    <div class="mb-3">
+        <label asp-for="MaQuanLy" class="form-label"></label>
+        <select asp-for="MaQuanLy" class="form-select" asp-items="@((IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)ViewData["NguoiQuanLy"]!)">
+            <option value="0">Chọn người quản lý</option>
+        </select>
+    </div>
+    <div class="mb-3">
+        <label asp-for="ThoiGianCho" class="form-label"></label>
+        <input asp-for="ThoiGianCho" class="form-control" type="number" min="0" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Thêm</button>
+    <a class="btn btn-outline-secondary" asp-action="Index">Hủy</a>
+</form>

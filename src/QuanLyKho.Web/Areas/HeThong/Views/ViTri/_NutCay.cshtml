@@ -1,0 +1,80 @@
+@model QuanLyKho.Web.Areas.HeThong.Services.ViTriCayDto
+@using QuanLyKho.Web.Contracts
+@{
+    var duocSua = User.IsInRole(VaiTroTen.QuanTriVien) || User.IsInRole(VaiTroTen.QuanLyKho);
+}
+
+<li class="nut-cay @(Model.DangHoatDong ? "" : "nut-cay-ngung")">
+    <details open>
+        <summary>
+            <span class="nut-cay-ten">@Model.TenViTri</span>
+            <span class="nut-cay-cap">@Model.CapViTri</span>
+            @if (Model.LaO)
+            {
+                <span class="nut-cay-loai">@Model.LoaiViTri</span>
+                @if (Model.MaVachO is not null)
+                {
+                    <code class="nut-cay-ma">@Model.MaVachO</code>
+                }
+                @if (Model.Dai is not null)
+                {
+                    <span class="nut-cay-kich-thuoc">@Model.Dai×@Model.Rong×@Model.Cao cm, tối đa @Model.KhoiLuongToiDa kg</span>
+                }
+            }
+            @if (Model.LaO)
+            {
+                @* Đường dẫn đầy đủ: tiêu chí hoàn thành việc T4-3, hiện ngay trên cây cho mỗi ô, không chỉ ở trang Sửa. *@
+                <span class="nut-cay-duong-dan">@Model.DuongDanDayDu</span>
+            }
+            @if (!Model.DangHoatDong)
+            {
+                <span class="nhan nhan-loi">Ngừng hoạt động</span>
+            }
+            @if (Model.DangKhoa)
+            {
+                <span class="nhan nhan-chu-y">Đang khóa kiểm kê</span>
+            }
+        </summary>
+
+        @if (duocSua)
+        {
+            <div class="nut-cay-thao-tac">
+                @if (!Model.LaO)
+                {
+                    <a class="btn btn-sm btn-outline-primary" asp-controller="ViTri" asp-action="Them" asp-route-maKho="@Model.MaKho" asp-route-maViTriCha="@Model.MaViTri">Thêm vị trí con</a>
+                }
+                <a class="btn btn-sm btn-outline-secondary" asp-controller="ViTri" asp-action="Sua" asp-route-id="@Model.MaViTri">Sửa</a>
+                @if (Model.DangHoatDong)
+                {
+                    <form method="post" asp-controller="ViTri" asp-action="Khoa" asp-route-id="@Model.MaViTri" asp-route-maKho="@Model.MaKho" class="d-inline"
+                          onsubmit="return confirm('Khóa (xóa mềm) \'@Model.TenViTri\'?');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Khóa</button>
+                    </form>
+                }
+                else
+                {
+                    <form method="post" asp-controller="ViTri" asp-action="MoLai" asp-route-id="@Model.MaViTri" asp-route-maKho="@Model.MaKho" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-outline-success">Mở lại</button>
+                    </form>
+                    @if (Model.Con.Count == 0)
+                    {
+                        <form method="post" asp-controller="ViTri" asp-action="Xoa" asp-route-id="@Model.MaViTri" asp-route-maKho="@Model.MaKho" class="d-inline"
+                              onsubmit="return confirm('Xóa hẳn \'@Model.TenViTri\'? Chỉ xóa được khi chưa có tồn kho.');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Xóa</button>
+                        </form>
+                    }
+                }
+            </div>
+        }
+
+        @if (Model.Con.Count > 0)
+        {
+            <ul class="nut-cay-con">
+                @foreach (var con in Model.Con)
+                {
+                    @await Html.PartialAsync("_NutCay", con)
+                }
+            </ul>
+        }
+    </details>
+</li>

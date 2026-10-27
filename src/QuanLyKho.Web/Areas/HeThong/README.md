@@ -155,3 +155,41 @@ Gồm mật khẩu, đăng nhập và chặn dò mật khẩu, phiên, quản l�
 - Đổi mật khẩu bởi chính người dùng, quên mật khẩu qua email, đăng nhập nhiều bước.
 - Hủy phiên đang mở khi đặt lại mật khẩu (hiện chỉ khóa tài khoản và đổi vai trò có hiệu lực ngay). Bảng NguoiDung theo báo cáo chưa có cột dấu phiên (security stamp).
 - Chống giả mạo yêu cầu (CSRF) tự động cho toàn ứng dụng: hiện từng POST của Area này gắn `[ValidateAntiForgeryToken]`. Có thể bật bộ lọc `AutoValidateAntiforgeryToken` toàn cục khi các nhóm đã quen.
+
+---
+
+# Kho và cây vị trí (việc T4-3, issue #39)
+
+Báo cáo: Bảng 2.20 (Kho, ViTri), mục 2.8.1 (vị trí nhiều cấp; kích thước và khối lượng), Bảng 2.17 dòng 1 (hàng chỉ nằm ở ô, cấp con thấp hơn cấp cha).
+
+## Đã làm
+
+- CRUD Kho (`KhoController`, `KhoService`). Thêm kho **tự tạo kèm một ô Khu tiếp nhận** nên luôn đúng tiêu chí "mỗi kho có khu tiếp nhận" ngay từ lúc tạo.
+- Cây vị trí nhiều cấp (`ViTriController`, `ViTriService`): thêm, sửa, khóa (xóa mềm), xóa cứng. Cấp con phải thấp hơn cấp cha và được phép bỏ qua cấp (seed "Khu tiếp nhận" là một ví dụ: một ô gốc, không qua Dãy/Kệ).
+- Đường dẫn đầy đủ (`Kho ▷ Dãy A ▷ Kệ A1 ▷ Ô A1-01`) hiện **ngay trên cây**, không chỉ ở trang Sửa.
+- Ràng buộc đã cài, khớp CHECK ở Bảng 2.20: chỉ ô có `LoaiViTri`, `MaVachO`, kích thước; ô Lưu trữ bắt buộc đủ 4 kích thước dương; ô Tiếp nhận và các cấp khác để trống các cột đó.
+- Không khóa (xóa mềm) được khu tiếp nhận hoạt động cuối cùng của một kho, và không khóa được vị trí còn con đang hoạt động.
+- Xóa cứng chỉ khi không còn vị trí con, và nếu là ô thì phải chưa có tồn hiện tại (qua `IStockService.LayTonTheoViTri`) — xem mục "Giới hạn đã biết" bên dưới.
+
+## Cấu trúc dữ liệu
+
+`ViTri` tự tham chiếu qua `MaViTriCha`. Để bảo đảm cấp con luôn cùng kho với cấp cha, bảng có khóa thay thế `(MaViTri, MaKho)` và khóa ngoại kép tự tham chiếu `(MaViTriCha, MaKho) → (MaViTri, MaKho)`. `MaViTriCha` cho phép NULL (gốc); SQL Server bỏ qua ràng buộc khóa ngoại kép khi một cột trong khóa là NULL, nên vị trí gốc không bị chặn.
+
+## Các nhóm khác dùng thế nào
+
+Không có hợp đồng mới trong `Contracts/`: các nhóm khác chỉ cần biết **mã** `MaKho`, `MaViTri` (đã có sẵn trong `SeedData/SeedDataSet.cs`, giữ nguyên qua `KhoViTriSeeder`). Muốn đọc thông tin vị trí (ví dụ hiển thị đường dẫn trên phiếu), tạm thời đọc thẳng `SeedDataSet.ViTri`/`TimViTri` như các bản giả trong `Contracts/Stubs` đang làm; khi cần một dịch vụ dùng chung thật sự (ví dụ `IViTriLookupService` để tránh phụ thuộc trực tiếp vào `Areas/HeThong`), hãy nêu trong issue #39 để bổ sung — chưa có nhu cầu cụ thể nên chưa thêm hợp đồng này.
+
+## Giới hạn đã biết
+
+- **Xóa cứng chỉ kiểm tồn hiện tại, chưa kiểm lịch sử sổ cái.** `IStockService`/`BienDongTon` (sổ cái) thuộc việc của nhóm Tồn kho, chưa có bản thật khi viết T4-3. Khi bản thật xong, `ViTriService.Xoa` nên kiểm thêm lịch sử `BienDongTon` trước khi cho xóa cứng (xem chú thích trong code).
+- **Sửa vị trí chưa cho đổi cấp hoặc đổi cấp cha** (chỉ sửa tên, loại ô, mã vạch, kích thước). Di chuyển cả nhánh sang cấp cha khác chưa làm, vì phải kiểm lại ràng buộc cấp cho toàn bộ cây con — nêu trong issue #39 nếu cần.
+- **Thêm kho và thêm khu tiếp nhận không chạy trong một giao dịch.** Nếu bước tạo khu tiếp nhận lỗi (rất hiếm, ví dụ trùng mã vạch tự sinh), kho vẫn được tạo và ứng dụng báo rõ để vào màn Vị trí thêm thủ công.
+- **`DangKhoa` (khóa ô khi kiểm kê) chỉ là cột lưu trữ**, T4-3 không có màn hình thao tác cột này — đó là việc của nhóm Kiểm tra hàng hóa qua `ILockService` (đã có bản giả `LockServiceStub`).
+
+## Kiểm thử
+
+```
+dotnet test --filter "FullyQualifiedName~KhoViTri"
+```
+
+47 test: thứ tự cấp vị trí (Bảng 2.16), ràng buộc kích thước theo loại ô, khu tiếp nhận tự tạo và không khóa được cái cuối cùng, xóa cứng chỉ khi chưa có tồn, dựng cây và đường dẫn đầy đủ, quy tắc cấu trúc Controller.

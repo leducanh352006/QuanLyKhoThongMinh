@@ -37,6 +37,30 @@ public class PhieuNhapController(INguoiDungHienTai hienTai, IAuditService audit,
         return p is null ? NotFound() : await HienForm(p);
     }
 
+    /// <summary>
+    /// In tem mã (việc T1-6): mỗi dòng của phiếu một tem gồm mã vạch biến thể (BienThe.MaVach) và mã lô. Chỉ in cho phiếu đã xác nhận,
+    /// vì phiếu nháp còn đổi dòng hàng nên mã lô (đánh theo số thứ tự dòng) chưa cố định. <paramref name="soTem"/> là số bản in mỗi dòng.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> InTem(int id, int soTem = 1)
+    {
+        var p = await Db.PhieuNhap.Include(x => x.ChiTiet).FirstOrDefaultAsync(x => x.MaPN == id);
+        if (p is null) return NotFound();
+        if (!p.DaKhoa)
+        {
+            TempData["Loi"] = "Chỉ in tem cho phiếu đã xác nhận. Hãy xác nhận phiếu trước.";
+            return RedirectToAction(nameof(Sua), new { id });
+        }
+        var ma = p.ChiTiet.Select(d => d.MaBT).Distinct().ToList();
+        var hang = await Db.BienThe.Where(b => ma.Contains(b.MaBT))
+            .Join(Db.SanPham, b => b.MaSP, s => s.MaSP, (b, s) => new { b.MaBT, s.TenSP, b.ThuocTinh, b.MaVach })
+            .ToDictionaryAsync(x => x.MaBT);
+        ViewBag.Phieu = p;
+        ViewBag.SoTem = Math.Clamp(soTem, 1, 50);
+        return View(p.ChiTiet.OrderBy(d => d.MaCTN).Select((d, i) => new TemIn(
+            hang[d.MaBT].TenSP, hang[d.MaBT].ThuocTinh, hang[d.MaBT].MaVach, PhieuNhap.MaLo(p.SoPhieu, i + 1), d.SLDuKien)).ToList());
+    }
+
     // ---- Lưu (tạo mới và sửa dùng chung một form, phân biệt bằng MaPN: 0 là phiếu mới) ----
 
     [HttpPost, ValidateAntiForgeryToken, CanQuyen(LoaiChungTu.NK, QuyenThaoTac.Them)]
@@ -139,3 +163,6 @@ public class PhieuNhapController(INguoiDungHienTai hienTai, IAuditService audit,
         return View("Form", p);
     }
 }
+
+/// <summary>Nội dung một tem: mặt hàng, mã vạch biến thể, mã lô và số lượng của dòng phiếu.</summary>
+public record TemIn(string TenSP, string ThuocTinh, string MaVach, string MaLo, int SoLuong);

@@ -31,6 +31,19 @@ public static class GiaTriCsdl
         _ => throw new ArgumentOutOfRangeException(nameof(v), v, null),
     };
 
+    /// <summary>Chiều ngược của ToCsdl(LoaiBienDong): đọc cột BienDongTon.LoaiBienDong (chuỗi) ra lại enum.</summary>
+    public static LoaiBienDong ParseLoaiBienDong(string v) => v switch
+    {
+        "Nhận hàng" => LoaiBienDong.NhanHang,
+        "Sắp xếp" => LoaiBienDong.SapXep,
+        "Xuất kho" => LoaiBienDong.XuatKho,
+        "Chuyển đi" => LoaiBienDong.ChuyenDi,
+        "Nhận chuyển" => LoaiBienDong.NhanChuyen,
+        "Đổi ô" => LoaiBienDong.DoiO,
+        "Hoàn tác" => LoaiBienDong.HoanTac,
+        _ => throw new ArgumentOutOfRangeException(nameof(v), v, null),
+    };
+
     public static string ToCsdl(this TrangThaiGoiY v) => v switch
     {
         TrangThaiGoiY.ChoDuyet => "Chờ duyệt",

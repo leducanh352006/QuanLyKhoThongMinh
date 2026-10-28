@@ -11,7 +11,7 @@ public class LockServiceTests
     private static (LockService Khoa, MoiTruongKhoThu Moi) Tao()
     {
         var moi = new MoiTruongKhoThu();
-        return (new LockService(moi.Store, moi.NhatKy), moi);
+        return (new LockService(moi.Store, moi.Stock, moi.NhatKy), moi);
     }
 
     [Fact]
@@ -24,6 +24,23 @@ public class LockServiceTests
         Assert.True(kq.ThanhCong);
         Assert.True(await khoa.DangKhoa(MaOLuuTru));
         Assert.Contains(moi.NhatKy.Dong, d => d.HanhDong == "Khóa ô kiểm kê");
+    }
+
+    [Fact]
+    public async Task KhoaO_ConHangGiuChoPhieuXuat_ChuaKhoaDuoc_TraChoXongThiKhoaDuoc()
+    {
+        var (khoa, moi) = Tao();
+        var ton = (await moi.Stock.LayTonTheoViTri(MaOLuuTru)).First();
+        var dong = new DongTon(ton.MaLo, MaOLuuTru, 1);
+        Assert.True((await moi.Stock.GiuCho(dong)).ThanhCong);
+
+        var kq = await khoa.KhoaO(MaOLuuTru, MoiTruongKhoThu.MaNguoiThucHien);
+        Assert.False(kq.ThanhCong);
+        Assert.Equal(MaLoiDichVu.SaiTrangThai, kq.MaLoi);
+        Assert.False(await khoa.DangKhoa(MaOLuuTru));
+
+        await moi.Stock.TraCho(dong);
+        Assert.True((await khoa.KhoaO(MaOLuuTru, MoiTruongKhoThu.MaNguoiThucHien)).ThanhCong);
     }
 
     [Fact]

@@ -22,7 +22,7 @@ public sealed class StockService(KhoDbContext db) : IStockService
     public Task<KetQua> GiuCho(DongTon dong, CancellationToken ct = default) =>
         ThuLai(async () =>
         {
-            var loi = await KiemTraDong(dong, ct);
+            var loi = await KiemTraDong(dong, ct, chanKhoa: true);
             if (loi is not null) return loi;
 
             var ton = await LayHoacTaoTon(dong.MaLo, dong.MaViTri, ct);
@@ -52,7 +52,7 @@ public sealed class StockService(KhoDbContext db) : IStockService
     public Task<KetQua> GhiTang(DongTon dong, LoaiBienDong loai, ThamChieuChungTu chungTu, int maND, CancellationToken ct = default) =>
         ThuLai(async () =>
         {
-            var loi = await KiemTraDong(dong, ct);
+            var loi = await KiemTraDong(dong, ct, chanKhoa: chungTu.Loai != LoaiChungTu.KK);
             if (loi is not null) return loi;
             if (await DaGhi(dong.MaLo, dong.MaViTri, dong.SoLuong, loai, chungTu, ct)) return KetQua.Ok();
 
@@ -66,7 +66,7 @@ public sealed class StockService(KhoDbContext db) : IStockService
     public Task<KetQua> GhiGiam(DongTon dong, LoaiBienDong loai, ThamChieuChungTu chungTu, int maND, bool tuGiuCho = false, CancellationToken ct = default) =>
         ThuLai(async () =>
         {
-            var loi = await KiemTraDong(dong, ct);
+            var loi = await KiemTraDong(dong, ct, chanKhoa: chungTu.Loai != LoaiChungTu.KK);
             if (loi is not null) return loi;
             if (await DaGhi(dong.MaLo, dong.MaViTri, -dong.SoLuong, loai, chungTu, ct)) return KetQua.Ok();
 
@@ -95,8 +95,9 @@ public sealed class StockService(KhoDbContext db) : IStockService
             if (maViTriNguon == maViTriDich)
                 return KetQua.Loi("Ô nguồn và ô đích phải khác nhau.", MaLoiDichVu.DuLieuKhongHopLe);
 
-            var loi = await KiemTraDong(new DongTon(maLo, maViTriNguon, soLuong), ct)
-                      ?? await KiemTraDong(new DongTon(maLo, maViTriDich, soLuong), ct);
+            var chanKhoa = chungTu.Loai != LoaiChungTu.KK;
+            var loi = await KiemTraDong(new DongTon(maLo, maViTriNguon, soLuong), ct, chanKhoa)
+                      ?? await KiemTraDong(new DongTon(maLo, maViTriDich, soLuong), ct, chanKhoa);
             if (loi is not null) return loi;
             if (await DaGhi(maLo, maViTriNguon, -soLuong, LoaiBienDong.DoiO, chungTu, ct)) return KetQua.Ok();
 
@@ -180,7 +181,8 @@ public sealed class StockService(KhoDbContext db) : IStockService
         db.BienDongTon.AnyAsync(b => b.MaLo == maLo && b.MaViTri == maViTri && b.SoLuong == soLuong
             && b.LoaiBienDong == loai.ToCsdl() && b.LoaiCT == chungTu.Loai.ToCsdl() && b.MaCT == chungTu.MaCT, ct);
 
-    private async Task<KetQua?> KiemTraDong(DongTon d, CancellationToken ct)
+    /// <summary><paramref name="chanKhoa"/> = true: từ chối ô đang khóa kiểm kê (ILockService).</summary>
+    private async Task<KetQua?> KiemTraDong(DongTon d, CancellationToken ct, bool chanKhoa = false)
     {
         if (d.SoLuong <= 0)
             return KetQua.Loi("Số lượng phải lớn hơn 0.", MaLoiDichVu.DuLieuKhongHopLe);
@@ -190,6 +192,8 @@ public sealed class StockService(KhoDbContext db) : IStockService
             return KetQua.Loi($"Không tìm thấy vị trí {d.MaViTri}.", MaLoiDichVu.KhongTimThay);
         if (!vt.LaO)
             return KetQua.Loi($"Hàng chỉ được để ở ô, '{vt.TenViTri}' là cấp {vt.CapViTri}.", MaLoiDichVu.DuLieuKhongHopLe);
+        if (chanKhoa && vt.DangKhoa)
+            return KetQua.Loi($"Ô '{vt.TenViTri}' đang bị khóa để kiểm kê.", MaLoiDichVu.OBiKhoa);
 
         return null;
     }

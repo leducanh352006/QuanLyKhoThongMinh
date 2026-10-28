@@ -7,7 +7,7 @@ namespace QuanLyKho.Web.Areas.HeThong.Services;
 /// Bản thật của <see cref="ILockService"/>: khóa/mở ô qua cột <see cref="ViTri.DangKhoa"/> (Bảng 2.20), lưu qua
 /// <see cref="IKhoViTriStore"/> nên dùng chung dữ liệu với T4-3 (EF Core hoặc bộ nhớ Development).
 /// </summary>
-public sealed class LockService(IKhoViTriStore store, IAuditService audit) : ILockService
+public sealed class LockService(IKhoViTriStore store, IStockService stock, IAuditService audit) : ILockService
 {
     public async Task<KetQua> KhoaO(int maViTri, int maND, CancellationToken ct = default)
     {
@@ -15,6 +15,11 @@ public sealed class LockService(IKhoViTriStore store, IAuditService audit) : ILo
         if (v is null) return KetQua.Loi($"Không tìm thấy vị trí {maViTri}.", MaLoiDichVu.KhongTimThay);
         if (!v.LaO) return KetQua.Loi("Chỉ ô mới khóa được.", MaLoiDichVu.DuLieuKhongHopLe);
         if (v.DangKhoa) return KetQua.Loi($"Ô '{v.TenViTri}' đang bị khóa để kiểm kê.", MaLoiDichVu.OBiKhoa);
+
+        // Ô còn hàng giữ chỗ cho phiếu xuất chưa hoàn tất thì chưa khóa được (Bảng 2.3).
+        var dangGiu = (await stock.LayTonTheoViTri(maViTri, ct)).Sum(t => t.SoLuongGiu);
+        if (dangGiu > 0)
+            return KetQua.Loi($"Ô '{v.TenViTri}' còn {dangGiu} hàng giữ chỗ cho phiếu xuất chưa hoàn tất, chưa khóa được.", MaLoiDichVu.SaiTrangThai);
 
         v.DangKhoa = true;
         await store.LuuThayDoi(ct);

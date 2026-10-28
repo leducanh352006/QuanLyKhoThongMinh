@@ -1,3 +1,4 @@
+@using QuanLyKho.Web.Areas.NhapKho.Models
 @model List<QuanLyKho.Web.Areas.NhapKho.Models.PhieuNhap>
 @{
     ViewData["Title"] = "Phiếu nhập";
@@ -35,7 +36,10 @@ else
                         <td>@(p.Kho?.TenKho)</td>
                         <td>@(p.NhaCungCap?.TenNCC ?? "Chưa chọn")</td>
                         <td class="text-end">@p.ChiTiet.Count</td>
-                        <td><span class="nhan @(p.DaKhoa ? "nhan-tot" : "nhan-chu-y")">@p.TrangThai</span></td>
+                        <td>
+                            <span class="nhan @(p.DaKhoa ? "nhan-tot" : "nhan-chu-y")">@p.TrangThai</span>
+                            @if (p.TrangThai == PhieuNhap.DaXacNhan) { <a asp-action="KiemTra" asp-route-id="@p.MaPN" class="ms-2">Kiểm tra hàng</a> }
+                        </td>
                     </tr>
                 }
             </tbody>

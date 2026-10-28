@@ -71,6 +71,38 @@ public static class HeThongModule
         services.AddScoped<IKhoQuanLy, KhoService>();
         services.AddScoped<IViTriQuanLy, ViTriService>();
         services.AddScoped<ILockService, LockService>();   // T4-5: thay bản giả LockServiceStub, khóa/mở ô qua ViTri.DangKhoa
+
+        // T4-7: nhật ký thao tác và tệp đính kèm. Bản thật của IAuditService thay AuditServiceStub; chưa có CSDL thì (chỉ Development) dùng bản trong bộ nhớ.
+        services.AddSingleton<BoNhoNhatKyStore>();
+        services.AddScoped<INhatKyStore>(sp =>
+        {
+            var db = sp.GetService<KhoDbContext>();
+            if (db is not null) return new EfNhatKyStore(db);
+
+            var moiTruong = sp.GetService<IHostEnvironment>();
+            if (moiTruong is null || moiTruong.IsDevelopment()) return sp.GetRequiredService<BoNhoNhatKyStore>();
+            throw new InvalidOperationException("Chưa cấu hình ConnectionStrings:KhoDb nên không có nơi lưu nhật ký. Xem README, mục \"Chạy lần đầu\".");
+        });
+        services.AddScoped<IAuditService, AuditService>();
+        services.AddScoped<INhatKyQuanLy, NhatKyService>();
+        services.AddSingleton<BoNhoTepDinhKemStore>();
+        services.AddScoped<ITepDinhKemStore>(sp =>
+        {
+            var db = sp.GetService<KhoDbContext>();
+            if (db is not null) return new EfTepDinhKemStore(db);
+
+            var moiTruong = sp.GetService<IHostEnvironment>();
+            if (moiTruong is null || moiTruong.IsDevelopment()) return sp.GetRequiredService<BoNhoTepDinhKemStore>();
+            throw new InvalidOperationException("Chưa cấu hình ConnectionStrings:KhoDb nên không có nơi lưu tệp đính kèm. Xem README, mục \"Chạy lần đầu\".");
+        });
+        services.AddSingleton(sp =>
+        {
+            // Thư mục lưu tệp nằm ngoài wwwroot (không ai tải trực tiếp được) và ngoài git; đổi bằng cấu hình Storage:TepDinhKem.
+            var goc = sp.GetRequiredService<IHostEnvironment>().ContentRootPath;
+            var thuMuc = sp.GetRequiredService<IConfiguration>()["Storage:TepDinhKem"];
+            return new TepLuuTruCauHinh(Path.GetFullPath(string.IsNullOrWhiteSpace(thuMuc) ? Path.Combine("App_Data", "dinh-kem") : thuMuc, goc));
+        });
+        services.AddScoped<ITepDinhKemQuanLy, TepDinhKemService>();
         services.TryAddScoped<INguonHangChoXep, KhongCoHangChoXep>();   // T4-5: Nhóm 2 đăng ký nguồn thật sau (đăng ký sau cùng thắng)
         services.AddScoped<ICapacityService>(sp =>   // T4-5: thay bản giả CapacityServiceStub
         {

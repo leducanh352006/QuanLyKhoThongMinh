@@ -1,0 +1,181 @@
+@using QuanLyKho.Web.Areas.HangHoa.Models
+@using QuanLyKho.Web.Areas.NhapKho.Controllers
+@using QuanLyKho.Web.Areas.NhapKho.Models
+@model PhieuNhap
+@{
+    // Màn hình tiếp nhận và kiểm tra hàng nhập (việc T1-2).
+    // Phiếu Đã xác nhận: quét mã, nhập số thực nhận / số đạt / hạn dùng. Phiếu đã kiểm tra: chỉ xem kết quả.
+    var hang = (Dictionary<int, HangKiem>)ViewBag.Hang;
+    var lo = (Dictionary<int, LoHang>)ViewBag.Lo;
+    var nhap = (Dictionary<int, DongTiepNhan>)ViewBag.Nhap;
+    var dong = Model.ChiTiet.OrderBy(d => d.MaCTN).ToList();
+    var chiXem = Model.TrangThai != PhieuNhap.DaXacNhan;
+    var tuyChonQuet = new QuetMaOptions("oQuet", "Quét mã vạch biến thể hoặc mã lô trên tem", "Quét rồi nhấn Enter");
+    ViewData["Title"] = $"Kiểm tra hàng nhập {Model.SoPhieu}";
+}
+
+<header class="trang-dau">
+    <h1>@ViewData["Title"]</h1>
+    <p class="mota">
+        <span class="nhan @(chiXem ? "nhan-tot" : "nhan-chu-y")">@Model.TrangThai</span>
+        @(chiXem ? "Đã ghi kết quả kiểm tra, không sửa được nữa." : "Quét mã vạch biến thể và mã lô trên tem, rồi nhập số thực nhận. Chưa bấm lưu thì chưa có hàng nào vào kho.")
+    </p>
+</header>
+
+@if (TempData["ThongBao"] is string tb) { <div class="alert alert-success" role="status">@tb</div> }
+@if ((TempData["Loi"] ?? ViewData["Loi"]) is string loi) { <div class="alert alert-danger" role="alert">@loi</div> }
+
+@if (chiXem)
+{
+    <div class="bang-cuon">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">Hàng</th><th scope="col" class="text-end">Dự kiến</th><th scope="col" class="text-end">Thực nhận</th>
+                    <th scope="col" class="text-end">Đạt</th><th scope="col" class="text-end">Không đạt</th>
+                    <th scope="col">Mã lô</th><th scope="col">Hạn dùng</th><th scope="col">Lý do lệch</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var d in dong)
+                {
+                    var h = hang[d.MaBT];
+                    var l = d.MaLo is int ml && lo.TryGetValue(ml, out var found) ? found : null;
+                    <tr>
+                        <td>@h.TenSP <span class="text-body-secondary">@h.ThuocTinh</span></td>
+                        <td class="text-end">@d.SLDuKien</td>
+                        <td class="text-end">@d.SLThucNhan</td>
+                        <td class="text-end">@d.SLDat</td>
+                        <td class="text-end">@((d.SLThucNhan ?? 0) - (d.SLDat ?? 0))</td>
+                        <td>@(l?.MaVachLo ?? "Không có hàng về")</td>
+                        <td>@(l?.HanDung?.ToString("dd/MM/yyyy"))</td>
+                        <td>@d.LyDoLech</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <p class="text-body-secondary">Hàng đang nằm ở ô Tiếp nhận của kho. Hàng chưa sắp xếp vào ô lưu trữ thì chưa tính vào tồn khả dụng; hàng không đạt ở lại khu tiếp nhận chờ trả lại nhà cung cấp.</p>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-primary" asp-action="InTem" asp-route-id="@Model.MaPN" target="_blank" rel="noopener">In tem mã</a>
+        <a class="btn btn-outline-secondary" asp-action="Sua" asp-route-id="@Model.MaPN">Xem phiếu</a>
+        <a class="btn btn-outline-secondary" asp-action="Index">Quay lại danh sách</a>
+    </div>
+}
+else
+{
+    <partial name="_QuetMa" model="tuyChonQuet" />
+
+    <form method="post" asp-action="KiemTra" asp-route-id="@Model.MaPN" id="formKiemTra" class="mt-3">
+        <div class="bang-cuon">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">Hàng</th><th scope="col" class="text-end">Dự kiến</th><th scope="col">Mã vạch</th><th scope="col">Mã lô</th>
+                        <th scope="col">Thực nhận</th><th scope="col">Đạt</th><th scope="col">Hạn dùng</th><th scope="col">Lý do lệch</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < dong.Count; i++)
+                    {
+                        var d = dong[i];
+                        var h = hang[d.MaBT];
+                        nhap.TryGetValue(d.MaCTN, out var n);
+                        var maLo = PhieuNhap.MaLo(Model.SoPhieu, i + 1);
+                        <tr data-ma-vach="@h.MaVach" data-ma-lo="@maLo" data-du-kien="@d.SLDuKien">
+                            <td>
+                                @h.TenSP <span class="text-body-secondary">@h.ThuocTinh</span>
+                                <input type="hidden" name="dong[@i].MaCTN" value="@d.MaCTN" />
+                            </td>
+                            <td class="text-end">@d.SLDuKien</td>
+                            <td><input class="form-control form-control-sm f-vach" name="dong[@i].MaVach" value="@n?.MaVach" readonly placeholder="Chưa quét" aria-label="Mã vạch đã quét dòng @(i + 1)" /></td>
+                            <td><input class="form-control form-control-sm f-lo" name="dong[@i].MaLo" value="@n?.MaLo" readonly placeholder="Chưa quét" aria-label="Mã lô đã quét dòng @(i + 1)" /></td>
+                            <td><input type="number" min="0" class="form-control form-control-sm f-sl" style="width:6rem" name="dong[@i].SLThucNhan" value="@n?.SLThucNhan" required aria-label="Số thực nhận dòng @(i + 1)" /></td>
+                            <td><input type="number" min="0" class="form-control form-control-sm f-dat" style="width:6rem" name="dong[@i].SLDat" value="@n?.SLDat" required aria-label="Số đạt dòng @(i + 1)" /></td>
+                            <td>
+                                @if (h.CoHanDung)
+                                {
+                                    <input type="date" class="form-control form-control-sm" name="dong[@i].HanDung" value="@n?.HanDung?.ToString("yyyy-MM-dd")" aria-label="Hạn dùng dòng @(i + 1)" />
+                                }
+                                else
+                                {
+                                    <span class="text-body-secondary">Không quản lý</span>
+                                }
+                            </td>
+                            <td><input class="form-control form-control-sm f-lydo" name="dong[@i].LyDoLech" value="@n?.LyDoLech" maxlength="255" placeholder="Bắt buộc nếu khác dự kiến" aria-label="Lý do lệch dòng @(i + 1)" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <p class="text-body-secondary">Số không đạt = thực nhận − đạt. Cả hàng đạt và không đạt đều được ghi vào ô Tiếp nhận; hàng chưa sắp xếp vào ô lưu trữ thì chưa tính vào tồn khả dụng.</p>
+        <div class="d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-success" id="nutLuu">Lưu kết quả kiểm tra</button>
+            <a class="btn btn-outline-secondary" asp-action="Sua" asp-route-id="@Model.MaPN">Xem phiếu</a>
+            <a class="btn btn-outline-secondary" asp-action="Index">Quay lại danh sách</a>
+        </div>
+    </form>
+}
+
+@section Scripts {
+    <script>
+        (function () {
+            var dong = Array.prototype.slice.call(document.querySelectorAll('tr[data-ma-vach]'));
+            var thongBao = document.querySelector('[data-quet-ma-thongbao]');
+            var form = document.getElementById('formKiemTra');
+            if (!form) { return; }   // phiếu đã kiểm tra chỉ xem
+
+            function bao(t) { if (thongBao) { thongBao.textContent = t; } }
+            function o(r, lop) { return r.querySelector(lop); }
+            function quetLai() { document.querySelector('[data-quet-ma]').dispatchEvent(new Event('quetma:focus')); }
+
+            // Quét mã lô thì điền ô mã lô; quét mã vạch thì điền ô mã vạch của dòng đầu tiên cùng biến thể còn trống.
+            document.addEventListener('quetma:them', function (e) {
+                var ma = e.detail.giaTri.toLowerCase();
+                var r = dong.filter(function (x) { return x.dataset.maLo.toLowerCase() === ma; })[0];
+                if (r) {
+                    o(r, '.f-lo').value = r.dataset.maLo;
+                } else {
+                    var khop = dong.filter(function (x) { return x.dataset.maVach.toLowerCase() === ma; });
+                    r = khop.filter(function (x) { return !o(x, '.f-vach').value; })[0] || khop[0];
+                    if (r) { o(r, '.f-vach').value = r.dataset.maVach; }
+                }
+                if (!r) { bao('Mã "' + e.detail.giaTri + '" không thuộc phiếu này.'); return; }
+                r.classList.add('table-active');
+                o(r, '.f-sl').focus();
+            });
+
+            dong.forEach(function (r) {
+                var sl = o(r, '.f-sl'), dat = o(r, '.f-dat'), lyDo = o(r, '.f-lydo');
+                var duKien = parseInt(r.dataset.duKien, 10);
+                var daSuaDat = dat.value !== '';
+                sl.addEventListener('input', function () {
+                    if (!daSuaDat) { dat.value = sl.value; }                                  // mặc định cả lô đạt
+                    lyDo.required = sl.value !== '' && parseInt(sl.value, 10) !== duKien;      // lệch số lượng phải ghi lý do
+                    dat.max = sl.value;
+                });
+                dat.addEventListener('input', function () { daSuaDat = true; });
+                [sl, dat].forEach(function (x) {
+                    x.addEventListener('keydown', function (e) {
+                        if (e.key === 'Enter') { e.preventDefault(); quetLai(); }              // Enter quay lại ô quét, không gửi form
+                    });
+                });
+                sl.dispatchEvent(new Event('input'));
+            });
+
+            form.addEventListener('submit', function (e) {
+                var thieu = dong.filter(function (r) {
+                    return parseInt(o(r, '.f-sl').value, 10) > 0 && (!o(r, '.f-vach').value || !o(r, '.f-lo').value);
+                });
+                if (thieu.length) {
+                    e.preventDefault();
+                    thieu[0].classList.add('table-danger');
+                    bao('Còn dòng có hàng về nhưng chưa quét đủ mã vạch và mã lô.');
+                    return;
+                }
+                if (!confirm('Lưu kết quả kiểm tra? Sau khi lưu sẽ không sửa được nữa.')) { e.preventDefault(); return; }
+                document.getElementById('nutLuu').disabled = true;                           // tránh bấm hai lần
+            });
+        })();
+    </script>
+}

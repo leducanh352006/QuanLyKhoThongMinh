@@ -1,0 +1,48 @@
+@model IReadOnlyList<QuanLyKho.Web.Areas.HangHoa.Services.DanhMucDong>
+
+<header class="trang-dau d-flex flex-wrap justify-content-between align-items-end gap-2">
+    <div>
+        <h1>Danh mục sản phẩm</h1>
+        <p class="mota">Danh mục còn sản phẩm tham chiếu sẽ không xóa được.</p>
+    </div>
+    <a class="btn btn-primary" asp-action="Them">Thêm danh mục</a>
+</header>
+
+@if (TempData["ThongBao"] is string tb)
+{
+    <div class="alert alert-success" role="status">@tb</div>
+}
+@if (TempData["Loi"] is string loi)
+{
+    <div class="alert alert-danger" role="alert">@loi</div>
+}
+
+<div class="bang-cuon">
+    <table class="table align-middle">
+        <thead>
+            <tr>
+                <th scope="col">Tên danh mục</th>
+                <th scope="col"><span class="visually-hidden">Thao tác</span></th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Count == 0)
+            {
+                <tr><td colspan="2" class="text-center text-muted">Chưa có danh mục nào.</td></tr>
+            }
+            @foreach (var d in Model)
+            {
+                <tr>
+                    <td>@d.TenDM</td>
+                    <td class="text-nowrap text-end">
+                        <a class="btn btn-sm btn-outline-secondary" asp-action="Sua" asp-route-id="@d.MaDM">Sửa</a>
+                        <form method="post" asp-action="Xoa" asp-route-id="@d.MaDM" class="d-inline"
+                              onsubmit="return confirm('Xóa danh mục @d.TenDM?');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Xóa</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

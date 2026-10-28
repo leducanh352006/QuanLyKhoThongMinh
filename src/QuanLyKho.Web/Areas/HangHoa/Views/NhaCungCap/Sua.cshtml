@@ -1,0 +1,30 @@
+@model QuanLyKho.Web.Areas.HangHoa.Models.NhaCungCapSuaViewModel
+
+<header class="trang-dau">
+    <h1>Sửa nhà cung cấp</h1>
+</header>
+
+<form method="post" asp-action="Sua" class="khung-form" novalidate>
+    <input type="hidden" asp-for="MaNCC" />
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger" role="alert" asp-validation-summary="All"></div>
+    }
+
+    <div class="mb-3">
+        <label asp-for="TenNCC" class="form-label"></label>
+        <input asp-for="TenNCC" class="form-control" />
+    </div>
+    <div class="mb-3">
+        <label asp-for="SDT" class="form-label"></label>
+        <input asp-for="SDT" class="form-control" />
+    </div>
+    <div class="mb-3">
+        <label asp-for="DiaChi" class="form-label"></label>
+        <input asp-for="DiaChi" class="form-control" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Lưu</button>
+    <a class="btn btn-outline-secondary" asp-action="Index">Hủy</a>
+</form>

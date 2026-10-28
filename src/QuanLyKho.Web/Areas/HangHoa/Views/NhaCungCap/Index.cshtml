@@ -1,0 +1,72 @@
+@model IReadOnlyList<QuanLyKho.Web.Areas.HangHoa.Services.NhaCungCapDong>
+
+<header class="trang-dau d-flex flex-wrap justify-content-between align-items-end gap-2">
+    <div>
+        <h1>Nhà cung cấp</h1>
+        <p class="mota">Danh sách nhà cung cấp. Nhà cung cấp ngừng dùng sẽ không chọn được ở phiếu nhập.</p>
+    </div>
+    <a class="btn btn-primary" asp-action="Them">Thêm nhà cung cấp</a>
+</header>
+
+@if (TempData["ThongBao"] is string tb)
+{
+    <div class="alert alert-success" role="status">@tb</div>
+}
+@if (TempData["Loi"] is string loi)
+{
+    <div class="alert alert-danger" role="alert">@loi</div>
+}
+
+<div class="bang-cuon">
+    <table class="table align-middle">
+        <thead>
+            <tr>
+                <th scope="col">Tên nhà cung cấp</th>
+                <th scope="col">Số điện thoại</th>
+                <th scope="col">Địa chỉ</th>
+                <th scope="col">Trạng thái</th>
+                <th scope="col"><span class="visually-hidden">Thao tác</span></th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Count == 0)
+            {
+                <tr><td colspan="5" class="text-center text-muted">Chưa có nhà cung cấp nào.</td></tr>
+            }
+            @foreach (var n in Model)
+            {
+                <tr>
+                    <td>@n.TenNCC</td>
+                    <td>@n.SDT</td>
+                    <td>@n.DiaChi</td>
+                    <td>
+                        @if (n.DangHoatDong)
+                        {
+                            <span class="nhan nhan-tot">Hoạt động</span>
+                        }
+                        else
+                        {
+                            <span class="nhan nhan-loi">Ngừng dùng</span>
+                        }
+                    </td>
+                    <td class="text-nowrap text-end">
+                        <a class="btn btn-sm btn-outline-secondary" asp-action="Sua" asp-route-id="@n.MaNCC">Sửa</a>
+                        @if (n.DangHoatDong)
+                        {
+                            <form method="post" asp-action="Ngung" asp-route-id="@n.MaNCC" class="d-inline"
+                                  onsubmit="return confirm('Ngừng dùng nhà cung cấp @n.TenNCC?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Ngừng dùng</button>
+                            </form>
+                        }
+                        else
+                        {
+                            <form method="post" asp-action="MoLai" asp-route-id="@n.MaNCC" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-outline-success">Mở lại</button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

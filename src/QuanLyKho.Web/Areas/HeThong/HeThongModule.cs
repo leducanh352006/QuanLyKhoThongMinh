@@ -71,6 +71,16 @@ public static class HeThongModule
         services.AddScoped<IKhoQuanLy, KhoService>();
         services.AddScoped<IViTriQuanLy, ViTriService>();
         services.AddScoped<ILockService, LockService>();   // T4-5: thay bản giả LockServiceStub, khóa/mở ô qua ViTri.DangKhoa
+        services.TryAddScoped<INguonHangChoXep, KhongCoHangChoXep>();   // T4-5: Nhóm 2 đăng ký nguồn thật sau (đăng ký sau cùng thắng)
+        services.AddScoped<ICapacityService>(sp =>   // T4-5: thay bản giả CapacityServiceStub
+        {
+            var db = sp.GetService<KhoDbContext>();
+            if (db is not null) return new CapacityService(db, sp.GetRequiredService<INguonHangChoXep>());
+
+            var moiTruong = sp.GetService<IHostEnvironment>();
+            if (moiTruong is null || moiTruong.IsDevelopment()) return ActivatorUtilities.CreateInstance<CapacityServiceStub>(sp);
+            throw new InvalidOperationException("Chưa cấu hình ConnectionStrings:KhoDb nên không kiểm tra được sức chứa. Xem README, mục \"Chạy lần đầu\".");
+        });
         services.AddScoped<INguoiDungHienTai, NguoiDungHienTaiService>();   // đăng ký sau AddKhoInfrastructure nên thay bản giả Development
 
         // ---- Đăng nhập và phân quyền ----

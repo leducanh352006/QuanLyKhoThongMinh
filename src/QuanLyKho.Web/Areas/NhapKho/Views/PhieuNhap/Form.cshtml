@@ -33,7 +33,7 @@
             <div class="col-md-4">
                 <label class="form-label" for="LoaiPhieu">Loại phiếu</label>
                 <select class="form-select" id="LoaiPhieu" name="LoaiPhieu">
-                    @foreach (var loai in new[] { "Mua hàng", "Khác" })
+                    @foreach (var loai in new[] { "Mua hàng", "Khác" }.Union(new[] { Model.LoaiPhieu }))
                     {
                         <option selected="@(Model.LoaiPhieu == loai)">@loai</option>
                     }

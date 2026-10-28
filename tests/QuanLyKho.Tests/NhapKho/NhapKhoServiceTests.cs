@@ -124,6 +124,7 @@ public class NhapKhoServiceTests
         Assert.Equal(kq.GiaTri!.SoPhieu, p.SoPhieu);
         Assert.StartsWith("NK", p.SoPhieu);
         Assert.Equal(2, p.ChiTiet.Count);
+        Assert.All(p.ChiTiet, d => { Assert.Equal(e.Lo.MaLo, d.MaLo); Assert.Equal(d.SLDuKien, d.SLThucNhan); Assert.Equal(d.SLDuKien, d.SLDat); });
         Assert.Equal(truoc + 5, await TonAsync(e.Db, e.Lo.MaLo, e.O.MaViTri));
 
         var lai = await e.Nhap.TaoPhieuNhapThua(e.O.MaKho, MaPKThu, dong, nguoi);   // một phiếu kiểm chỉ có một phiếu Thừa
@@ -163,6 +164,8 @@ public class NhapKhoServiceTests
         Assert.Null(p.MaNCC);
         Assert.Null(p.MaPK);
         Assert.Equal(4, p.ChiTiet.Single().SLDuKien);
+        Assert.Null(p.ChiTiet.Single().MaLo);   // chưa tiếp nhận nên chưa có lô, thực nhận, đạt
+        Assert.Null(p.ChiTiet.Single().SLThucNhan);
         Assert.Contains("77", p.DienGiai);
         Assert.Equal(truoc, await TonAsync(e.Db, e.Lo.MaLo, e.O.MaViTri));
     });

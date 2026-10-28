@@ -1,0 +1,34 @@
+@model QuanLyKho.Web.Areas.HangHoa.Models.SanPhamSuaViewModel
+
+<header class="trang-dau">
+    <h1>Sửa sản phẩm</h1>
+</header>
+
+<form method="post" asp-action="Sua" class="khung-form" novalidate>
+    <input type="hidden" asp-for="MaSP" />
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger" role="alert" asp-validation-summary="All"></div>
+    }
+
+    <div class="mb-3">
+        <label asp-for="TenSP" class="form-label"></label>
+        <input asp-for="TenSP" class="form-control" />
+    </div>
+    <div class="mb-3">
+        <label asp-for="MaDM" class="form-label"></label>
+        <select asp-for="MaDM" class="form-select" asp-items="@((IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)ViewData["DanhMuc"]!)"></select>
+    </div>
+    <div class="mb-3">
+        <label asp-for="DonViTinh" class="form-label"></label>
+        <input asp-for="DonViTinh" class="form-control" />
+    </div>
+    <div class="mb-3 form-check">
+        <input asp-for="CoHanDung" class="form-check-input" />
+        <label asp-for="CoHanDung" class="form-check-label"></label>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Lưu</button>
+    <a class="btn btn-outline-secondary" asp-action="Index">Hủy</a>
+</form>

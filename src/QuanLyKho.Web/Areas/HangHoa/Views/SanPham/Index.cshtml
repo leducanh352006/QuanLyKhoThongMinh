@@ -1,0 +1,61 @@
+@model IReadOnlyList<QuanLyKho.Web.Areas.HangHoa.Services.SanPhamDong>
+@using QuanLyKho.Web.Contracts
+@{
+    var duocSua = User.IsInRole(VaiTroTen.QuanTriVien) || User.IsInRole(VaiTroTen.QuanLyKho);
+}
+
+<header class="trang-dau d-flex flex-wrap justify-content-between align-items-end gap-2">
+    <div>
+        <h1>Sản phẩm</h1>
+        <p class="mota">Danh sách sản phẩm. Mở "Biến thể" để thêm size, màu... cho từng sản phẩm.</p>
+    </div>
+    @if (duocSua)
+    {
+        <a class="btn btn-primary" asp-action="Them">Thêm sản phẩm</a>
+    }
+</header>
+
+@if (TempData["ThongBao"] is string tb)
+{
+    <div class="alert alert-success" role="status">@tb</div>
+}
+@if (TempData["Loi"] is string loi)
+{
+    <div class="alert alert-danger" role="alert">@loi</div>
+}
+
+<div class="bang-cuon">
+    <table class="table align-middle">
+        <thead>
+            <tr>
+                <th scope="col">Tên sản phẩm</th>
+                <th scope="col">Danh mục</th>
+                <th scope="col">Đơn vị tính</th>
+                <th scope="col">Có hạn dùng</th>
+                <th scope="col"><span class="visually-hidden">Thao tác</span></th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Count == 0)
+            {
+                <tr><td colspan="5" class="text-center text-muted">Chưa có sản phẩm nào.</td></tr>
+            }
+            @foreach (var s in Model)
+            {
+                <tr>
+                    <td>@s.TenSP</td>
+                    <td>@s.TenDM</td>
+                    <td>@s.DonViTinh</td>
+                    <td>@(s.CoHanDung ? "Có" : "Không")</td>
+                    <td class="text-nowrap text-end">
+                        <a class="btn btn-sm btn-outline-secondary" asp-controller="BienThe" asp-action="Index" asp-route-maSP="@s.MaSP">Biến thể</a>
+                        @if (duocSua)
+                        {
+                            <a class="btn btn-sm btn-outline-secondary" asp-action="Sua" asp-route-id="@s.MaSP">Sửa</a>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

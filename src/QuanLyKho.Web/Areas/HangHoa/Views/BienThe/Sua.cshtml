@@ -1,0 +1,46 @@
+@model QuanLyKho.Web.Areas.HangHoa.Models.BienTheSuaViewModel
+
+<header class="trang-dau">
+    <h1>Sửa biến thể</h1>
+    <p class="mota">Sản phẩm <strong>@Model.TenSP</strong>.</p>
+</header>
+
+<form method="post" asp-action="Sua" class="khung-form" novalidate>
+    <input type="hidden" asp-for="MaBT" />
+    <input type="hidden" asp-for="MaSP" />
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger" role="alert" asp-validation-summary="All"></div>
+    }
+
+    <div class="mb-3">
+        <label asp-for="MaVach" class="form-label"></label>
+        <input asp-for="MaVach" class="form-control" />
+    </div>
+    <div class="mb-3">
+        <label asp-for="ThuocTinh" class="form-label"></label>
+        <input asp-for="ThuocTinh" class="form-control" />
+    </div>
+    <div class="row">
+        <div class="col-md-3 mb-3">
+            <label asp-for="Dai" class="form-label"></label>
+            <input asp-for="Dai" class="form-control" type="number" step="0.01" min="0.01" />
+        </div>
+        <div class="col-md-3 mb-3">
+            <label asp-for="Rong" class="form-label"></label>
+            <input asp-for="Rong" class="form-control" type="number" step="0.01" min="0.01" />
+        </div>
+        <div class="col-md-3 mb-3">
+            <label asp-for="Cao" class="form-label"></label>
+            <input asp-for="Cao" class="form-control" type="number" step="0.01" min="0.01" />
+        </div>
+        <div class="col-md-3 mb-3">
+            <label asp-for="KhoiLuong" class="form-label"></label>
+            <input asp-for="KhoiLuong" class="form-control" type="number" step="0.001" min="0.001" />
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Lưu</button>
+    <a class="btn btn-outline-secondary" asp-action="Index" asp-route-maSP="@Model.MaSP">Hủy</a>
+</form>

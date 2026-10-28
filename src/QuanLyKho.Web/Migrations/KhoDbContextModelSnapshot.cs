@@ -21,6 +21,50 @@ namespace QuanLyKho.Web.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("QuanLyKho.Web.Areas.HangHoa.Models.BienThe", b =>
+                {
+                    b.Property<int>("MaBT")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MaBT"));
+
+                    b.Property<decimal>("Cao")
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<decimal>("Dai")
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<decimal>("KhoiLuong")
+                        .HasColumnType("decimal(10,3)");
+
+                    b.Property<int>("MaSP")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MaVach")
+                        .IsRequired()
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<decimal>("Rong")
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<string>("ThuocTinh")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("MaBT");
+
+                    b.HasIndex("MaSP");
+
+                    b.HasIndex("MaVach")
+                        .IsUnique();
+
+                    b.ToTable("BienThe", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_BienThe_KichThuoc", "[Dai] > 0 AND [Rong] > 0 AND [Cao] > 0 AND [KhoiLuong] > 0");
+                        });
+                });
+
             modelBuilder.Entity("QuanLyKho.Web.Areas.HangHoa.Models.DanhMuc", b =>
                 {
                     b.Property<int>("MaDM")
@@ -74,6 +118,37 @@ namespace QuanLyKho.Web.Migrations
                         {
                             t.HasCheckConstraint("CK_NhaCungCap_TrangThai", "[TrangThai] IN (N'Hoạt động', N'Ngừng hoạt động')");
                         });
+                });
+
+            modelBuilder.Entity("QuanLyKho.Web.Areas.HangHoa.Models.SanPham", b =>
+                {
+                    b.Property<int>("MaSP")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MaSP"));
+
+                    b.Property<bool>("CoHanDung")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("DonViTinh")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("MaDM")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TenSP")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("MaSP");
+
+                    b.HasIndex("MaDM");
+
+                    b.ToTable("SanPham", (string)null);
                 });
 
             modelBuilder.Entity("QuanLyKho.Web.Areas.HeThong.Models.Kho", b =>
@@ -310,6 +385,24 @@ namespace QuanLyKho.Web.Migrations
 
                             t.HasCheckConstraint("CK_ViTri_TrangThai", "[TrangThai] IN (N'Hoạt động', N'Ngừng hoạt động')");
                         });
+                });
+
+            modelBuilder.Entity("QuanLyKho.Web.Areas.HangHoa.Models.BienThe", b =>
+                {
+                    b.HasOne("QuanLyKho.Web.Areas.HangHoa.Models.SanPham", null)
+                        .WithMany()
+                        .HasForeignKey("MaSP")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QuanLyKho.Web.Areas.HangHoa.Models.SanPham", b =>
+                {
+                    b.HasOne("QuanLyKho.Web.Areas.HangHoa.Models.DanhMuc", null)
+                        .WithMany()
+                        .HasForeignKey("MaDM")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("QuanLyKho.Web.Areas.HeThong.Models.Kho", b =>

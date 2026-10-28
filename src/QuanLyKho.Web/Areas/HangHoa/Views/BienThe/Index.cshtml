@@ -1,0 +1,81 @@
+@model IReadOnlyList<QuanLyKho.Web.Areas.HangHoa.Services.BienTheDong>
+@using QuanLyKho.Web.Contracts
+@{
+    var duocSua = User.IsInRole(VaiTroTen.QuanTriVien) || User.IsInRole(VaiTroTen.QuanLyKho);
+    var maSP = (int)ViewData["MaSP"]!;
+}
+
+<header class="trang-dau">
+    <h1>Biến thể</h1>
+    <p class="mota">Danh sách biến thể (size, màu...) của sản phẩm <strong>@ViewData["TenSP"]</strong>.</p>
+</header>
+
+@if (TempData["ThongBao"] is string tb)
+{
+    <div class="alert alert-success" role="status">@tb</div>
+}
+@if (TempData["Loi"] is string loi)
+{
+    <div class="alert alert-danger" role="alert">@loi</div>
+}
+
+<form method="get" asp-action="Index" class="mb-3 d-flex flex-wrap align-items-end gap-2">
+    <div>
+        <label for="chonSanPham" class="form-label">Sản phẩm</label>
+        <select id="chonSanPham" name="maSP" class="form-select" onchange="this.form.submit()"
+                asp-items="@((IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)ViewData["DanhSachSanPham"]!)"></select>
+    </div>
+    <noscript><button type="submit" class="btn btn-outline-secondary">Xem</button></noscript>
+</form>
+
+@if (duocSua)
+{
+    <a class="btn btn-primary mb-3" asp-action="Them" asp-route-maSP="@maSP">Thêm biến thể</a>
+}
+
+@if (Model.Count == 0)
+{
+    <div class="khung-trong">
+        <h2>Sản phẩm chưa có biến thể nào</h2>
+        <p>Bấm "Thêm biến thể" để thêm size, màu... cho sản phẩm này.</p>
+    </div>
+}
+else
+{
+    <div class="bang-cuon">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">Mã vạch</th>
+                    <th scope="col">Thuộc tính</th>
+                    <th scope="col">Dài (cm)</th>
+                    <th scope="col">Rộng (cm)</th>
+                    <th scope="col">Cao (cm)</th>
+                    <th scope="col">Khối lượng (kg)</th>
+                    <th scope="col">Thể tích (cm³)</th>
+                    <th scope="col"><span class="visually-hidden">Thao tác</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var b in Model)
+                {
+                    <tr>
+                        <td>@b.MaVach</td>
+                        <td>@b.ThuocTinh</td>
+                        <td>@b.Dai</td>
+                        <td>@b.Rong</td>
+                        <td>@b.Cao</td>
+                        <td>@b.KhoiLuong</td>
+                        <td>@b.TheTichCm3</td>
+                        <td class="text-nowrap text-end">
+                            @if (duocSua)
+                            {
+                                <a class="btn btn-sm btn-outline-secondary" asp-action="Sua" asp-route-id="@b.MaBT">Sửa</a>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

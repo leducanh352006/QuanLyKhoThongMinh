@@ -31,6 +31,22 @@ public static class HangHoaModule
         services.AddScoped<INhaCungCapQuanLy, NhaCungCapService>();
         services.AddScoped<IDanhMucQuanLy, DanhMucService>();
 
+        // ---- Sản phẩm, biến thể (việc T3-2) ----
+        services.AddSingleton<BoNhoSanPhamBienTheStore>();
+        services.AddScoped<ISanPhamBienTheStore>(sp =>
+        {
+            var db = sp.GetService<KhoDbContext>();
+            if (db is not null) return new EfSanPhamBienTheStore(db);
+
+            var moiTruong = sp.GetService<IHostEnvironment>();
+            if (moiTruong is null || moiTruong.IsDevelopment()) return sp.GetRequiredService<BoNhoSanPhamBienTheStore>();
+            throw new InvalidOperationException("Chưa cấu hình ConnectionStrings:KhoDb nên không có nơi lưu sản phẩm, biến thể.");
+        });
+        services.AddScoped<IDbSeeder, SanPhamBienTheSeeder>();
+
+        services.AddScoped<ISanPhamQuanLy, SanPhamService>();
+        services.AddScoped<IBienTheQuanLy, BienTheService>();
+
         return services;
     }
 }

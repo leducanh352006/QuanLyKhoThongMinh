@@ -15,7 +15,7 @@ public sealed class NhapKhoService(KhoDbContext db, IStockService ton, IAuditSer
     /// <summary>
     /// Phiếu Thừa do kiểm kê: lưu thẳng ở trạng thái Hoàn tất rồi ghi tăng tồn đúng lô và ô của từng dòng (loại biến động Nhận hàng, chứng từ NK).
     /// Ô đang bị khóa kiểm vẫn được ghi, vì chính đợt kiểm kê đó khóa ô. Mỗi phiếu kiểm chỉ có một phiếu Thừa.
-    /// Lô và ô của dòng nằm ở sổ cái BienDongTon (tra theo chứng từ NK và mã phiếu), dòng phiếu chỉ giữ biến thể và số lượng.
+    /// Mỗi dòng phiếu ghi sẵn lô và coi như đã nhận đủ, đạt hết (thực nhận = đạt = số lượng), để màn hình kiểm tra hiện đúng; ô nằm ở sổ cái BienDongTon (chứng từ NK, mã phiếu).
     /// </summary>
     public async Task<KetQua<PhieuRef>> TaoPhieuNhapThua(int maKho, int maPK, IReadOnlyList<DongPhieu> dong, int maNguoiLap, CancellationToken ct = default)
     {
@@ -99,7 +99,9 @@ public sealed class NhapKhoService(KhoDbContext db, IStockService ton, IAuditSer
         SoPhieu = "TAM" + Guid.NewGuid().ToString("N")[..12],   // số tạm, đổi thành NK + mã ngay sau khi có MaPN
         LoaiPhieu = loai, TrangThai = trangThai, ThoiGian = DateTime.UtcNow, MaKho = maKho, MaNCC = maNCC, MaPK = maPK,
         MaNguoiLap = maNguoiLap, DienGiai = dienGiai,
-        ChiTiet = dong.Select(d => new ChiTietPhieuNhap { MaBT = d.MaBT, SLDuKien = d.SoLuong }).ToList(),
+        ChiTiet = dong.Select(d => maPK is null
+            ? new ChiTietPhieuNhap { MaBT = d.MaBT, SLDuKien = d.SoLuong }
+            : new ChiTietPhieuNhap { MaBT = d.MaBT, SLDuKien = d.SoLuong, MaLo = d.MaLo, SLThucNhan = d.SoLuong, SLDat = d.SoLuong }).ToList(),
     };
 
     /// <summary>

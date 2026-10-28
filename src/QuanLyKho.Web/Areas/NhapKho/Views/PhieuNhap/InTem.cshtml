@@ -1,0 +1,71 @@
+@using QuanLyKho.Web.Areas.NhapKho.Services
+@model List<QuanLyKho.Web.Areas.NhapKho.Controllers.TemIn>
+@{
+    // Trang in tem mã (việc T1-6). Không dùng layout chung để khi in chỉ còn các tem.
+    Layout = null;
+    var phieu = (QuanLyKho.Web.Areas.NhapKho.Models.PhieuNhap)ViewBag.Phieu;
+    int soTem = ViewBag.SoTem;
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tem mã - @phieu.SoPhieu</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css" />
+    <style>
+        .tem { display: inline-block; vertical-align: top; width: 80mm; margin: 0 3mm 3mm 0; padding: 2mm 3mm; border: 1px dashed #888; background: #fff; color: #000; font-family: Arial, sans-serif; break-inside: avoid; }
+        .tem-ten { font-weight: 700; font-size: 11pt; line-height: 1.2; }
+        .tem-phu { font-size: 8pt; margin-bottom: 1mm; }
+        .tem-nhan { font-size: 7pt; text-transform: uppercase; }
+        .vach { display: block; height: 11mm; max-width: 100%; }
+        .tem-chu { font-family: monospace; font-size: 9pt; margin-bottom: 1mm; }
+        @@page { margin: 4mm; }
+        @@media print {
+            .khong-in { display: none !important; }
+            .tem { border: 0; }
+            /* Máy in tem cuốn: mỗi tem một trang. */
+            body.mot-trang .tem { display: block; margin: 0; break-after: page; }
+        }
+    </style>
+</head>
+<body class="p-3">
+    <div class="khong-in mb-3">
+        <h1 class="h4">Tem mã phiếu @phieu.SoPhieu</h1>
+        <p class="text-body-secondary">Mỗi dòng hàng một tem gồm mã vạch biến thể và mã lô (Code 128). Kiểm tra bản xem trước rồi bấm In.</p>
+        <form method="get" asp-action="InTem" class="d-flex flex-wrap gap-2 align-items-center">
+            <input type="hidden" name="id" value="@phieu.MaPN" />
+            <label for="soTem" class="form-label mb-0">Số tem mỗi dòng</label>
+            <input type="number" class="form-control" style="width:6rem" id="soTem" name="soTem" min="1" max="50" value="@soTem" />
+            <button type="submit" class="btn btn-outline-secondary">Cập nhật</button>
+            <div class="form-check ms-2">
+                <input class="form-check-input" type="checkbox" id="motTrang" />
+                <label class="form-check-label" for="motTrang">Mỗi tem một trang (máy in tem)</label>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="window.print()">In tem</button>
+            <a class="btn btn-outline-secondary" asp-action="Sua" asp-route-id="@phieu.MaPN">Quay lại phiếu</a>
+        </form>
+    </div>
+
+    @foreach (var t in Model)
+    {
+        for (var k = 0; k < soTem; k++)
+        {
+            <section class="tem">
+                <div class="tem-ten">@t.TenSP</div>
+                <div class="tem-phu">@t.ThuocTinh · SL @t.SoLuong · @phieu.SoPhieu</div>
+                @foreach (var (nhan, ma) in new[] { ("Mã vạch biến thể", t.MaVach), ("Mã lô", t.MaLo) })
+                {
+                    <div class="tem-nhan">@nhan</div>
+                    @Html.Raw(Code128.Svg(ma) ?? "<div class=\"text-danger\">Không tạo được vạch: mã chứa ký tự ngoài ASCII.</div>")
+                    <div class="tem-chu">@ma</div>
+                }
+            </section>
+        }
+    }
+
+    <script>
+        document.getElementById('motTrang').addEventListener('change', e => document.body.classList.toggle('mot-trang', e.target.checked));
+    </script>
+</body>
+</html>

@@ -103,6 +103,10 @@
                         onclick="return confirm('Xác nhận phiếu? Sau khi xác nhận sẽ không sửa được nữa. Thay đổi chưa lưu sẽ mất.');">Xác nhận phiếu</button>
             }
         }
+        @if (khoa)
+        {
+            <a class="btn btn-outline-primary" asp-action="InTem" asp-route-id="@Model.MaPN" target="_blank" rel="noopener">In tem mã</a>
+        }
         <a class="btn btn-outline-secondary" asp-action="Index">Quay lại danh sách</a>
     </div>
 </form>

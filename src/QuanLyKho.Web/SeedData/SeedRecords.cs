@@ -18,6 +18,8 @@ public sealed record ViTriSeed(
 
 public sealed record DanhMucSeed(int MaDM, string TenDM);
 
+public sealed record NhaCungCapSeed(int MaNCC, string TenNCC, string? SDT, string? DiaChi);
+
 public sealed record SanPhamSeed(int MaSP, string TenSP, int MaDM, string DonViTinh, bool CoHanDung);
 
 /// <summary>Kích thước (cm) và khối lượng (kg) của một đơn vị.</summary>

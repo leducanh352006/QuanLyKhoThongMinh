@@ -64,6 +64,13 @@ public static class SeedDataSet
         new(3, "Điện tử, điện máy"),
     };
 
+    public static readonly IReadOnlyList<NhaCungCapSeed> NhaCungCap = new NhaCungCapSeed[]
+    {
+        new(1, "Công ty TNHH Dệt may Phương Nam", "0901234567", "TP. Hồ Chí Minh (dữ liệu mẫu)"),
+        new(2, "Công ty CP Mỹ phẩm Hương Việt", "0912345678", "Hà Nội (dữ liệu mẫu)"),
+        new(3, "Công ty TNHH Điện tử Thành Đạt", "0923456789", "Đà Nẵng (dữ liệu mẫu)"),
+    };
+
     public static readonly IReadOnlyList<SanPhamSeed> SanPham = new SanPhamSeed[]
     {
         new(1, "Áo thun cổ tròn", 1, "cái", CoHanDung: false),

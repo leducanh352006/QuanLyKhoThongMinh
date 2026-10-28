@@ -21,6 +21,61 @@ namespace QuanLyKho.Web.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("QuanLyKho.Web.Areas.HangHoa.Models.DanhMuc", b =>
+                {
+                    b.Property<int>("MaDM")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MaDM"));
+
+                    b.Property<string>("TenDM")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("MaDM");
+
+                    b.HasIndex("TenDM")
+                        .IsUnique();
+
+                    b.ToTable("DanhMuc", (string)null);
+                });
+
+            modelBuilder.Entity("QuanLyKho.Web.Areas.HangHoa.Models.NhaCungCap", b =>
+                {
+                    b.Property<int>("MaNCC")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MaNCC"));
+
+                    b.Property<string>("DiaChi")
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("SDT")
+                        .HasColumnType("varchar(15)");
+
+                    b.Property<string>("TenNCC")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("TrangThai")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Hoạt động");
+
+                    b.HasKey("MaNCC");
+
+                    b.HasIndex("TenNCC")
+                        .IsUnique();
+
+                    b.ToTable("NhaCungCap", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_NhaCungCap_TrangThai", "[TrangThai] IN (N'Hoạt động', N'Ngừng hoạt động')");
+                        });
+                });
+
             modelBuilder.Entity("QuanLyKho.Web.Areas.HeThong.Models.Kho", b =>
                 {
                     b.Property<int>("MaKho")

@@ -1,0 +1,22 @@
+@model QuanLyKho.Web.Areas.HangHoa.Models.DanhMucSuaViewModel
+
+<header class="trang-dau">
+    <h1>Sửa danh mục</h1>
+</header>
+
+<form method="post" asp-action="Sua" class="khung-form" novalidate>
+    <input type="hidden" asp-for="MaDM" />
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger" role="alert" asp-validation-summary="All"></div>
+    }
+
+    <div class="mb-3">
+        <label asp-for="TenDM" class="form-label"></label>
+        <input asp-for="TenDM" class="form-control" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Lưu</button>
+    <a class="btn btn-outline-secondary" asp-action="Index">Hủy</a>
+</form>

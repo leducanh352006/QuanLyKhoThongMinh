@@ -58,6 +58,7 @@ public static class HeThongModule
         services.AddScoped<INguoiDungQuanLy, NguoiDungQuanLyService>();
         services.AddScoped<IKhoQuanLy, KhoService>();
         services.AddScoped<IViTriQuanLy, ViTriService>();
+        services.AddScoped<ILockService, LockService>();   // T4-5: thay bản giả LockServiceStub, khóa/mở ô qua ViTri.DangKhoa
         services.AddScoped<INguoiDungHienTai, NguoiDungHienTaiService>();   // đăng ký sau AddKhoInfrastructure nên thay bản giả Development
 
         // ---- Đăng nhập và phân quyền ----

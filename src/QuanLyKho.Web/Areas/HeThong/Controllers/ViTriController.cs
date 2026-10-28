@@ -10,7 +10,7 @@ namespace QuanLyKho.Web.Areas.HeThong.Controllers;
 /// <summary>Cây vị trí nhiều cấp của một kho: thêm, sửa, khóa (xóa mềm), xóa cứng. Xem được cả Thủ kho; sửa đổi chỉ Quản trị viên, Quản lý kho.</summary>
 [Area("HeThong")]
 [Authorize(Roles = VaiTroTen.QuanTriVien + "," + VaiTroTen.QuanLyKho + "," + VaiTroTen.ThuKho)]
-public class ViTriController(IViTriQuanLy viTri, IKhoQuanLy kho, INguoiDungHienTai hienTai) : Controller
+public class ViTriController(IViTriQuanLy viTri, IKhoQuanLy kho, INguoiDungHienTai hienTai, ILockService khoaO) : Controller
 {
     [HttpGet]
     public async Task<IActionResult> Index(int? maKho, CancellationToken ct)
@@ -117,6 +117,22 @@ public class ViTriController(IViTriQuanLy viTri, IKhoQuanLy kho, INguoiDungHienT
 
     [HttpPost, ValidateAntiForgeryToken]
     public Task<IActionResult> MoLai(int id, int maKho, CancellationToken ct) => DoiTrangThai(id, maKho, true, ct);
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> KhoaKiemKe(int id, int maKho, CancellationToken ct)
+    {
+        var kq = await khoaO.KhoaO(id, NguoiThucHien(), ct);
+        TempData[kq.ThanhCong ? "ThongBao" : "Loi"] = kq.ThongBao;
+        return RedirectToAction(nameof(Index), new { maKho });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> MoKhoaKiemKe(int id, int maKho, CancellationToken ct)
+    {
+        var kq = await khoaO.MoO(id, NguoiThucHien(), ct);
+        TempData[kq.ThanhCong ? "ThongBao" : "Loi"] = kq.ThongBao;
+        return RedirectToAction(nameof(Index), new { maKho });
+    }
 
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Xoa(int id, int maKho, CancellationToken ct)

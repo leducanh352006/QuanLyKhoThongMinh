@@ -517,24 +517,45 @@ namespace QuanLyKho.Web.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MaCTN"));
 
+                    b.Property<string>("LyDoLech")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
                     b.Property<int>("MaBT")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MaLo")
                         .HasColumnType("int");
 
                     b.Property<int>("MaPN")
                         .HasColumnType("int");
 
+                    b.Property<int?>("SLDat")
+                        .HasColumnType("int");
+
                     b.Property<int>("SLDuKien")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SLThucNhan")
                         .HasColumnType("int");
 
                     b.HasKey("MaCTN");
 
                     b.HasIndex("MaBT");
 
+                    b.HasIndex("MaLo");
+
                     b.HasIndex("MaPN");
 
                     b.ToTable("ChiTietPhieuNhap", null, t =>
                         {
+                            t.HasCheckConstraint("CK_ChiTietPhieuNhap_LyDoLech", "[SLThucNhan] IS NULL OR [SLThucNhan] = [SLDuKien] OR [LyDoLech] IS NOT NULL");
+
+                            t.HasCheckConstraint("CK_ChiTietPhieuNhap_SLDat", "[SLDat] >= 0 AND [SLDat] <= [SLThucNhan]");
+
                             t.HasCheckConstraint("CK_ChiTietPhieuNhap_SLDuKien", "[SLDuKien] > 0");
+
+                            t.HasCheckConstraint("CK_ChiTietPhieuNhap_SLThucNhan", "[SLThucNhan] >= 0");
                         });
                 });
 

@@ -1,4 +1,5 @@
 using QuanLyKho.Web.Areas.HangHoa.Services;
+using QuanLyKho.Web.Contracts;
 using QuanLyKho.Web.Data;
 using QuanLyKho.Web.Infrastructure.Menu;
 
@@ -46,6 +47,22 @@ public static class HangHoaModule
 
         services.AddScoped<ISanPhamQuanLy, SanPhamService>();
         services.AddScoped<IBienTheQuanLy, BienTheService>();
+
+        // ---- Lô hàng (việc T3-3) ----
+        services.AddSingleton<BoNhoLoHangStore>();
+        services.AddScoped<ILoHangStore>(sp =>
+        {
+            var db = sp.GetService<KhoDbContext>();
+            if (db is not null) return new EfLoHangStore(db);
+
+            var moiTruong = sp.GetService<IHostEnvironment>();
+            if (moiTruong is null || moiTruong.IsDevelopment()) return sp.GetRequiredService<BoNhoLoHangStore>();
+            throw new InvalidOperationException("Chưa cấu hình ConnectionStrings:KhoDb nên không có nơi lưu lô hàng.");
+        });
+        services.AddScoped<IDbSeeder, LoHangSeeder>();
+
+        services.AddScoped<ILoHangQuanLy, LoHangService>();
+        services.AddScoped<IHangHoaService, HangHoaService>();   // thay bản giả HangHoaServiceStub (đăng ký sau cùng thắng)
 
         return services;
     }

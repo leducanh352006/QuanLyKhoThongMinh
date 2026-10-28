@@ -15,11 +15,16 @@ internal sealed class MoiTruongSanPhamThu
     public DanhMucService DanhMuc { get; }
     public SanPhamService SanPham { get; }
     public BienTheService BienThe { get; }
+    public BoNhoLoHangStore LoStore { get; } = new();
+    public LoHangService LoHang { get; }
+    public HangHoaService HangHoa { get; }
 
     public MoiTruongSanPhamThu()
     {
         DanhMuc = new DanhMucService(new BoNhoHangHoaStore(), NhatKy);
         SanPham = new SanPhamService(Store, DanhMuc, NhatKy);
         BienThe = new BienTheService(Store, NhatKy);
+        LoHang = new LoHangService(LoStore);
+        HangHoa = new HangHoaService(LoStore, Store);
     }
 }

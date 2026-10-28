@@ -1,0 +1,20 @@
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+<header class="trang-dau">
+    <h1>Lô hàng</h1>
+    <p class="mota">Sản phẩm <strong>@ViewData["TenSP"]</strong>.</p>
+</header>
+
+<form method="get" asp-action="Index" class="mb-3 d-flex flex-wrap align-items-end gap-2">
+    <div>
+        <label for="chonSanPham" class="form-label">Sản phẩm</label>
+        <select id="chonSanPham" name="maSP" class="form-select" onchange="this.form.submit()"
+                asp-items="@((IEnumerable<SelectListItem>)ViewData["DanhSachSanPham"]!)"></select>
+    </div>
+    <noscript><button type="submit" class="btn btn-outline-secondary">Xem</button></noscript>
+</form>
+
+<div class="khung-trong">
+    <h2>Sản phẩm chưa có biến thể nào</h2>
+    <p>Vào mục Biến thể để thêm size, màu... cho sản phẩm này, sau đó quay lại đây để xem lô hàng.</p>
+</div>

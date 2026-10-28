@@ -11,7 +11,6 @@ namespace QuanLyKho.Web.Areas.NhapKho.Models
     {
         public const string Nhap = "Nháp";
         public const string DaXacNhan = "Đã xác nhận";
-        public const string DaKiemTra = "Đã kiểm tra";
 
         public int MaPN { get; set; }
 
@@ -23,7 +22,9 @@ namespace QuanLyKho.Web.Areas.NhapKho.Models
 
         public int MaKho { get; set; }
 
-        public int? MaNCC { get; set; }                              // null chỉ với phiếu nháp từ gợi ý G3 (làm sau)
+        public int? MaNCC { get; set; }                              // null chỉ với phiếu nháp từ gợi ý G3 (quản lý kho chọn khi duyệt)
+
+        public int? MaPK { get; set; }                               // phiếu kiểm sinh ra phiếu Thừa do kiểm kê (T1-8); các loại khác để null
 
         public int MaNguoiLap { get; set; }
 
@@ -45,6 +46,10 @@ namespace QuanLyKho.Web.Areas.NhapKho.Models
         /// </summary>
         public static string MaLo(string soPhieu, int stt) => $"LO-{soPhieu}-{stt:D2}";
 
+        /// <summary>Phiếu do hệ thống tự sinh khi quản lý kho duyệt kiểm kê (T1-8): tự hoàn tất, không qua kiểm tra và sắp xếp.</summary>
+        public const string LoaiThua = "Thừa do kiểm kê";
+        public const string HoanTat = "Hoàn tất";
+
         /// <summary>Quy tắc không cần CSDL (Bảng 2.3 dòng 1). Trả về lỗi, hoặc null nếu hợp lệ.</summary>
         public string? KiemTra()
         {
@@ -59,31 +64,13 @@ namespace QuanLyKho.Web.Areas.NhapKho.Models
         }
     }
 
-    /// <summary>Một dòng hàng của phiếu nhập (Bảng 2.22). Bốn cột sau cùng do việc T1-2 (kiểm tra hàng nhập) điền.</summary>
+    /// <summary>Một dòng hàng của phiếu nhập. Các cột kiểm tra hàng (lô, thực nhận...) thêm ở việc T1-2.</summary>
     public class ChiTietPhieuNhap
     {
         public int MaCTN { get; set; }
         public int MaPN { get; set; }
         public int MaBT { get; set; }
         public int SLDuKien { get; set; }
-
-        public int? MaLo { get; set; }          // null đến khi tiếp nhận
-
-        public int? SLThucNhan { get; set; }    // null đến khi kiểm; SLThucNhan trừ SLDat là số không đạt
-
-        public int? SLDat { get; set; }
-
-        public string? LyDoLech { get; set; }
-
-        /// <summary>Quy tắc kiểm tra một dòng khi tiếp nhận (Bảng 2.3 dòng 2), không cần CSDL. Trả về lỗi, hoặc null nếu hợp lệ.</summary>
-        public string? KiemTraKetQua()
-        {
-            if (SLThucNhan is null || SLThucNhan < 0) return "Nhập số thực nhận (từ 0 trở lên).";
-            if (SLDat is null || SLDat < 0 || SLDat > SLThucNhan) return "Số đạt phải từ 0 đến số thực nhận.";
-            if (SLThucNhan != SLDuKien && string.IsNullOrWhiteSpace(LyDoLech)) return "Số thực nhận khác phiếu phải ghi lý do.";
-            if (LyDoLech?.Length > 255) return "Lý do tối đa 255 ký tự.";
-            return null;
-        }
     }
 
     // ---- Cấu hình bảng (EF tự nạp các lớp này) ----
@@ -95,6 +82,7 @@ namespace QuanLyKho.Web.Areas.NhapKho.Models
             b.ToTable("PhieuNhap", t =>
             {
                 t.HasCheckConstraint("CK_PhieuNhap_LoaiPhieu", "[LoaiPhieu] IN (N'Mua hàng', N'Khác', N'Thừa do kiểm kê')");
+                t.HasCheckConstraint("CK_PhieuNhap_ThuaCoPhieuKiem", "([LoaiPhieu] = N'Thừa do kiểm kê' AND [MaPK] IS NOT NULL) OR ([LoaiPhieu] <> N'Thừa do kiểm kê' AND [MaPK] IS NULL)");
                 t.HasCheckConstraint("CK_PhieuNhap_TrangThai", "[TrangThai] IN (N'Nháp', N'Đã xác nhận', N'Đã kiểm tra', N'Hoàn tất', N'Đã hủy')");
             });
             b.HasKey(x => x.MaPN);
@@ -106,6 +94,7 @@ namespace QuanLyKho.Web.Areas.NhapKho.Models
             b.Property(x => x.TrangThai).HasMaxLength(20).IsRequired().HasDefaultValue(PhieuNhap.Nhap);
             b.Ignore(x => x.DaKhoa);
             b.HasIndex(x => new { x.MaKho, x.ThoiGian });
+            b.HasIndex(x => x.MaPK);   // chưa có khóa ngoại tới PhieuKiem vì bảng đó do nhóm Kiểm tra hàng hóa tạo sau
             b.HasOne(x => x.Kho).WithMany().HasForeignKey(x => x.MaKho).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(x => x.NhaCungCap).WithMany().HasForeignKey(x => x.MaNCC).OnDelete(DeleteBehavior.Restrict);
             b.HasOne<NguoiDung>().WithMany().HasForeignKey(x => x.MaNguoiLap).OnDelete(DeleteBehavior.Restrict);
@@ -117,17 +106,8 @@ namespace QuanLyKho.Web.Areas.NhapKho.Models
     {
         public void Configure(EntityTypeBuilder<ChiTietPhieuNhap> b)
         {
-            b.ToTable("ChiTietPhieuNhap", t =>
-            {
-                t.HasCheckConstraint("CK_ChiTietPhieuNhap_SLDuKien", "[SLDuKien] > 0");
-                t.HasCheckConstraint("CK_ChiTietPhieuNhap_SLThucNhan", "[SLThucNhan] >= 0");
-                t.HasCheckConstraint("CK_ChiTietPhieuNhap_SLDat", "[SLDat] >= 0 AND [SLDat] <= [SLThucNhan]");
-                t.HasCheckConstraint("CK_ChiTietPhieuNhap_LyDoLech", "[SLThucNhan] IS NULL OR [SLThucNhan] = [SLDuKien] OR [LyDoLech] IS NOT NULL");
-            });
+            b.ToTable("ChiTietPhieuNhap", t => t.HasCheckConstraint("CK_ChiTietPhieuNhap_SLDuKien", "[SLDuKien] > 0"));
             b.HasKey(x => x.MaCTN);
-            b.Property(x => x.LyDoLech).HasMaxLength(255);
-            // Khóa ngoại kép (MaLo, MaBT) → LoHang (Bảng 2.22) tạo bằng SQL trong migration KiemTraHangNhap, vì EF cần khóa thay thế ở LoHang (Area của nhóm khác).
-            b.HasIndex(x => x.MaLo);
             b.HasOne<BienThe>().WithMany().HasForeignKey(x => x.MaBT).OnDelete(DeleteBehavior.Restrict);
         }
     }

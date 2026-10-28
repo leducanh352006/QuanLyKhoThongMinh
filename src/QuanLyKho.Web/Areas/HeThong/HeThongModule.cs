@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using QuanLyKho.Web.Areas.HeThong.Services;
 using QuanLyKho.Web.Contracts;
+using QuanLyKho.Web.Contracts.Stubs;
 using QuanLyKho.Web.Data;
 using QuanLyKho.Web.Infrastructure.Menu;
 
@@ -50,6 +51,17 @@ public static class HeThongModule
             throw new InvalidOperationException("Chưa cấu hình ConnectionStrings:KhoDb nên không có nơi lưu kho, vị trí. Xem README, mục \"Chạy lần đầu\".");
         });
         services.AddScoped<IDbSeeder, KhoViTriSeeder>();
+        services.AddSingleton<StockServiceStub>();
+        services.AddScoped<IStockService>(sp =>
+        {
+            var db = sp.GetService<KhoDbContext>();
+            if (db is not null) return new StockService(db);
+
+            var moiTruong = sp.GetService<IHostEnvironment>();
+            if (moiTruong is null || moiTruong.IsDevelopment()) return sp.GetRequiredService<StockServiceStub>();
+            throw new InvalidOperationException("Chưa cấu hình ConnectionStrings:KhoDb nên không có nơi lưu tồn kho. Xem README, mục \"Chạy lần đầu\".");
+        });
+        services.AddScoped<IDbSeeder, TonKhoSeeder>();   // T4-4: thay bản giả StockServiceStub, TonKho/BienDongTon qua EF Core
 
         // ---- Nghiệp vụ ----
         services.AddScoped<ITaiKhoanService, TaiKhoanService>();

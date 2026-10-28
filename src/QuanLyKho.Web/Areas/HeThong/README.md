@@ -181,7 +181,7 @@ Không có hợp đồng mới trong `Contracts/`: các nhóm khác chỉ cần 
 
 ## Giới hạn đã biết
 
-- **Xóa cứng chỉ kiểm tồn hiện tại, chưa kiểm lịch sử sổ cái.** `IStockService`/`BienDongTon` (sổ cái) thuộc việc của nhóm Tồn kho, chưa có bản thật khi viết T4-3. Khi bản thật xong, `ViTriService.Xoa` nên kiểm thêm lịch sử `BienDongTon` trước khi cho xóa cứng (xem chú thích trong code).
+- **Xóa cứng chỉ kiểm tồn hiện tại, chưa kiểm lịch sử sổ cái.** `IStockService` đã có bản thật (T4-4, xem mục bên dưới) nhưng `ViTriService.Xoa` vẫn chỉ gọi `LayTonTheoViTri` (tồn hiện tại = 0 thì cho xóa); một ô đã hết tồn nhưng còn lịch sử `BienDongTon` vẫn bị xóa cứng, mất vết. Nêu trong issue #39 nếu cần kiểm thêm lịch sử trước khi xóa.
 - **Sửa vị trí chưa cho đổi cấp hoặc đổi cấp cha** (chỉ sửa tên, loại ô, mã vạch, kích thước). Di chuyển cả nhánh sang cấp cha khác chưa làm, vì phải kiểm lại ràng buộc cấp cho toàn bộ cây con — nêu trong issue #39 nếu cần.
 - **Thêm kho và thêm khu tiếp nhận không chạy trong một giao dịch.** Nếu bước tạo khu tiếp nhận lỗi (rất hiếm, ví dụ trùng mã vạch tự sinh), kho vẫn được tạo và ứng dụng báo rõ để vào màn Vị trí thêm thủ công.
 - **`DangKhoa` (khóa ô khi kiểm kê) chỉ là cột lưu trữ**, T4-3 không có màn hình thao tác cột này — đó là việc của nhóm Kiểm tra hàng hóa qua `ILockService` (đã có bản giả `LockServiceStub`).
@@ -193,3 +193,36 @@ dotnet test --filter "FullyQualifiedName~KhoViTri"
 ```
 
 47 test: thứ tự cấp vị trí (Bảng 2.16), ràng buộc kích thước theo loại ô, khu tiếp nhận tự tạo và không khóa được cái cuối cùng, xóa cứng chỉ khi chưa có tồn, dựng cây và đường dẫn đầy đủ, quy tắc cấu trúc Controller.
+
+# Tồn kho và sổ cái (việc T4-4, issue #35)
+
+Báo cáo: mục 2.8.1 (Tồn kho và sổ cái), Bảng 2.21.
+
+## Đã làm
+
+- Bảng `TonKho` (khóa `MaLo, MaViTri`: `SoLuongTon`, `SoLuongGiu`) và `BienDongTon` (sổ cái, chỉ thêm) qua EF Core Code First, FK tới `LoHang` (Area HangHoa) và `ViTri`/`NguoiDung` (Area này); ràng buộc CHECK khớp Bảng 2.16/2.17 (không âm, giữ không vượt tồn, số lượng sổ cái khác 0, miền giá trị LoaiBienDong/LoaiCT).
+- `StockService : IStockService` (`Areas/HeThong/Services/StockService.cs`) thay `StockServiceStub` khi đã cấu hình `ConnectionStrings:KhoDb` (giống mẫu `IKhoViTriStore` ở T4-3); môi trường Development chưa cấu hình DB vẫn dùng `StockServiceStub`.
+- Mỗi lần đổi tồn là một giao dịch (tham gia giao dịch của nơi gọi nếu đã mở sẵn trên cùng `KhoDbContext`), ghi đúng một dòng `BienDongTon` (hai dòng với `ChuyenO`) cùng lúc với `TonKho`.
+- **Chống tranh chấp:** khóa lạc quan trên `TonKho.PhienBan` (rowversion) — câu UPDATE của EF luôn kèm điều kiện "còn đúng phiên bản vừa đọc"; thao tác thua thử lại tối đa 5 lần với số liệu mới nhất. Đã kiểm tay: 20 luồng cùng giữ chỗ 1 đơn vị trên tồn 10 cho ra đúng 10 thành công, 10 bị từ chối, không âm.
+- **Chống ghi hai lần khi bị gọi lại:** trước khi ghi `GhiTang`/`GhiGiam`/`ChuyenO`, kiểm sổ cái đã có đúng dòng (chứng từ, loại biến động, lô, ô, số lượng) chưa; có rồi thì trả thành công mà không ghi lại.
+- Hàng ở ô loại Tiếp nhận: `IStockService` không tự loại trừ loại ô khi tính tồn (đúng như bản giả) — nhóm Nhập kho chịu trách nhiệm không gọi `GhiTang` vào `available` cho tới khi hàng đã sắp xếp (xem báo cáo mục 2.8.1); `LayTonTheoViTri`/`DoiChieuSoCai` trả đúng số đã ghi, không ẩn ô Tiếp nhận.
+- `TonKhoSeeder` (`ThuTu = 6`, chạy sau `LoHangSeeder`) nạp tồn mẫu kèm một dòng `BienDongTon` loại Nhận hàng (chứng từ giả NK số 0) cho mỗi dòng, để sổ cái khớp `TonKho` ngay từ đầu.
+- Thêm migration `LoHangBangThat` tách riêng: bảng `LoHang` (T3-3) có cấu hình Entity nhưng chưa từng có migration tạo bảng trên `main`; đã tách để không lẫn vào migration của T4-4.
+
+## Các nhóm khác dùng thế nào
+
+Không đổi `IStockService`/`Contracts/Stubs/StockServiceStub` — bản thật thay bản giả qua DI, không ai cần sửa code đang gọi `IStockService`.
+
+## Giới hạn đã biết
+
+- **Không có idempotency key riêng.** Chống ghi hai lần dựa trên so khớp đúng (chứng từ, loại biến động, lô, ô, số lượng) đã có trong sổ cái; hai lời gọi hợp lệ nhưng khác số lượng cho cùng chứng từ (ví dụ sửa số lượng rồi gọi lại) sẽ ghi thêm, không bị coi là trùng.
+- **`GiuCho`/`TraCho` không chống gọi lại trùng** (không ghi sổ cái nên rủi ro thấp hơn, nhưng gọi lại `GiuCho` hai lần sẽ giữ chỗ hai lần nếu nơi gọi không tự kiểm).
+- **Chưa có màn hình** (xem việc Lịch sử biến động tồn, nêu trong issue #35 nếu cần trước).
+
+## Kiểm thử
+
+```
+dotnet test --filter "FullyQualifiedName~StockServiceStub"
+```
+
+17 test hành vi bắt buộc (bản giả phải cư xử như bản thật): giữ/trả chỗ, vượt tồn bị từ chối kèm "cần bao nhiêu, còn bao nhiêu", ghi tăng/giảm đúng sổ cái, giảm từ phần giữ chỗ hoặc từ khả dụng, đổi ô tồn tổng không đổi, 100 luồng giữ chỗ đồng thời không làm tồn âm, đối chiếu sổ cái khớp `TonKho`. Bản thật (`StockService`, EF Core) đã kiểm tay trên SQL Server thật với cùng các tình huống (xem mục "Đã làm" phía trên) vì môi trường kiểm thử của dự án chưa có SQL Server/Sqlite cho các lớp `Ef*`, giống `EfKhoViTriStore` ở T4-3 cũng không có kiểm thử trực tiếp.

@@ -44,6 +44,22 @@
                     <a class="btn btn-sm btn-outline-primary" asp-controller="ViTri" asp-action="Them" asp-route-maKho="@Model.MaKho" asp-route-maViTriCha="@Model.MaViTri">Thêm vị trí con</a>
                 }
                 <a class="btn btn-sm btn-outline-secondary" asp-controller="ViTri" asp-action="Sua" asp-route-id="@Model.MaViTri">Sửa</a>
+                @if (Model.LaO)
+                {
+                    @if (Model.DangKhoa)
+                    {
+                        <form method="post" asp-controller="ViTri" asp-action="MoKhoaKiemKe" asp-route-id="@Model.MaViTri" asp-route-maKho="@Model.MaKho" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-outline-success">Mở khóa kiểm kê</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <form method="post" asp-controller="ViTri" asp-action="KhoaKiemKe" asp-route-id="@Model.MaViTri" asp-route-maKho="@Model.MaKho" class="d-inline"
+                              onsubmit="return confirm('Khóa ô \'@Model.TenViTri\' để kiểm kê? Ô sẽ bị loại khỏi nhập, xuất, chuyển.');">
+                            <button type="submit" class="btn btn-sm btn-outline-warning">Khóa kiểm kê</button>
+                        </form>
+                    }
+                }
                 @if (Model.DangHoatDong)
                 {
                     <form method="post" asp-controller="ViTri" asp-action="Khoa" asp-route-id="@Model.MaViTri" asp-route-maKho="@Model.MaKho" class="d-inline"

@@ -38,6 +38,12 @@ namespace QuanLyKho.Web.Areas.NhapKho.Models
 
         public bool DaKhoa => TrangThai != Nhap;
 
+        /// <summary>
+        /// Mã lô in trên tem của dòng thứ <paramref name="stt"/> (đếm từ 1) của phiếu: LO-NK000001-01. Số phiếu duy nhất nên mã lô duy nhất toàn hệ thống,
+        /// khác kiểu mã tự sinh của HangHoa (LO-yyMM-nnn) nên không trùng. Việc T1-2 tạo lô nên truyền đúng mã này vào IHangHoaService.TaoLo.
+        /// </summary>
+        public static string MaLo(string soPhieu, int stt) => $"LO-{soPhieu}-{stt:D2}";
+
         /// <summary>Quy tắc không cần CSDL (Bảng 2.3 dòng 1). Trả về lỗi, hoặc null nếu hợp lệ.</summary>
         public string? KiemTra()
         {

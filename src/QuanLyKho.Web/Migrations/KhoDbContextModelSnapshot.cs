@@ -585,6 +585,9 @@ namespace QuanLyKho.Web.Migrations
                     b.Property<int>("MaNguoiLap")
                         .HasColumnType("int");
 
+                    b.Property<int?>("MaPK")
+                        .HasColumnType("int");
+
                     b.Property<string>("SoPhieu")
                         .IsRequired()
                         .HasColumnType("varchar(20)");
@@ -607,6 +610,8 @@ namespace QuanLyKho.Web.Migrations
 
                     b.HasIndex("MaNguoiLap");
 
+                    b.HasIndex("MaPK");
+
                     b.HasIndex("SoPhieu")
                         .IsUnique();
 
@@ -615,6 +620,8 @@ namespace QuanLyKho.Web.Migrations
                     b.ToTable("PhieuNhap", null, t =>
                         {
                             t.HasCheckConstraint("CK_PhieuNhap_LoaiPhieu", "[LoaiPhieu] IN (N'Mua hàng', N'Khác', N'Thừa do kiểm kê')");
+
+                            t.HasCheckConstraint("CK_PhieuNhap_ThuaCoPhieuKiem", "([LoaiPhieu] = N'Thừa do kiểm kê' AND [MaPK] IS NOT NULL) OR ([LoaiPhieu] <> N'Thừa do kiểm kê' AND [MaPK] IS NULL)");
 
                             t.HasCheckConstraint("CK_PhieuNhap_TrangThai", "[TrangThai] IN (N'Nháp', N'Đã xác nhận', N'Đã kiểm tra', N'Hoàn tất', N'Đã hủy')");
                         });

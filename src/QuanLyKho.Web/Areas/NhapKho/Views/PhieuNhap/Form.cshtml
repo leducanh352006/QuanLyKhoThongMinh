@@ -1,5 +1,4 @@
-@using QuanLyKho.Web.Areas.NhapKho.Models
-@model PhieuNhap
+@model QuanLyKho.Web.Areas.NhapKho.Models.PhieuNhap
 @{
     // Một form dùng cho cả tạo mới, sửa phiếu nháp và xem phiếu đã khóa.
     var laMoi = Model.MaPN == 0;
@@ -33,7 +32,7 @@
             <div class="col-md-4">
                 <label class="form-label" for="LoaiPhieu">Loại phiếu</label>
                 <select class="form-select" id="LoaiPhieu" name="LoaiPhieu">
-                    @foreach (var loai in new[] { "Mua hàng", "Khác" })
+                    @foreach (var loai in new[] { "Mua hàng", "Khác" }.Union(new[] { Model.LoaiPhieu }))
                     {
                         <option selected="@(Model.LoaiPhieu == loai)">@loai</option>
                     }
@@ -107,7 +106,6 @@
         @if (khoa)
         {
             <a class="btn btn-outline-primary" asp-action="InTem" asp-route-id="@Model.MaPN" target="_blank" rel="noopener">In tem mã</a>
-            <a class="btn btn-outline-primary" asp-action="KiemTra" asp-route-id="@Model.MaPN">@(Model.TrangThai == PhieuNhap.DaXacNhan ? "Kiểm tra hàng nhập" : "Xem kết quả kiểm tra")</a>
         }
         <a class="btn btn-outline-secondary" asp-action="Index">Quay lại danh sách</a>
     </div>

@@ -14,3 +14,6 @@ public sealed record BienTheDong(int MaBT, int MaSP, string MaVach, string Thuoc
 public sealed record BienTheMoi(int MaSP, string MaVach, string ThuocTinh, decimal Dai, decimal Rong, decimal Cao, decimal KhoiLuong);
 
 public sealed record BienTheSuaDoi(string MaVach, string ThuocTinh, decimal Dai, decimal Rong, decimal Cao, decimal KhoiLuong);
+
+/// <summary>Một dòng lô hàng để hiển thị (việc T3-3). DaHetHan tính từ HanDung so với ngày hiện tại (UTC).</summary>
+public sealed record LoHangDong(int MaLo, string MaVachLo, int MaBT, DateOnly? HanDung, bool DaHetHan);

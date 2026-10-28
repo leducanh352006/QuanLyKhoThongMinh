@@ -11,6 +11,7 @@ namespace QuanLyKho.Web.Areas.NhapKho.Models
     {
         public const string Nhap = "Nháp";
         public const string DaXacNhan = "Đã xác nhận";
+        public const string DaKiemTra = "Đã kiểm tra";
 
         public int MaPN { get; set; }
 
@@ -64,13 +65,31 @@ namespace QuanLyKho.Web.Areas.NhapKho.Models
         }
     }
 
-    /// <summary>Một dòng hàng của phiếu nhập. Các cột kiểm tra hàng (lô, thực nhận...) thêm ở việc T1-2.</summary>
+    /// <summary>Một dòng hàng của phiếu nhập (Bảng 2.22). Bốn cột sau cùng do việc T1-2 (kiểm tra hàng nhập) điền.</summary>
     public class ChiTietPhieuNhap
     {
         public int MaCTN { get; set; }
         public int MaPN { get; set; }
         public int MaBT { get; set; }
         public int SLDuKien { get; set; }
+
+        public int? MaLo { get; set; }          // null đến khi tiếp nhận
+
+        public int? SLThucNhan { get; set; }    // null đến khi kiểm; SLThucNhan trừ SLDat là số không đạt
+
+        public int? SLDat { get; set; }
+
+        public string? LyDoLech { get; set; }
+
+        /// <summary>Quy tắc kiểm tra một dòng khi tiếp nhận (Bảng 2.3 dòng 2), không cần CSDL. Trả về lỗi, hoặc null nếu hợp lệ.</summary>
+        public string? KiemTraKetQua()
+        {
+            if (SLThucNhan is null || SLThucNhan < 0) return "Nhập số thực nhận (từ 0 trở lên).";
+            if (SLDat is null || SLDat < 0 || SLDat > SLThucNhan) return "Số đạt phải từ 0 đến số thực nhận.";
+            if (SLThucNhan != SLDuKien && string.IsNullOrWhiteSpace(LyDoLech)) return "Số thực nhận khác phiếu phải ghi lý do.";
+            if (LyDoLech?.Length > 255) return "Lý do tối đa 255 ký tự.";
+            return null;
+        }
     }
 
     // ---- Cấu hình bảng (EF tự nạp các lớp này) ----
@@ -106,8 +125,17 @@ namespace QuanLyKho.Web.Areas.NhapKho.Models
     {
         public void Configure(EntityTypeBuilder<ChiTietPhieuNhap> b)
         {
-            b.ToTable("ChiTietPhieuNhap", t => t.HasCheckConstraint("CK_ChiTietPhieuNhap_SLDuKien", "[SLDuKien] > 0"));
+            b.ToTable("ChiTietPhieuNhap", t =>
+            {
+                t.HasCheckConstraint("CK_ChiTietPhieuNhap_SLDuKien", "[SLDuKien] > 0");
+                t.HasCheckConstraint("CK_ChiTietPhieuNhap_SLThucNhan", "[SLThucNhan] >= 0");
+                t.HasCheckConstraint("CK_ChiTietPhieuNhap_SLDat", "[SLDat] >= 0 AND [SLDat] <= [SLThucNhan]");
+                t.HasCheckConstraint("CK_ChiTietPhieuNhap_LyDoLech", "[SLThucNhan] IS NULL OR [SLThucNhan] = [SLDuKien] OR [LyDoLech] IS NOT NULL");
+            });
             b.HasKey(x => x.MaCTN);
+            b.Property(x => x.LyDoLech).HasMaxLength(255);
+            // Khóa ngoại kép (MaLo, MaBT) → LoHang (Bảng 2.22) tạo bằng SQL trong migration KiemTraHangNhap, vì EF cần khóa thay thế ở LoHang (Area của nhóm khác).
+            b.HasIndex(x => x.MaLo);
             b.HasOne<BienThe>().WithMany().HasForeignKey(x => x.MaBT).OnDelete(DeleteBehavior.Restrict);
         }
     }

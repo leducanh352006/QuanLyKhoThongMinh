@@ -23,8 +23,8 @@
                 {
                     <li>
                         <a asp-area="@muc.Area" asp-controller="@muc.Controller" asp-action="@muc.Action">
-                            <span class="viec-ten">@nhom.Ten</span>
-                            <span class="viec-mota">@muc.MoTa</span>
+                            <span class="viec-ten">@muc.Ten</span>
+                            <span class="viec-mota">@nhom.Ten · @muc.MoTa</span>
                         </a>
                     </li>
                 }
@@ -72,7 +72,7 @@
     <section class="mt-4 ghi-chu-dev" aria-labelledby="tieuDeDev">
         <h2 id="tieuDeDev" class="h6">Dành cho nhóm phát triển</h2>
         <p>
-                        Đăng nhập bằng từng tài khoản mẫu (<code>quantri</code>, <code>quanlykho</code>, <code>thukho</code>, <code>nhanvienbh</code>) để xem menu của từng vai trò.
+            Đăng nhập bằng từng tài khoản mẫu (<code>quantri</code>, <code>quanlykho</code>, <code>thukho</code>, <code>nhanvienbh</code>) để xem menu của từng vai trò.
             Mật khẩu mẫu đặt bằng User Secrets <code>Auth:SeedPassword</code>, xem <code>Areas/HeThong/README.md</code>.
             <a asp-area="HeThong" asp-controller="ThuNghiem" asp-action="QuetMa">Thử thành phần quét mã</a>.
         </p>

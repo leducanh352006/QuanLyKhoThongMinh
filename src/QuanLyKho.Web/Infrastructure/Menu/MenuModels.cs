@@ -19,4 +19,5 @@ public interface IMenuNguon
 }
 
 /// <summary>Menu đã lọc theo vai trò, kèm Area đang mở để tô sáng.</summary>
-public sealed record MenuViewModel(IReadOnlyList<MenuNhom> Nhom, string? AreaHienTai, bool DangODauTrang);
+/// <summary>Mục đang chọn khớp cả Area lẫn Controller (cùng Area có nhiều mục, chỉ tô đúng một).</summary>
+public sealed record MenuViewModel(IReadOnlyList<MenuNhom> Nhom, string? AreaHienTai, bool DangODauTrang, string? ControllerHienTai = null);

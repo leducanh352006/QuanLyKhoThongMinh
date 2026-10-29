@@ -22,7 +22,7 @@ public sealed class StockService(KhoDbContext db) : IStockService
     public Task<KetQua> GiuCho(DongTon dong, CancellationToken ct = default) =>
         ThuLai(async () =>
         {
-            var loi = await KiemTraDong(dong, ct, chanKhoa: true);
+            var loi = await KiemTraDong(dong, ct, chanKhoa: true, chanTiepNhan: true);
             if (loi is not null) return loi;
 
             var ton = await LayHoacTaoTon(dong.MaLo, dong.MaViTri, ct);
@@ -52,7 +52,7 @@ public sealed class StockService(KhoDbContext db) : IStockService
     public Task<KetQua> GhiTang(DongTon dong, LoaiBienDong loai, ThamChieuChungTu chungTu, int maND, CancellationToken ct = default) =>
         ThuLai(async () =>
         {
-            var loi = await KiemTraDong(dong, ct, chanKhoa: chungTu.Loai != LoaiChungTu.KK);
+            var loi = await KiemTraDong(dong, ct, chanKhoa: chungTu.Loai != LoaiChungTu.KK, canHoatDong: true);
             if (loi is not null) return loi;
             if (await DaGhi(dong.MaLo, dong.MaViTri, dong.SoLuong, loai, chungTu, ct)) return KetQua.Ok();
 
@@ -66,7 +66,8 @@ public sealed class StockService(KhoDbContext db) : IStockService
     public Task<KetQua> GhiGiam(DongTon dong, LoaiBienDong loai, ThamChieuChungTu chungTu, int maND, bool tuGiuCho = false, CancellationToken ct = default) =>
         ThuLai(async () =>
         {
-            var loi = await KiemTraDong(dong, ct, chanKhoa: chungTu.Loai != LoaiChungTu.KK);
+            var loi = await KiemTraDong(dong, ct, chanKhoa: chungTu.Loai != LoaiChungTu.KK,
+                chanTiepNhan: loai is LoaiBienDong.XuatKho or LoaiBienDong.ChuyenDi);
             if (loi is not null) return loi;
             if (await DaGhi(dong.MaLo, dong.MaViTri, -dong.SoLuong, loai, chungTu, ct)) return KetQua.Ok();
 
@@ -97,7 +98,7 @@ public sealed class StockService(KhoDbContext db) : IStockService
 
             var chanKhoa = chungTu.Loai != LoaiChungTu.KK;
             var loi = await KiemTraDong(new DongTon(maLo, maViTriNguon, soLuong), ct, chanKhoa)
-                      ?? await KiemTraDong(new DongTon(maLo, maViTriDich, soLuong), ct, chanKhoa);
+                      ?? await KiemTraDong(new DongTon(maLo, maViTriDich, soLuong), ct, chanKhoa, canHoatDong: true);
             if (loi is not null) return loi;
             if (await DaGhi(maLo, maViTriNguon, -soLuong, LoaiBienDong.DoiO, chungTu, ct)) return KetQua.Ok();
 
@@ -181,8 +182,12 @@ public sealed class StockService(KhoDbContext db) : IStockService
         db.BienDongTon.AnyAsync(b => b.MaLo == maLo && b.MaViTri == maViTri && b.SoLuong == soLuong
             && b.LoaiBienDong == loai.ToCsdl() && b.LoaiCT == chungTu.Loai.ToCsdl() && b.MaCT == chungTu.MaCT, ct);
 
-    /// <summary><paramref name="chanKhoa"/> = true: từ chối ô đang khóa kiểm kê (ILockService).</summary>
-    private async Task<KetQua?> KiemTraDong(DongTon d, CancellationToken ct, bool chanKhoa = false)
+    /// <summary>
+    /// <paramref name="chanKhoa"/>: từ chối ô đang khóa kiểm kê (ILockService). <paramref name="canHoatDong"/>: ô nhận hàng phải đang hoạt động
+    /// (ô đã khóa mềm không nhận thêm hàng). <paramref name="chanTiepNhan"/>: hàng ở ô Tiếp nhận chưa tính vào tồn khả dụng (chưa kiểm, chưa xếp)
+    /// nên không giữ chỗ, xuất bán hay chuyển kho từ đó; muốn đưa vào kệ thì dùng <see cref="ChuyenO"/>.
+    /// </summary>
+    private async Task<KetQua?> KiemTraDong(DongTon d, CancellationToken ct, bool chanKhoa = false, bool canHoatDong = false, bool chanTiepNhan = false)
     {
         if (d.SoLuong <= 0)
             return KetQua.Loi("Số lượng phải lớn hơn 0.", MaLoiDichVu.DuLieuKhongHopLe);
@@ -194,6 +199,10 @@ public sealed class StockService(KhoDbContext db) : IStockService
             return KetQua.Loi($"Hàng chỉ được để ở ô, '{vt.TenViTri}' là cấp {vt.CapViTri}.", MaLoiDichVu.DuLieuKhongHopLe);
         if (chanKhoa && vt.DangKhoa)
             return KetQua.Loi($"Ô '{vt.TenViTri}' đang bị khóa để kiểm kê.", MaLoiDichVu.OBiKhoa);
+        if (canHoatDong && !vt.DangHoatDong)
+            return KetQua.Loi($"Ô '{vt.TenViTri}' đã ngừng hoạt động, không nhận thêm hàng.", MaLoiDichVu.DuLieuKhongHopLe);
+        if (chanTiepNhan && vt.LoaiViTri == LoaiViTriGiaTri.TiepNhan)
+            return KetQua.Loi($"Hàng ở '{vt.TenViTri}' (khu tiếp nhận) chưa sẵn sàng xuất: phải kiểm và xếp lên kệ trước.", MaLoiDichVu.VuotTon);
 
         return null;
     }

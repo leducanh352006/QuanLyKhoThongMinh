@@ -214,23 +214,82 @@ public class ViTriServiceTests
         Assert.True((await e.ViTri.DatTrangThai(7, false, MoiTruongKhoThu.MaNguoiThucHien)).ThanhCong);
     }
 
+    private static async Task<int> TaoORong(MoiTruongKhoThu e, string ten, string maVach)
+    {
+        Assert.True((await e.ViTri.Them(MoiOLuuTru(ten, 5, maVach), MoiTruongKhoThu.MaNguoiThucHien)).ThanhCong);   // dưới Kệ A2
+        return (await e.ViTri.LayCay(MoiTruongKhoThu.MaKho1)).GiaTri!.Single(v => v.TenViTri == "Dãy A")
+            .Con.Single(v => v.TenViTri == "Kệ A2").Con.Single(v => v.TenViTri == ten).MaViTri;
+    }
+
     [Fact]
-    public async Task Khoa_OLuuTru_KhongVuongKhuTiepNhan_Duoc()
+    public async Task Khoa_OLuuTruRong_KhongVuongKhuTiepNhan_Duoc()
     {
         var e = new MoiTruongKhoThu();
-        var kq = await e.ViTri.DatTrangThai(6, false, MoiTruongKhoThu.MaNguoiThucHien);   // Ô A2-01, không phải khu tiếp nhận
+        var ma = await TaoORong(e, "Ô rỗng", "O-RONG-1");
+        var kq = await e.ViTri.DatTrangThai(ma, false, MoiTruongKhoThu.MaNguoiThucHien);
         Assert.True(kq.ThanhCong, kq.ThongBao);
-        Assert.False((await e.ViTri.LayMot(6))!.DangHoatDong);
+        Assert.False((await e.ViTri.LayMot(ma))!.DangHoatDong);
+    }
+
+    [Fact]
+    public async Task Khoa_OConHang_BiTuChoi()
+    {
+        var e = new MoiTruongKhoThu();
+        var kq = await e.ViTri.DatTrangThai(6, false, MoiTruongKhoThu.MaNguoiThucHien);   // Ô A2-01 còn 60 tai nghe
+        Assert.False(kq.ThanhCong);
+        Assert.Contains("còn 60 hàng", kq.ThongBao);
+        Assert.True((await e.ViTri.LayMot(6))!.DangHoatDong);
     }
 
     [Fact]
     public async Task Khoa_VaMoLai_GhiNhatKy()
     {
         var e = new MoiTruongKhoThu();
-        await e.ViTri.DatTrangThai(4, false, MoiTruongKhoThu.MaNguoiThucHien);   // Ô A1-02
+        var ma = await TaoORong(e, "Ô rỗng", "O-RONG-2");
+        Assert.True((await e.ViTri.DatTrangThai(ma, false, MoiTruongKhoThu.MaNguoiThucHien)).ThanhCong);
         Assert.Contains(e.NhatKy.Dong, d => d.HanhDong == "Khóa vị trí");
-        await e.ViTri.DatTrangThai(4, true, MoiTruongKhoThu.MaNguoiThucHien);
+        Assert.True((await e.ViTri.DatTrangThai(ma, true, MoiTruongKhoThu.MaNguoiThucHien)).ThanhCong);
         Assert.Contains(e.NhatKy.Dong, d => d.HanhDong == "Mở lại vị trí");
+    }
+
+    [Fact]
+    public async Task ThemHoacMoLai_DuoiCapChaNgungHoatDong_BiTuChoi()
+    {
+        var e = new MoiTruongKhoThu();
+        // Tạo kệ mới có một ô rỗng, khóa ô rồi khóa kệ; sau đó thử thêm và mở lại con của kệ đã khóa.
+        Assert.True((await e.ViTri.Them(new ViTriMoi("Kệ A9", MoiTruongKhoThu.MaKho1, 1, "Kệ"), MoiTruongKhoThu.MaNguoiThucHien)).ThanhCong);
+        var ke = (await e.ViTri.LayCay(MoiTruongKhoThu.MaKho1)).GiaTri!.Single(v => v.TenViTri == "Dãy A").Con.Single(v => v.TenViTri == "Kệ A9");
+        Assert.True((await e.ViTri.Them(MoiOLuuTru("Ô A9-01", ke.MaViTri, "O-A9-01"), MoiTruongKhoThu.MaNguoiThucHien)).ThanhCong);
+        var o = (await e.ViTri.LayMot(ke.MaViTri))!.Con.Single();
+        Assert.True((await e.ViTri.DatTrangThai(o.MaViTri, false, MoiTruongKhoThu.MaNguoiThucHien)).ThanhCong);
+        Assert.True((await e.ViTri.DatTrangThai(ke.MaViTri, false, MoiTruongKhoThu.MaNguoiThucHien)).ThanhCong);
+
+        var them = await e.ViTri.Them(MoiOLuuTru("Ô A9-02", ke.MaViTri, "O-A9-02"), MoiTruongKhoThu.MaNguoiThucHien);
+        Assert.False(them.ThanhCong);
+        Assert.Contains("ngừng hoạt động", them.ThongBao);
+        var moLai = await e.ViTri.DatTrangThai(o.MaViTri, true, MoiTruongKhoThu.MaNguoiThucHien);
+        Assert.False(moLai.ThanhCong);
+        Assert.Contains("Cấp cha", moLai.ThongBao);
+    }
+
+    [Fact]
+    public async Task Them_TrongKhoNgungHoatDong_BiTuChoi()
+    {
+        var e = new MoiTruongKhoThu();
+        Assert.True((await e.Kho.DatTrangThai(MoiTruongKhoThu.MaKho2, false, MoiTruongKhoThu.MaNguoiThucHien)).ThanhCong);
+        var kq = await e.ViTri.Them(new ViTriMoi("Dãy Z", MoiTruongKhoThu.MaKho2, null, "Dãy"), MoiTruongKhoThu.MaNguoiThucHien);
+        Assert.False(kq.ThanhCong);
+        Assert.Contains("ngừng hoạt động", kq.ThongBao);
+    }
+
+    [Fact]
+    public async Task Sua_DoiKhuTiepNhanCuoiCungSangLuuTru_BiTuChoi()
+    {
+        var e = new MoiTruongKhoThu();
+        var kq = await e.ViTri.Sua(7, new ViTriSuaDoi("Khu tiếp nhận", "Lưu trữ", "O-K1-TN", 100, 100, 100, 50), MoiTruongKhoThu.MaNguoiThucHien);
+        Assert.False(kq.ThanhCong);
+        Assert.Contains("khu tiếp nhận", kq.ThongBao);
+        Assert.Equal("Tiếp nhận", (await e.ViTri.LayMot(7))!.LoaiViTri);
     }
 
     [Fact]

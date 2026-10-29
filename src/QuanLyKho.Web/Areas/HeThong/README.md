@@ -168,8 +168,9 @@ Báo cáo: Bảng 2.20 (Kho, ViTri), mục 2.8.1 (vị trí nhiều cấp; kích
 - Cây vị trí nhiều cấp (`ViTriController`, `ViTriService`): thêm, sửa, khóa (xóa mềm), xóa cứng. Cấp con phải thấp hơn cấp cha và được phép bỏ qua cấp (seed "Khu tiếp nhận" là một ví dụ: một ô gốc, không qua Dãy/Kệ).
 - Đường dẫn đầy đủ (`Kho ▷ Dãy A ▷ Kệ A1 ▷ Ô A1-01`) hiện **ngay trên cây**, không chỉ ở trang Sửa.
 - Ràng buộc đã cài, khớp CHECK ở Bảng 2.20: chỉ ô có `LoaiViTri`, `MaVachO`, kích thước; ô Lưu trữ bắt buộc đủ 4 kích thước dương; ô Tiếp nhận và các cấp khác để trống các cột đó.
-- Không khóa (xóa mềm) được khu tiếp nhận hoạt động cuối cùng của một kho, và không khóa được vị trí còn con đang hoạt động.
-- Xóa cứng chỉ khi không còn vị trí con, và nếu là ô thì phải chưa có tồn hiện tại (qua `IStockService.LayTonTheoViTri`) — xem mục "Giới hạn đã biết" bên dưới.
+- Không khóa (xóa mềm) được khu tiếp nhận hoạt động cuối cùng của một kho (kể cả đổi nó sang Lưu trữ khi sửa), không khóa được vị trí còn con đang hoạt động hoặc ô còn hàng; không thêm vị trí vào kho hoặc cấp cha đang ngừng hoạt động, không mở lại vị trí khi cấp cha đang ngừng.
+- Xóa cứng chỉ khi không còn vị trí con, nếu là ô thì chưa có tồn hiện tại, và không có dữ liệu nào tham chiếu tới (sổ cái, dòng tồn, phiếu, gợi ý): khóa ngoại của CSDL chặn và màn hình báo rõ, không lỗi 500.
+- Thủ kho chỉ xem cây vị trí: thêm, sửa, khóa, mở lại, khóa/mở kiểm kê, xóa đều chặn ở máy chủ cho Quản trị viên và Quản lý kho.
 
 ## Cấu trúc dữ liệu
 
@@ -181,7 +182,6 @@ Không có hợp đồng mới trong `Contracts/`: các nhóm khác chỉ cần 
 
 ## Giới hạn đã biết
 
-- **Xóa cứng chỉ kiểm tồn hiện tại, chưa kiểm lịch sử sổ cái.** `IStockService` đã có bản thật (T4-4, xem mục bên dưới) nhưng `ViTriService.Xoa` vẫn chỉ gọi `LayTonTheoViTri` (tồn hiện tại = 0 thì cho xóa); một ô đã hết tồn nhưng còn lịch sử `BienDongTon` vẫn bị xóa cứng, mất vết. Nêu trong issue #39 nếu cần kiểm thêm lịch sử trước khi xóa.
 - **Sửa vị trí chưa cho đổi cấp hoặc đổi cấp cha** (chỉ sửa tên, loại ô, mã vạch, kích thước). Di chuyển cả nhánh sang cấp cha khác chưa làm, vì phải kiểm lại ràng buộc cấp cho toàn bộ cây con — nêu trong issue #39 nếu cần.
 - **Thêm kho và thêm khu tiếp nhận không chạy trong một giao dịch.** Nếu bước tạo khu tiếp nhận lỗi (rất hiếm, ví dụ trùng mã vạch tự sinh), kho vẫn được tạo và ứng dụng báo rõ để vào màn Vị trí thêm thủ công.
 - **`DangKhoa` (khóa ô khi kiểm kê) chỉ là cột lưu trữ**, T4-3 không có màn hình thao tác cột này — đó là việc của nhóm Kiểm tra hàng hóa qua `ILockService` (đã có bản giả `LockServiceStub`).
@@ -205,7 +205,7 @@ Báo cáo: mục 2.8.1 (Tồn kho và sổ cái), Bảng 2.21.
 - Mỗi lần đổi tồn là một giao dịch (tham gia giao dịch của nơi gọi nếu đã mở sẵn trên cùng `KhoDbContext`), ghi đúng một dòng `BienDongTon` (hai dòng với `ChuyenO`) cùng lúc với `TonKho`.
 - **Chống tranh chấp:** khóa lạc quan trên `TonKho.PhienBan` (rowversion) — câu UPDATE của EF luôn kèm điều kiện "còn đúng phiên bản vừa đọc"; thao tác thua thử lại tối đa 5 lần với số liệu mới nhất. Đã kiểm tay: 20 luồng cùng giữ chỗ 1 đơn vị trên tồn 10 cho ra đúng 10 thành công, 10 bị từ chối, không âm.
 - **Chống ghi hai lần khi bị gọi lại:** trước khi ghi `GhiTang`/`GhiGiam`/`ChuyenO`, kiểm sổ cái đã có đúng dòng (chứng từ, loại biến động, lô, ô, số lượng) chưa; có rồi thì trả thành công mà không ghi lại.
-- Hàng ở ô loại Tiếp nhận: `IStockService` không tự loại trừ loại ô khi tính tồn (đúng như bản giả) — nhóm Nhập kho chịu trách nhiệm không gọi `GhiTang` vào `available` cho tới khi hàng đã sắp xếp (xem báo cáo mục 2.8.1); `LayTonTheoViTri`/`DoiChieuSoCai` trả đúng số đã ghi, không ẩn ô Tiếp nhận.
+- Hàng ở ô loại Tiếp nhận chưa tính vào tồn khả dụng: `GiuCho` và `GhiGiam` loại Xuất kho, Chuyển đi từ ô Tiếp nhận bị từ chối (bản thật và bản giả); muốn đưa lên kệ thì `ChuyenO`. Ô đã ngừng hoạt động không nhận thêm hàng (`GhiTang`, ô đích của `ChuyenO`). `LayTonTheoViTri`, `DoiChieuSoCai` vẫn trả đúng số đã ghi ở mọi ô.
 - `TonKhoSeeder` (`ThuTu = 6`, chạy sau `LoHangSeeder`) nạp tồn mẫu kèm một dòng `BienDongTon` loại Nhận hàng (chứng từ giả NK số 0) cho mỗi dòng, để sổ cái khớp `TonKho` ngay từ đầu.
 - Thêm migration `LoHangBangThat` tách riêng: bảng `LoHang` (T3-3) có cấu hình Entity nhưng chưa từng có migration tạo bảng trên `main`; đã tách để không lẫn vào migration của T4-4.
 

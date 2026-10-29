@@ -1,0 +1,21 @@
+@model (QuanLyKho.Web.Contracts.LoaiGoiY Loai, IReadOnlyList<QuanLyKho.Web.Areas.HeThong.Controllers.GoiYKhungViewModel> GoiY)
+@using QuanLyKho.Web.Areas.HeThong.Services
+
+<section class="mt-4" aria-labelledby="duyetGoiY@(Model.Loai)">
+    <h2 id="duyetGoiY@(Model.Loai)" class="h5">Gợi ý AI: @QuyTacGoiY.Ten(Model.Loai)</h2>
+    @if (TempData["GoiYThongBao"] is string tb) { <div class="alert alert-success" role="status">@tb</div> }
+    @if (TempData["GoiYLoi"] is string loi) { <div class="alert alert-danger" role="alert">@loi</div> }
+
+    @if (Model.GoiY.Count == 0)
+    {
+        <p class="text-secondary">Không có gợi ý AI đang chờ cho mục này. Bạn làm tay bình thường.</p>
+    }
+    else
+    {
+        <p class="text-secondary small">Đây là đề xuất, chưa có hiệu lực cho tới khi được duyệt. Thao tác chạm hàng thật vẫn do thủ kho quét mã.</p>
+        @foreach (var k in Model.GoiY)
+        {
+            <partial name="~/Areas/HeThong/Views/Shared/_GoiYKhung.cshtml" model="k" />
+        }
+    }
+</section>

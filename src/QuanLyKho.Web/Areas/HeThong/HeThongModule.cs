@@ -83,6 +83,26 @@ public static class HeThongModule
         });
         services.AddScoped<INguoiDungHienTai, NguoiDungHienTaiService>();   // đăng ký sau AddKhoInfrastructure nên thay bản giả Development
 
+        // T4-8: khung gợi ý AI. Bản thật của IGoiYService thay GoiYServiceStub; chưa có CSDL thì (chỉ Development) lưu trong bộ nhớ.
+        services.AddSingleton<BoNhoGoiYStore>();
+        services.AddScoped<IGoiYStore>(sp =>
+        {
+            var db = sp.GetService<KhoDbContext>();
+            if (db is not null) return new EfGoiYStore(db);
+
+            var moiTruong = sp.GetService<IHostEnvironment>();
+            if (moiTruong is null || moiTruong.IsDevelopment()) return sp.GetRequiredService<BoNhoGoiYStore>();
+            throw new InvalidOperationException("Chưa cấu hình ConnectionStrings:KhoDb nên không có nơi lưu gợi ý AI. Xem README, mục \"Chạy lần đầu\".");
+        });
+        services.AddScoped<GoiYService>();
+        services.AddScoped<IGoiYService>(sp => sp.GetRequiredService<GoiYService>());
+        services.AddScoped<IGoiYQuanLy>(sp => sp.GetRequiredService<GoiYService>());
+        // Gợi ý mẫu và handler mẫu để các nhóm thử: handler mẫu chỉ bật ở Development và luôn nhường handler thật của nhóm sở hữu.
+        services.AddSingleton<ThaoTacMauStore>();
+        foreach (var loai in Enum.GetValues<LoaiGoiY>())
+            services.AddScoped<IGoiYHandler>(sp => ActivatorUtilities.CreateInstance<GoiYHandlerMau>(sp, loai));
+        services.AddScoped<GoiYMauService>();
+
         // ---- Đăng nhập và phân quyền ----
         XacThucCookie.DangKy(services);
         services.AddAuthorization(o => o.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());

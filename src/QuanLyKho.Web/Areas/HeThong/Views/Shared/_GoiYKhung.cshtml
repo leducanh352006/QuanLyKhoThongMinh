@@ -1,0 +1,149 @@
+@model QuanLyKho.Web.Areas.HeThong.Controllers.GoiYKhungViewModel
+@using QuanLyKho.Web.Areas.HeThong.Services
+@using QuanLyKho.Web.Contracts
+@{
+    var g = Model.GoiY;
+    var id = $"gy{g.MaGoiY}";
+    string Gio(DateTime utc) => TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), TimeZoneInfo.Local).ToString("dd/MM/yyyy HH:mm");
+    string ViTriHang(ChiTietGoiYDto c)
+    {
+        var phan = new List<string> { $"Biến thể #{c.MaBT}" };
+        if (c.MaLo is int lo) phan.Add($"lô #{lo}");
+        if (c.MaViTri is int vt) phan.Add($"ô #{vt}");
+        if (c.MaKhoNguon is int kn && c.MaKhoDich is int kd) phan.Add($"kho #{kn} → kho #{kd}");
+        else if (c.MaKhoNguon is int kn2) phan.Add($"từ kho #{kn2}");
+        else if (c.MaKhoDich is int kd2) phan.Add($"cho kho #{kd2}");
+        return string.Join(", ", phan);
+    }
+    var (nhan, lop) = g.TrangThai switch
+    {
+        TrangThaiGoiY.ChoDuyet => ("Chờ duyệt", "nhan-chu-y"),
+        TrangThaiGoiY.TuChoi => ("Từ chối", "nhan-loi"),
+        _ => (g.TrangThai.ToCsdl(), "nhan-tot"),
+    };
+    var phieu = g.ThamChieu.MaPX is int px ? $"Phiếu xuất #{px}" : g.ThamChieu.MaPN is int pn ? $"Phiếu nhập #{pn}" : g.ThamChieu.MaPC is int pc ? $"Phiếu chuyển #{pc}" : null;
+    var choDuyet = g.TrangThai == TrangThaiGoiY.ChoDuyet;
+}
+
+<article class="card mb-3" aria-labelledby="@(id)Tieu">
+    <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+            <div>
+                <h3 id="@(id)Tieu" class="h6 mb-1">
+                    <span class="badge text-bg-secondary">Gợi ý AI · @g.Loai</span>
+                    <a asp-area="HeThong" asp-controller="GoiY" asp-action="ChiTiet" asp-route-id="@g.MaGoiY">#@g.MaGoiY</a>
+                    @QuyTacGoiY.Ten(g.Loai)
+                </h3>
+                <p class="text-secondary small mb-0">
+                    Tạo lúc @Gio(g.ThoiGianTaoUtc)@(phieu is null ? "" : $" · {phieu}")
+                    @if (g.ThoiGianDuyetUtc is DateTime duyet)
+                    {
+                        <text> · Xử lý lúc @Gio(duyet) bởi người dùng #@g.MaNguoiDuyet</text>
+                    }
+                </p>
+            </div>
+            <span class="nhan @lop">@nhan</span>
+        </div>
+
+        <div class="bang-cuon mt-2">
+            <table class="table table-sm align-middle mb-2">
+                <caption class="visually-hidden">Các dòng đề xuất @(g.TrangThai == TrangThaiGoiY.DaSuaVaDuyet ? "đã được người duyệt sửa" : "của AI")</caption>
+                <thead><tr><th scope="col">Hàng, vị trí</th><th scope="col" class="text-end">Số lượng</th><th scope="col">Lý do và số liệu căn cứ</th></tr></thead>
+                <tbody>
+                    @foreach (var c in g.ChiTiet)
+                    {
+                        <tr><td>@ViTriHang(c)</td><td class="text-end">@c.SoLuong.ToString("N0")</td><td>@c.LyDo</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (Model.ChiTietGoc is { Count: > 0 } goc && g.TrangThai == TrangThaiGoiY.DaSuaVaDuyet)
+        {
+            <h4 class="h6">Đề xuất gốc của AI (trước khi sửa)</h4>
+            <div class="bang-cuon">
+                <table class="table table-sm align-middle text-secondary">
+                    <thead><tr><th scope="col">Hàng, vị trí</th><th scope="col" class="text-end">Số lượng</th><th scope="col">Lý do</th></tr></thead>
+                    <tbody>
+                        @foreach (var c in goc)
+                        {
+                            <tr><td>@ViTriHang(c)</td><td class="text-end">@c.SoLuong.ToString("N0")</td><td>@c.LyDo</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        @if (choDuyet)
+        {
+            @if (!Model.CoXuLy)
+            {
+                <p class="text-secondary small">Chưa nối thao tác tự động cho @g.Loai: duyệt sẽ báo lỗi và gợi ý vẫn Chờ duyệt. Bạn làm tay bình thường.</p>
+            }
+            @if (!Model.DuocXuLy)
+            {
+                <p class="text-secondary small mb-0">Chỉ @string.Join(", ", QuyTacGoiY.VaiTroDuocDuyet(g.Loai)) được xử lý gợi ý này.</p>
+            }
+            else
+            {
+                <div class="d-flex flex-wrap gap-2 align-items-start">
+                    <form method="post" asp-area="HeThong" asp-controller="GoiY" asp-action="Duyet" asp-route-id="@g.MaGoiY">
+                        <input type="hidden" name="quayLai" value="@Model.QuayLai" />
+                        <button type="submit" class="btn btn-primary btn-sm">Duyệt</button>
+                    </form>
+
+                    <details @(Model.MoRong ? "open" : "")>
+                        <summary class="btn btn-outline-primary btn-sm">Sửa rồi duyệt</summary>
+                        <form method="post" asp-area="HeThong" asp-controller="GoiY" asp-action="SuaVaDuyet" asp-route-id="@g.MaGoiY" class="mt-2">
+                            <input type="hidden" name="quayLai" value="@Model.QuayLai" />
+                            <div class="bang-cuon">
+                                <table class="table table-sm align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Giữ</th><th scope="col">Biến thể</th><th scope="col">Lô</th><th scope="col">Ô</th>
+                                            <th scope="col">Kho đi</th><th scope="col">Kho đến</th><th scope="col">Số lượng</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (var i = 0; i < g.ChiTiet.Count; i++)
+                                        {
+                                            var c = g.ChiTiet[i];
+                                            <tr>
+                                                <td>
+                                                    <input type="checkbox" class="form-check-input" name="dong[@i].Giu" value="true" checked aria-label="Giữ dòng @(i + 1)" />
+                                                    @* Ô ẩn đứng SAU ô chọn: bộ kết nối dữ liệu lấy giá trị đầu tiên, nên bỏ chọn mới ra false. *@
+                                                    <input type="hidden" name="dong[@i].Giu" value="false" />
+                                                    <input type="hidden" name="dong[@i].MaBT" value="@c.MaBT" />
+                                                    <input type="hidden" name="dong[@i].LyDo" value="@c.LyDo" />
+                                                </td>
+                                                <td>#@c.MaBT</td>
+                                                <td><input type="number" min="1" class="form-control form-control-sm" name="dong[@i].MaLo" value="@c.MaLo" aria-label="Lô dòng @(i + 1)" /></td>
+                                                <td><input type="number" min="1" class="form-control form-control-sm" name="dong[@i].MaViTri" value="@c.MaViTri" aria-label="Ô dòng @(i + 1)" /></td>
+                                                <td><input type="number" min="1" class="form-control form-control-sm" name="dong[@i].MaKhoNguon" value="@c.MaKhoNguon" aria-label="Kho đi dòng @(i + 1)" /></td>
+                                                <td><input type="number" min="1" class="form-control form-control-sm" name="dong[@i].MaKhoDich" value="@c.MaKhoDich" aria-label="Kho đến dòng @(i + 1)" /></td>
+                                                <td><input type="number" min="1" required class="form-control form-control-sm" name="dong[@i].SoLuong" value="@c.SoLuong" aria-label="Số lượng dòng @(i + 1)" /></td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-sm">Lưu sửa và duyệt</button>
+                        </form>
+                    </details>
+
+                    <details>
+                        <summary class="btn btn-outline-danger btn-sm">Từ chối</summary>
+                        <form method="post" asp-area="HeThong" asp-controller="GoiY" asp-action="TuChoi" asp-route-id="@g.MaGoiY" class="mt-2 d-flex flex-wrap gap-2 align-items-end">
+                            <input type="hidden" name="quayLai" value="@Model.QuayLai" />
+                            <div>
+                                <label for="@(id)LyDo" class="form-label small">Lý do (không bắt buộc)</label>
+                                <input id="@(id)LyDo" name="lyDo" maxlength="@QuyTacGoiY.DoDaiToiDaLyDo" class="form-control form-control-sm" />
+                            </div>
+                            <button type="submit" class="btn btn-danger btn-sm">Xác nhận từ chối</button>
+                        </form>
+                    </details>
+                </div>
+            }
+        }
+    </div>
+</article>

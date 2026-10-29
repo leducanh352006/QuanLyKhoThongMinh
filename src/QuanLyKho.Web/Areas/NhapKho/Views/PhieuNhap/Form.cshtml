@@ -118,6 +118,11 @@
     <form method="post" asp-action="XacNhan" asp-route-id="@Model.MaPN" id="formXacNhan"></form>
 }
 
+@if (!laMoi)
+{
+    @await Component.InvokeAsync("DinhKem", new { loai = QuanLyKho.Web.Contracts.LoaiChungTu.NK, maCT = Model.MaPN })
+}
+
 @section Scripts {
     <script>
         // Thêm, xóa dòng hàng rồi đánh số lại tên ô: ChiTiet[0].MaBT, ChiTiet[0].SLDuKien, ChiTiet[1].MaBT...

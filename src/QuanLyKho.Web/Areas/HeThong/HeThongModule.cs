@@ -102,6 +102,7 @@ public static class HeThongModule
             var thuMuc = sp.GetRequiredService<IConfiguration>()["Storage:TepDinhKem"];
             return new TepLuuTruCauHinh(Path.GetFullPath(string.IsNullOrWhiteSpace(thuMuc) ? Path.Combine("App_Data", "dinh-kem") : thuMuc, goc));
         });
+        services.AddScoped<IChungTuTonTai, PhieuNhapTonTai>();   // các nhóm khác đăng ký bản cho XK, CK, KK của mình
         services.AddScoped<ITepDinhKemQuanLy, TepDinhKemService>();
         services.TryAddScoped<INguonHangChoXep, KhongCoHangChoXep>();   // T4-5: Nhóm 2 đăng ký nguồn thật sau (đăng ký sau cùng thắng)
         services.AddScoped<ICapacityService>(sp =>   // T4-5: thay bản giả CapacityServiceStub

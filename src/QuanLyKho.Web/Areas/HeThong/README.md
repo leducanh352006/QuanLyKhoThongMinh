@@ -244,9 +244,8 @@ Báo cáo: Bảng 2.26 (NhatKyThaoTac, TepDinhKem), Bảng 2.3 dòng 7.
 
 ## Giới hạn đã biết
 
-- Không kiểm chứng từ `(LoaiCT, MaCT)` có tồn tại (chứng từ do nhóm khác quản lý); quyền kiểm theo loại chứng từ, không theo người lập.
+- Kiểm chứng từ tồn tại qua `IChungTuTonTai` (đã có bản cho NK); XK, CK, KK chưa có bản nào nên chưa kiểm, nhóm sở hữu đăng ký bản của mình. Quyền kiểm theo loại chứng từ, không theo người lập.
 - Chưa có xóa tệp đính kèm (nhật ký và đính kèm đều chỉ thêm).
-- Hai kiểm thử cấu hình bảng của nhóm Nhập kho (`CauHinhBang_*`) đang lỗi sẵn trên `main`, không thuộc việc này.
 
 ## Kiểm thử
 

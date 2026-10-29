@@ -126,7 +126,8 @@ public interface ITepDinhKemQuanLy
 }
 
 public sealed class TepDinhKemService(
-    ITepDinhKemStore store, IHeThongStore nguoiDung, IAuditService audit, TepLuuTruCauHinh cauHinh, TimeProvider gio) : ITepDinhKemQuanLy
+    ITepDinhKemStore store, IHeThongStore nguoiDung, IAuditService audit, TepLuuTruCauHinh cauHinh, TimeProvider gio,
+    IEnumerable<IChungTuTonTai>? kiemTra = null) : ITepDinhKemQuanLy
 {
     public async Task<IReadOnlyList<TepDto>> LayTheoChungTu(LoaiChungTu loaiCT, int maCT, CancellationToken ct = default)
     {
@@ -141,6 +142,9 @@ public sealed class TepDinhKemService(
         var ten = QuyTacTep.ChuanHoaTen(tenTep);
         if (ten is null)
             return KetQua<TepDto>.Loi($"Tên tệp không hợp lệ hoặc loại tệp không được phép (chỉ nhận: {string.Join(", ", QuyTacTep.DuoiChoPhep)}).", MaLoiDichVu.DuLieuKhongHopLe);
+        foreach (var k in kiemTra?.Where(k => k.Loai == loaiCT) ?? [])
+            if (!await k.TonTai(maCT, ct))
+                return KetQua<TepDto>.Loi($"Không tìm thấy chứng từ {loaiCT} số {maCT}.", MaLoiDichVu.KhongTimThay);
         var nguoi = await nguoiDung.TimNguoiDung(maND, ct);
         if (nguoi is null) return KetQua<TepDto>.Loi($"Không tìm thấy người dùng {maND}.", MaLoiDichVu.KhongTimThay);
 
@@ -202,4 +206,24 @@ public sealed class TepDinhKemService(
     }
 
     private static TepDto Dto(TepDinhKem t, string nguoiTai) => new(t.MaTep, t.LoaiCT, t.MaCT, t.TenTep, t.ThoiGian, t.MaND, nguoiTai);
+}
+
+/// <summary>
+/// Cho biết một chứng từ có tồn tại không, để không đính kèm tệp vào mã ảo. Mỗi nhóm sở hữu chứng từ đăng ký một bản cho loại của mình
+/// (<c>services.AddScoped&lt;IChungTuTonTai, ...&gt;()</c>). Loại chứng từ chưa có bản nào thì không kiểm (coi là hợp lệ).
+/// </summary>
+public interface IChungTuTonTai
+{
+    LoaiChungTu Loai { get; }
+
+    Task<bool> TonTai(int maCT, CancellationToken ct = default);
+}
+
+/// <summary>Phiếu nhập (NK). Không có CSDL (Development bộ nhớ) thì không kiểm.</summary>
+public sealed class PhieuNhapTonTai(KhoDbContext? db = null) : IChungTuTonTai
+{
+    public LoaiChungTu Loai => LoaiChungTu.NK;
+
+    public async Task<bool> TonTai(int maCT, CancellationToken ct = default) =>
+        db is null || await db.Set<QuanLyKho.Web.Areas.NhapKho.Models.PhieuNhap>().AnyAsync(p => p.MaPN == maCT, ct);
 }

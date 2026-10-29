@@ -246,4 +246,26 @@ public class TepDinhKemServiceTests
         foreach (var f in Directory.GetFiles(e.ThuMuc, "*", SearchOption.AllDirectories)) File.Delete(f);
         Assert.Equal(MaLoiDichVu.KhongTimThay, (await e.Tep.Mo(tep.MaTep)).MaLoi);
     }
+
+    private sealed class ChiCoMa(LoaiChungTu loai, int ma) : IChungTuTonTai
+    {
+        public LoaiChungTu Loai => loai;
+        public Task<bool> TonTai(int maCT, CancellationToken ct = default) => Task.FromResult(maCT == ma);
+    }
+
+    [Fact]
+    public async Task Them_ChungTuKhongTonTai_BiTuChoi_ChungTuCoHoacLoaiKhacKhongKiem_ThiDuocPhep()
+    {
+        using var e = new MoiTruongNhatKyThu();
+        var dv = new TepDinhKemService(new BoNhoTepDinhKemStore(), e.NguoiDung, e.Audit, new TepLuuTruCauHinh(e.ThuMuc), TimeProvider.System,
+            new IChungTuTonTai[] { new ChiCoMa(LoaiChungTu.NK, 5) });
+
+        var sai = await dv.Them(LoaiChungTu.NK, 6, "a.pdf", Noi("x"), MoiTruongNhatKyThu.QuanLyKho);
+        Assert.False(sai.ThanhCong);
+        Assert.Equal(MaLoiDichVu.KhongTimThay, sai.MaLoi);
+        Assert.Empty(await e.Audit.LayTheoChungTu(LoaiChungTu.NK, 6));
+
+        Assert.True((await dv.Them(LoaiChungTu.NK, 5, "a.pdf", Noi("x"), MoiTruongNhatKyThu.QuanLyKho)).ThanhCong);
+        Assert.True((await dv.Them(LoaiChungTu.XK, 99, "a.pdf", Noi("x"), MoiTruongNhatKyThu.QuanLyKho)).ThanhCong);   // XK chưa có bản kiểm
+    }
 }

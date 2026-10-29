@@ -1,0 +1,147 @@
+@using QuanLyKho.Web.Areas.HeThong.Models
+@using QuanLyKho.Web.Areas.NhapKho.Models
+@using QuanLyKho.Web.Contracts
+@model PhieuNhap
+@{
+    // Màn hình sắp xếp vào ô (việc T1-4): mỗi dòng hàng đạt có các lệnh xếp; lệnh chờ xác nhận được xác nhận bằng cách quét mã ô và mã lô.
+    var hang = (Dictionary<int, string>)ViewBag.Hang;
+    var lo = (Dictionary<int, string>)ViewBag.Lo;
+    var lenh = (ILookup<int, SapXep>)ViewBag.Lenh;
+    var oTrongKho = (List<ViTri>)ViewBag.O;
+    var goiY = (Dictionary<int, ChiTietGoiYDto>)ViewBag.GoiY;
+    var tenO = oTrongKho.ToDictionary(v => v.MaViTri, v => v.TenViTri);
+    var oXep = oTrongKho.Where(v => v.LoaiViTri == LoaiViTriGiaTri.LuuTru && v.DangHoatDong && !v.DangKhoa).ToList();
+    var hoanTat = Model.TrangThai == PhieuNhap.HoanTat;
+    ViewData["Title"] = $"Sắp xếp vào ô {Model.SoPhieu}";
+}
+
+<header class="trang-dau">
+    <h1>@ViewData["Title"]</h1>
+    <p class="mota">
+        <span class="nhan @(hoanTat ? "nhan-tot" : "nhan-chu-y")">@Model.TrangThai</span>
+        Lập lệnh xếp hàng đạt vào ô lưu trữ, rồi quét mã ô và mã lô trên từng lệnh để xác nhận. Quét sai ô hoặc sai lô thì không ghi nhận gì.
+        Muốn xếp vào ô khác thì hủy lệnh rồi lập lệnh mới.
+    </p>
+</header>
+
+@if (TempData["ThongBao"] is string tb) { <div class="alert alert-success" role="status">@tb</div> }
+@if (TempData["Loi"] is string loi) { <div class="alert alert-danger" role="alert">@loi</div> }
+
+@foreach (var d in Model.ChiTiet.OrderBy(x => x.MaCTN))
+{
+    var cacLenh = lenh[d.MaCTN].ToList();
+    var dat = d.SLDat ?? 0;
+    var daXep = cacLenh.Where(s => s.TrangThai == SapXep.DaXacNhan).Sum(s => s.SoLuong);
+    var dangCho = cacLenh.Where(s => s.TrangThai == SapXep.ChoXacNhan).Sum(s => s.SoLuong);
+    var chuaLap = dat - daXep - dangCho;
+    var ten = hang[d.MaBT];
+    var maLo = d.MaLo is int ml && lo.TryGetValue(ml, out var maVachLo) ? maVachLo : null;
+    var g = goiY.GetValueOrDefault(d.MaBT);   // gợi ý G2 đang chờ duyệt cho biến thể này, nếu có
+    var oGoiY = g?.MaViTri;
+    var coHang = dat > 0 && maLo is not null;
+
+    <section class="mb-4" aria-labelledby="dong@(d.MaCTN)">
+        <h2 class="h5" id="dong@(d.MaCTN)">@ten @if (maLo is not null) { <span class="text-body-secondary">lô @maLo</span> }</h2>
+
+        @if (!coHang)
+        {
+            <p class="text-body-secondary">Không có hàng đạt để xếp (thực nhận @(d.SLThucNhan ?? 0), đạt @dat).</p>
+        }
+
+        @if (coHang)
+        {
+            <p>
+                Hàng đạt <strong>@dat</strong> · đã xếp <strong>@daXep</strong> · chờ xác nhận <strong>@dangCho</strong> · chưa lập lệnh <strong>@chuaLap</strong>
+            </p>
+        }
+
+        @if (cacLenh.Count > 0)
+        {
+            <div class="bang-cuon">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr><th scope="col">Ô</th><th scope="col" class="text-end">Số lượng</th><th scope="col">Trạng thái</th><th scope="col">Xác nhận</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in cacLenh)
+                        {
+                            <tr>
+                                <td>@tenO.GetValueOrDefault(s.MaViTri, "Ô " + s.MaViTri)</td>
+                                <td class="text-end">@s.SoLuong</td>
+                                <td><span class="nhan @(s.TrangThai == SapXep.DaXacNhan ? "nhan-tot" : "nhan-chu-y")">@s.TrangThai</span></td>
+                                <td>
+                                    @if (s.TrangThai == SapXep.ChoXacNhan)
+                                    {
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <form method="post" asp-action="XacNhan" asp-route-id="@Model.MaPN" class="d-flex flex-wrap gap-2">
+                                                <input type="hidden" name="maSX" value="@s.MaSX" />
+                                                <input name="maO" class="form-control form-control-sm" style="width:11rem" placeholder="Quét mã ô" autocomplete="off" required aria-label="Mã ô của lệnh @s.MaSX" />
+                                                <input name="maLo" class="form-control form-control-sm" style="width:11rem" placeholder="Quét mã lô" autocomplete="off" required aria-label="Mã lô của lệnh @s.MaSX" />
+                                                <button type="submit" class="btn btn-sm btn-success">Xác nhận</button>
+                                            </form>
+                                            <form method="post" asp-action="Huy" asp-route-id="@Model.MaPN" onsubmit="return confirm('Hủy lệnh sắp xếp này?');">
+                                                <input type="hidden" name="maSX" value="@s.MaSX" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">Hủy lệnh</button>
+                                            </form>
+                                        </div>
+                                    }
+                                    else if (s.TrangThai == SapXep.DaXacNhan)
+                                    {
+                                        <span>@(s.ThoiGianXN?.ToLocalTime().ToString("dd/MM/yyyy HH:mm"))</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        @if (coHang && chuaLap > 0 && !hoanTat)
+        {
+            if (g is not null)
+            {
+                <p class="text-body-secondary">Gợi ý G2 đang chờ duyệt: ô @tenO.GetValueOrDefault(oGoiY ?? 0, "khác") (@g.SoLuong). @g.LyDo</p>
+            }
+            <form method="post" asp-action="LapLenh" asp-route-id="@Model.MaPN" class="row g-2 align-items-end">
+                <input type="hidden" name="maCTN" value="@d.MaCTN" />
+                <div class="col-auto">
+                    <label class="form-label" for="o@(d.MaCTN)">Ô lưu trữ</label>
+                    <select class="form-select form-select-sm" name="maViTri" id="o@(d.MaCTN)" required>
+                        @foreach (var o in oXep)
+                        {
+                            <option value="@o.MaViTri" selected="@(oGoiY == o.MaViTri)">@o.TenViTri (@o.MaVachO)</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <label class="form-label" for="sl@(d.MaCTN)">Số lượng</label>
+                    <input type="number" class="form-control form-control-sm" style="width:7rem" name="soLuong" id="sl@(d.MaCTN)" min="1" max="@chuaLap" value="@chuaLap" required />
+                </div>
+                <div class="col-auto form-check">
+                    <input type="checkbox" class="form-check-input" name="tuChia" id="chia@(d.MaCTN)" value="true" checked />
+                    <label class="form-check-label" for="chia@(d.MaCTN)">Ô không đủ chỗ thì chia phần dư sang ô khác</label>
+                </div>
+                <div class="col-auto"><button type="submit" class="btn btn-sm btn-primary">Lập lệnh xếp</button></div>
+            </form>
+        }
+    </section>
+}
+
+<div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-outline-secondary" asp-action="Index">Danh sách chờ sắp xếp</a>
+    <a class="btn btn-outline-secondary" asp-controller="PhieuNhap" asp-action="Index">Phiếu nhập</a>
+</div>
+
+@section Scripts {
+    <script>
+        // Máy quét gõ mã rồi nhấn Enter: ở ô mã ô thì nhảy sang ô mã lô, ở ô mã lô thì gửi form.
+        document.querySelectorAll('input[name="maO"]').forEach(function (o) {
+            o.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') { e.preventDefault(); o.form.querySelector('input[name="maLo"]').focus(); }
+            });
+        });
+        var dau = document.querySelector('input[name="maO"]');
+        if (dau) { dau.focus(); }
+    </script>
+}

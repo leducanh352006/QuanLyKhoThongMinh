@@ -41,11 +41,18 @@ public class PhieuXuatController(INguoiDungHienTai hienTai, IAuditService audit,
 
     // ---- Lưu (tạo mới và sửa dùng chung một form, phân biệt bằng MaPX: 0 là phiếu mới) ----
 
+    // Ép MaPX = 0 (bỏ qua giá trị người dùng gửi lên): nếu không, người chỉ có quyền Thêm có thể POST vào đây
+    // với MaPX của một phiếu có sẵn để sửa phiếu đó mà không có quyền Sửa.
     [HttpPost, ValidateAntiForgeryToken, CanQuyen(LoaiChungTu.XK, QuyenThaoTac.Them)]
-    public Task<IActionResult> Tao(PhieuXuat p) => Luu(p);
+    public Task<IActionResult> Tao(PhieuXuat p)
+    {
+        p.MaPX = 0;
+        return Luu(p);
+    }
 
+    // Đối xứng: người chỉ có quyền Sửa không được POST MaPX = 0 vào đây để tạo phiếu mới mà không có quyền Thêm.
     [HttpPost, ValidateAntiForgeryToken, CanQuyen(LoaiChungTu.XK, QuyenThaoTac.Sua)]
-    public Task<IActionResult> Sua(PhieuXuat p) => Luu(p);
+    public Task<IActionResult> Sua(PhieuXuat p) => p.MaPX > 0 ? Luu(p) : Task.FromResult<IActionResult>(NotFound());
 
     /// <summary>
     /// Nháp thành Đã duyệt: khóa phiếu và ghi người duyệt. Một lệnh có điều kiện nên bấm hai lần cũng chỉ ghi một lần.
@@ -104,7 +111,8 @@ public class PhieuXuatController(INguoiDungHienTai hienTai, IAuditService audit,
     }
 
     /// <summary>
-    /// Số lượng mỗi dòng không được vượt tổng tồn khả dụng của biến thể trong kho xuất (Bảng 2.4 dòng 1), gộp tồn mọi lô và mọi ô.
+    /// Số lượng mỗi dòng không được vượt tổng tồn khả dụng của biến thể trong kho xuất (Bảng 2.4 dòng 1), gộp tồn mọi lô và mọi ô
+    /// LƯU TRỮ (không tính ô Tiếp nhận: hàng chưa kiểm, chưa xếp thì chưa khả dụng — IStockService cũng từ chối giữ chỗ, xuất từ đó).
     /// Giả định: áp dụng cho cả ba loại phiếu; việc T2-7 sẽ bỏ kiểm tra này cho phiếu trả lại hàng không đạt (Bảng 2.4 dòng 7).
     /// </summary>
     private async Task<string?> KiemTraTonKhaDung(PhieuXuat p)
@@ -115,7 +123,7 @@ public class PhieuXuatController(INguoiDungHienTai hienTai, IAuditService audit,
             from t in Db.TonKho
             join l in Db.LoHang on t.MaLo equals l.MaLo
             join v in Db.ViTri on t.MaViTri equals v.MaViTri
-            where v.MaKho == p.MaKho && ma.Contains(l.MaBT)
+            where v.MaKho == p.MaKho && v.LoaiViTri != LoaiViTriGiaTri.TiepNhan && ma.Contains(l.MaBT)
             group t by l.MaBT into g
             select new { MaBT = g.Key, KhaDung = g.Sum(x => x.SoLuongTon - x.SoLuongGiu) }
         ).ToDictionaryAsync(x => x.MaBT, x => x.KhaDung);

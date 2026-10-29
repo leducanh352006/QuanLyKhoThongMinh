@@ -12,6 +12,7 @@ namespace QuanLyKho.Web.Areas.XuatKho.Controllers;
 /// <summary>
 /// Phiếu xuất (việc T2-1): danh sách, tạo, sửa phiếu nháp, và một bước duyệt tối giản chỉ để khóa phiếu (đủ cho tiêu chí hoàn thành
 /// của việc này). Gợi ý G1 (T2-2) và duyệt kèm giữ chỗ tồn (T2-3) sẽ MỞ RỘNG đúng hành động Duyệt bên dưới, không tạo hành động mới.
+/// Trả lại hàng mua và hủy hàng (việc T2-7, Bảng 2.4 dòng 7) dùng chung Tao/Sua/Duyet ở trên.
 /// Quyền theo bảng PhanQuyen: Xem để vào, Thêm để tạo, Sửa để sửa, Duyệt để duyệt.
 /// </summary>
 [Area("XuatKho")]
@@ -88,7 +89,11 @@ public class PhieuXuatController(INguoiDungHienTai hienTai, IAuditService audit,
 
     private async Task<IActionResult> Luu(PhieuXuat p)
     {
-        var loi = p.KiemTra() ?? await KiemTraDanhMuc(p) ?? await KiemTraTonKhaDung(p) ?? await Ghi(p);
+        // Trả lại hàng mua lấy hàng không đạt từ khu tiếp nhận (Bảng 2.4 dòng 7): kiểm theo số chưa trả hết của phiếu nhập gốc,
+        // không xét tồn khả dụng (hàng ở đó vốn đã bị loại khỏi tồn khả dụng, xem KiemTraTonKhaDung).
+        var loi = p.KiemTra() ?? await KiemTraDanhMuc(p)
+            ?? (p.LoaiPhieu == PhieuXuat.TraLaiHangMua ? await KiemTraTraHang(p) : await KiemTraTonKhaDung(p))
+            ?? await Ghi(p);
         if (loi is not null)
         {
             ViewData["Loi"] = loi;
@@ -113,7 +118,7 @@ public class PhieuXuatController(INguoiDungHienTai hienTai, IAuditService audit,
     /// <summary>
     /// Số lượng mỗi dòng không được vượt tổng tồn khả dụng của biến thể trong kho xuất (Bảng 2.4 dòng 1), gộp tồn mọi lô và mọi ô
     /// LƯU TRỮ (không tính ô Tiếp nhận: hàng chưa kiểm, chưa xếp thì chưa khả dụng — IStockService cũng từ chối giữ chỗ, xuất từ đó).
-    /// Giả định: áp dụng cho cả ba loại phiếu; việc T2-7 sẽ bỏ kiểm tra này cho phiếu trả lại hàng không đạt (Bảng 2.4 dòng 7).
+    /// Áp dụng cho loại Khác và Hủy hàng; phiếu Trả lại hàng mua dùng <see cref="KiemTraTraHang"/> thay vì hàm này (Bảng 2.4 dòng 7).
     /// </summary>
     private async Task<string?> KiemTraTonKhaDung(PhieuXuat p)
     {
@@ -129,13 +134,44 @@ public class PhieuXuatController(INguoiDungHienTai hienTai, IAuditService audit,
         ).ToDictionaryAsync(x => x.MaBT, x => x.KhaDung);
 
         foreach (var d in gop)
+            if (d.SoLuong > khaDung.GetValueOrDefault(d.MaBT))
+                return $"{await TenBienThe(d.MaBT)}: vượt tồn khả dụng trong kho (còn {khaDung.GetValueOrDefault(d.MaBT)}).";
+        return null;
+    }
+
+    /// <summary>
+    /// Trả lại hàng mua (việc T2-7, Bảng 2.4 dòng 7): lấy từ hàng không đạt (SLThucNhan - SLDat) còn lại của từng dòng biến thể trên
+    /// phiếu nhập gốc, trừ đi phần đã trả ở các phiếu trả khác (chưa hủy) tham chiếu cùng phiếu nhập đó. Không xét tồn khả dụng vì
+    /// hàng không đạt nằm ở khu tiếp nhận, vốn đã bị loại khỏi tồn khả dụng (xem <see cref="KiemTraTonKhaDung"/>).
+    /// </summary>
+    private async Task<string?> KiemTraTraHang(PhieuXuat p)
+    {
+        var maPNGoc = p.MaPNGoc!.Value;   // bắt buộc có giá trị với loại Trả lại hàng mua, đã kiểm ở PhieuXuat.KiemTra()
+        var gop = p.ChiTiet.GroupBy(d => d.MaBT).Select(g => new { MaBT = g.Key, SoLuong = g.Sum(d => d.SoLuong) }).ToList();
+
+        var khongDat = await Db.ChiTietPhieuNhap.Where(d => d.MaPN == maPNGoc)
+            .GroupBy(d => d.MaBT)
+            .Select(g => new { MaBT = g.Key, SoLuong = g.Sum(d => (d.SLThucNhan ?? 0) - (d.SLDat ?? 0)) })
+            .ToDictionaryAsync(x => x.MaBT, x => x.SoLuong);
+
+        var daTra = await Db.ChiTietPhieuXuat.Join(Db.PhieuXuat, d => d.MaPX, x => x.MaPX, (d, x) => new { d.MaBT, d.SoLuong, x.MaPX, x.MaPNGoc, x.LoaiPhieu, x.TrangThai })
+            .Where(x => x.MaPX != p.MaPX && x.MaPNGoc == maPNGoc && x.LoaiPhieu == PhieuXuat.TraLaiHangMua && x.TrangThai != PhieuXuat.DaHuy)
+            .GroupBy(x => x.MaBT)
+            .Select(g => new { MaBT = g.Key, SoLuong = g.Sum(x => x.SoLuong) })
+            .ToDictionaryAsync(x => x.MaBT, x => x.SoLuong);
+
+        foreach (var d in gop)
         {
-            var ten = await Db.BienThe.Where(b => b.MaBT == d.MaBT).Join(Db.SanPham, b => b.MaSP, s => s.MaSP,
-                (b, s) => s.TenSP + " (" + b.ThuocTinh + ")").FirstOrDefaultAsync() ?? $"biến thể #{d.MaBT}";
-            if (d.SoLuong > khaDung.GetValueOrDefault(d.MaBT)) return $"{ten}: vượt tồn khả dụng trong kho (còn {khaDung.GetValueOrDefault(d.MaBT)}).";
+            var conLai = khongDat.GetValueOrDefault(d.MaBT) - daTra.GetValueOrDefault(d.MaBT);
+            if (d.SoLuong > conLai)
+                return $"{await TenBienThe(d.MaBT)}: vượt số không đạt còn lại của phiếu nhập gốc (còn trả được {Math.Max(0, conLai)}).";
         }
         return null;
     }
+
+    private async Task<string> TenBienThe(int maBT)
+        => await Db.BienThe.Where(b => b.MaBT == maBT).Join(Db.SanPham, b => b.MaSP, s => s.MaSP,
+            (b, s) => s.TenSP + " (" + b.ThuocTinh + ")").FirstOrDefaultAsync() ?? $"biến thể #{maBT}";
 
     /// <summary>Ghi vào CSDL. Trả về lỗi, hoặc null nếu thành công (phiếu mới thì p.MaPX được điền).</summary>
     private async Task<string?> Ghi(PhieuXuat p)

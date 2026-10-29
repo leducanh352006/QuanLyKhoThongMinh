@@ -10,6 +10,7 @@ public static class MaLoiDichVu
     public const string DuLieuKhongHopLe = "DU_LIEU_KHONG_HOP_LE";
     public const string SaiTrangThai = "SAI_TRANG_THAI";
     public const string ChuaCoXuLy = "CHUA_CO_XU_LY";
+    public const string AiKhongDung = "AI_KHONG_DUNG";
 }
 
 /// <summary>Kết quả của một thao tác nghiệp vụ không trả dữ liệu. Thông báo viết tiếng Việt, hiển thị thẳng cho người dùng.</summary>

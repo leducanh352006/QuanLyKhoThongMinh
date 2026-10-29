@@ -1,3 +1,4 @@
+using QuanLyKho.Web.Areas.HeThong.Services;
 using QuanLyKho.Web.Areas.NhapKho.Services;
 using QuanLyKho.Web.Contracts;
 using QuanLyKho.Web.Contracts.Stubs;
@@ -27,6 +28,9 @@ public static class NhapKhoModule
             if (moiTruong is null || moiTruong.IsDevelopment()) return sp.GetRequiredService<NhapKhoServiceStub>();
             throw new InvalidOperationException("Chưa cấu hình ConnectionStrings:KhoDb nên không lưu được phiếu nhập. Xem README, mục \"Chạy lần đầu\".");
         });
+
+        // T1-4: lệnh sắp xếp Chờ xác nhận đã chiếm chỗ trong ô, tính vào sức chứa (ICapacityService của T4-5). Đăng ký sau HeThong nên thay bản mặc định "không có hàng chờ".
+        services.AddScoped<INguonHangChoXep, HangChoXepTuSapXep>();
         return services;
     }
 }

@@ -32,7 +32,7 @@ public sealed class StockServiceStub : IStockService
 
     public Task<KetQua> GiuCho(DongTon dong, CancellationToken ct = default)
     {
-        var loi = KiemTraDong(dong);
+        var loi = KiemTraDong(dong, chanTiepNhan: true);
         if (loi is not null) return Task.FromResult(loi);
 
         lock (_khoa)
@@ -76,7 +76,7 @@ public sealed class StockServiceStub : IStockService
 
     public Task<KetQua> GhiGiam(DongTon dong, LoaiBienDong loai, ThamChieuChungTu chungTu, int maND, bool tuGiuCho = false, CancellationToken ct = default)
     {
-        var loi = KiemTraDong(dong);
+        var loi = KiemTraDong(dong, chanTiepNhan: loai is LoaiBienDong.XuatKho or LoaiBienDong.ChuyenDi);
         if (loi is not null) return Task.FromResult(loi);
 
         lock (_khoa)
@@ -170,7 +170,8 @@ public sealed class StockServiceStub : IStockService
     private static KetQua ThieuTon(int can, int con) =>
         KetQua.Loi($"Không đủ tồn khả dụng: cần {can}, còn {con}.", MaLoiDichVu.VuotTon);
 
-    private static KetQua? KiemTraDong(DongTon d)
+    /// <summary><paramref name="chanTiepNhan"/>: hàng ở ô Tiếp nhận chưa tính vào tồn khả dụng, không giữ chỗ, xuất hay chuyển kho từ đó (giống bản thật).</summary>
+    private static KetQua? KiemTraDong(DongTon d, bool chanTiepNhan = false)
     {
         if (d.SoLuong <= 0)
             return KetQua.Loi("Số lượng phải lớn hơn 0.", MaLoiDichVu.DuLieuKhongHopLe);
@@ -180,6 +181,8 @@ public sealed class StockServiceStub : IStockService
             return KetQua.Loi($"Không tìm thấy vị trí {d.MaViTri}.", MaLoiDichVu.KhongTimThay);
         if (vt.CapViTri != SeedDataSet.CapO)
             return KetQua.Loi($"Hàng chỉ được để ở ô, '{vt.TenViTri}' là cấp {vt.CapViTri}.", MaLoiDichVu.DuLieuKhongHopLe);
+        if (chanTiepNhan && vt.LoaiViTri == SeedDataSet.OTiepNhan)
+            return KetQua.Loi($"Hàng ở '{vt.TenViTri}' (khu tiếp nhận) chưa sẵn sàng xuất: phải kiểm và xếp lên kệ trước.", MaLoiDichVu.VuotTon);
 
         return null;
     }

@@ -12,5 +12,6 @@ public sealed class NhapKhoMenu : IMenuNguon
     {
         new MenuMuc("Tổng quan", "Phiếu nhập, kiểm tra hàng nhập, sắp xếp vào ô.", "NhapKho", "TrangChu", "Index", new[] { VaiTroTen.QuanLyKho, VaiTroTen.ThuKho }),
         new MenuMuc("Phiếu nhập", "Danh sách, tạo, sửa và xác nhận phiếu nhập kho.", "NhapKho", "PhieuNhap", "Index", new[] { VaiTroTen.QuanLyKho, VaiTroTen.ThuKho }),
+        new MenuMuc("Sắp xếp vào ô", "Quét mã ô và mã lô để xếp hàng đã kiểm tra vào ô lưu trữ.", "NhapKho", "SapXep", "Index", new[] { VaiTroTen.QuanLyKho, VaiTroTen.ThuKho }),
     });
 }

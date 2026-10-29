@@ -226,3 +226,45 @@ dotnet test --filter "FullyQualifiedName~StockServiceStub"
 ```
 
 17 test hành vi bắt buộc (bản giả phải cư xử như bản thật): giữ/trả chỗ, vượt tồn bị từ chối kèm "cần bao nhiêu, còn bao nhiêu", ghi tăng/giảm đúng sổ cái, giảm từ phần giữ chỗ hoặc từ khả dụng, đổi ô tồn tổng không đổi, 100 luồng giữ chỗ đồng thời không làm tồn âm, đối chiếu sổ cái khớp `TonKho`. Bản thật (`StockService`, EF Core) đã kiểm tay trên SQL Server thật với cùng các tình huống (xem mục "Đã làm" phía trên) vì môi trường kiểm thử của dự án chưa có SQL Server/Sqlite cho các lớp `Ef*`, giống `EfKhoViTriStore` ở T4-3 cũng không có kiểm thử trực tiếp.
+
+# Khung gợi ý AI dùng chung (việc T4-8, issue #32)
+
+Báo cáo: mục 1.1.5, 1.2.4 (vòng đời gợi ý), Bảng 1.3 (bốn bài toán G1 đến G4), Bảng 2.26.
+
+## Đã làm
+
+- Bảng `GoiYAI` và `ChiTietGoiY` qua EF Core, đúng tên cột ở issue. CHECK: loại G1–G4; trạng thái theo Bảng 2.16; đã xử lý thì phải có người duyệt và thời điểm, chưa xử lý thì không; tham chiếu phiếu theo loại (G1 đúng một phiếu xuất, G2 đúng một phiếu nhập, G3 chỉ phiếu nhập, G4 chỉ phiếu chuyển); số lượng dương; lý do không rỗng; kho đi khác kho đến.
+- `GoiYService : IGoiYService` thay `GoiYServiceStub` (không đổi interface). Hàm lưu gợi ý trong interface tên là `Tao` (issue ghi `Luu`).
+- **Ba cách xử lý**: Duyệt, Sửa rồi duyệt, Từ chối (kèm lý do, ghi vào nhật ký). Thẩm quyền kiểm ở máy chủ theo `QuyTacGoiY`: G1, G3, G4 là Quản lý kho; G2 là Thủ kho; Quản trị viên xử lý được mọi loại.
+- **Tự tạo thao tác**: khi duyệt, khung gọi `IGoiYHandler` của nhóm sở hữu (G1 nhóm 3, G2 nhóm 2, G3 và G4 nhóm 5). Handler chỉ cần trả phiếu nó tạo; ô để trống thì giữ tham chiếu cũ.
+- **Một giao dịch, một người thắng**: đổi trạng thái là lệnh có điều kiện "đang Chờ duyệt", chạy cùng giao dịch với handler. Hai người duyệt cùng lúc thì handler chỉ chạy một lần, người kia nhận "đã xử lý". Handler thất bại hoặc ném lỗi thì hoàn tác hết, kể cả dữ liệu handler đã ghi trên cùng `KhoDbContext`; gợi ý vẫn Chờ duyệt. Nếu nơi gọi đã mở giao dịch thì khung dùng điểm lưu.
+- **Đường lui**:
+  - `GoiYAnToan.Chay(...)` (Contracts): bọc lời gọi thuật toán AI; lỗi hoặc quá 10 giây thì trả `MaLoiDichVu.AiKhongDung` kèm thông báo "làm tay", không bao giờ ném lỗi ra màn hình.
+  - Chưa có handler hoặc handler lỗi thì báo làm tay; quy trình phiếu không phụ thuộc gợi ý.
+- **Sửa rồi duyệt**: dòng gốc của AI giữ nguyên để so sánh. Cột thêm `ChiTietGoiY.LaBanSua` (không có trong issue) phân biệt dòng gốc với dòng người duyệt sửa.
+- **Giao diện**:
+  - Màn hình **Gợi ý AI** (`/HeThong/GoiY`): lọc theo loại và trạng thái; trang chi tiết so dòng gốc với dòng đã sửa.
+  - Thành phần dùng chung `DuyetGoiY` để nhóm khác nhúng vào phiếu: `@await Component.InvokeAsync("DuyetGoiY", new { loai = LoaiGoiY.G1, maPX = Model.MaPX })`.
+- **Bản gợi ý giả** (chỉ Development):
+  - Nút "Tạo gợi ý mẫu" tạo G1, G3, G4 (và G2 nếu nhập mã phiếu nhập) từ dữ liệu mẫu chung, số liệu khớp công thức của báo cáo.
+  - Handler mẫu ghi lại "thao tác" để xem duyệt sinh đúng thao tác; handler mẫu luôn nhường handler thật.
+  - Nút "Giả lập AI lỗi" để xem đường lui.
+  - Trang thử thành phần nhúng: `/HeThong/ThuNghiem/GoiY?loai=G1&maPX=1`.
+
+## Các nhóm khác dùng thế nào
+
+1. Tính gợi ý trong `GoiYAnToan.Chay`, rồi `IGoiYService.Tao(loai, thamChieu, chiTiet)`; mỗi dòng phải có lý do kèm số liệu căn cứ.
+2. Đăng ký handler trong module của mình: `services.AddScoped<IGoiYHandler, HandlerG3>();`. Handler chỉ tạo chứng từ; thao tác chạm hàng thật (lấy, xếp, nhận) vẫn do thủ kho quét mã.
+3. Nhúng `DuyetGoiY` vào màn hình phiếu.
+
+## Giới hạn đã biết
+
+- `MaPX`, `MaPC` chưa có khóa ngoại vì bảng `PhieuXuat`, `PhieuChuyen` chưa có trên `main`; thêm khi nhóm sở hữu có bảng.
+- Bảng `GoiYAI` theo issue, chưa có các cột dữ liệu đầu vào, phiên bản thuật toán của bản báo cáo mới (Bảng 2.70); lý do và số liệu căn cứ nằm ở `ChiTietGoiY.LyDo`.
+- Không kiểm "người lập không tự duyệt" cho gợi ý (gợi ý do hệ thống tạo, không có người lập).
+
+## Kiểm thử
+
+```
+dotnet test --filter "FullyQualifiedName~QuanLyKho.Tests.GoiY"
+```

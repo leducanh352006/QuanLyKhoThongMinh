@@ -774,6 +774,9 @@ namespace QuanLyKho.Web.Migrations
                     b.Property<int>("MaNguoiLap")
                         .HasColumnType("int");
 
+                    b.Property<int?>("MaPK")
+                        .HasColumnType("int");
+
                     b.Property<int?>("MaPNGoc")
                         .HasColumnType("int");
 
@@ -803,6 +806,8 @@ namespace QuanLyKho.Web.Migrations
 
                     b.HasIndex("MaNguoiLap");
 
+                    b.HasIndex("MaPK");
+
                     b.HasIndex("MaPNGoc");
 
                     b.HasIndex("SoPhieu")
@@ -817,6 +822,8 @@ namespace QuanLyKho.Web.Migrations
                             t.HasCheckConstraint("CK_PhieuXuat_LoaiPhieu", "[LoaiPhieu] IN (N'Khác', N'Trả lại hàng mua', N'Hủy hàng', N'Thiếu do kiểm kê')");
 
                             t.HasCheckConstraint("CK_PhieuXuat_NguoiDuyet", "[TrangThai] = N'Nháp' OR [TrangThai] = N'Đã hủy' OR [MaNguoiDuyet] IS NOT NULL");
+
+                            t.HasCheckConstraint("CK_PhieuXuat_ThieuCoPhieuKiem", "([LoaiPhieu] = N'Thiếu do kiểm kê' AND [MaPK] IS NOT NULL) OR ([LoaiPhieu] <> N'Thiếu do kiểm kê' AND [MaPK] IS NULL)");
 
                             t.HasCheckConstraint("CK_PhieuXuat_TraHangMua", "([LoaiPhieu] <> N'Trả lại hàng mua' OR [MaPNGoc] IS NOT NULL) AND ([LoaiPhieu] = N'Trả lại hàng mua' OR [MaPNGoc] IS NULL)");
 

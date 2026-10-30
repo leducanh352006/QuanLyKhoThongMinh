@@ -26,9 +26,23 @@ public class PhieuXuatController(INguoiDungHienTai hienTai, IAuditService audit,
 
     // ---- Xem ----
 
-    public async Task<IActionResult> Index() =>
-        View(await Db.PhieuXuat.Include(p => p.Kho).Include(p => p.ChiTiet)
-            .OrderByDescending(p => p.MaPX).Take(200).ToListAsync());
+    /// <summary>Danh sách tìm theo số phiếu (chứa, không phân biệt hoa thường) và lọc theo khoảng thời gian lập phiếu (việc T2-8).</summary>
+    public async Task<IActionResult> Index(string? q, DateOnly? tuNgay, DateOnly? denNgay)
+    {
+        var truy = Db.PhieuXuat.Include(p => p.Kho).Include(p => p.ChiTiet).AsQueryable();
+        if (!string.IsNullOrWhiteSpace(q)) truy = truy.Where(p => p.SoPhieu.Contains(q.Trim()));
+        if (tuNgay is DateOnly tu) truy = truy.Where(p => p.ThoiGian >= DauNgayUtc(tu));
+        if (denNgay is DateOnly den) truy = truy.Where(p => p.ThoiGian <= DauNgayUtc(den.AddDays(1)).AddTicks(-1));
+
+        ViewBag.Q = q;
+        ViewBag.TuNgay = tuNgay;
+        ViewBag.DenNgay = denNgay;
+        return View(await truy.OrderByDescending(p => p.MaPX).Take(200).ToListAsync());
+    }
+
+    /// <summary>Đổi ngày theo giờ máy chủ sang đầu ngày giờ UTC để lọc ThoiGian (lưu UTC).</summary>
+    private static DateTime DauNgayUtc(DateOnly ngay) =>
+        TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(ngay.ToDateTime(TimeOnly.MinValue), DateTimeKind.Unspecified), TimeZoneInfo.Local);
 
     [HttpGet, CanQuyen(LoaiChungTu.XK, QuyenThaoTac.Them)]
     public Task<IActionResult> Tao() => HienForm(new PhieuXuat { ChiTiet = { new ChiTietPhieuXuat() } });
@@ -82,6 +96,33 @@ public class PhieuXuatController(INguoiDungHienTai hienTai, IAuditService audit,
             TempData["ThongBao"] = "Đã duyệt phiếu. Phiếu bị khóa, không sửa được nữa.";
         }
         else TempData["Loi"] = "Không duyệt được: phiếu vừa bị đổi trạng thái ở nơi khác.";
+        return RedirectToAction(nameof(Sua), new { id });
+    }
+
+    /// <summary>
+    /// Hủy phiếu Nháp hoặc Đã duyệt (việc T2-8, Bảng 2.4). T2-1, T2-7 chưa giữ chỗ tồn khi duyệt (xem Duyet ở trên) nên hiện chưa có gì
+    /// để trả; khi việc T2-3 thêm IStockService.GiuCho vào Duyet, hàm này cần thêm bước gọi TraCho tương ứng cho từng dòng đã giữ.
+    /// Phiếu Thiếu do kiểm kê (IXuatKhoService.TaoPhieuXuatThieu) đã ở trạng thái Hoàn tất, không hủy được bằng hành động này.
+    /// </summary>
+    [HttpPost, ValidateAntiForgeryToken, CanQuyen(LoaiChungTu.XK, QuyenThaoTac.Xoa)]
+    public async Task<IActionResult> Huy(int id)
+    {
+        var p = await Db.PhieuXuat.AsNoTracking().FirstOrDefaultAsync(x => x.MaPX == id);
+        if (p is null) return NotFound();
+        if (p.LoaiPhieu == PhieuXuat.ThieuDoKiemKe)
+        {
+            TempData["Loi"] = "Phiếu Thiếu do kiểm kê do hệ thống tự sinh, không hủy được ở đây.";
+            return RedirectToAction(nameof(Sua), new { id });
+        }
+
+        var n = await Db.PhieuXuat.Where(x => x.MaPX == id && (x.TrangThai == PhieuXuat.Nhap || x.TrangThai == PhieuXuat.DaDuyet))
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.TrangThai, PhieuXuat.DaHuy));
+        if (n == 1)
+        {
+            await audit.Ghi(MaNguoiDung(), "Hủy phiếu xuất", LoaiChungTu.XK, id, p.SoPhieu);
+            TempData["ThongBao"] = "Đã hủy phiếu.";
+        }
+        else TempData["Loi"] = "Không hủy được: phiếu không còn ở trạng thái Nháp hoặc Đã duyệt.";
         return RedirectToAction(nameof(Sua), new { id });
     }
 

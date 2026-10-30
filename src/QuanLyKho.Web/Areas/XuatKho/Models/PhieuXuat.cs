@@ -9,7 +9,7 @@ namespace QuanLyKho.Web.Areas.XuatKho.Models
 {
     /// <summary>
     /// Phiếu xuất kho (việc T2-1, Bảng 2.23). Phiếu Nháp sửa được, phiếu Đã duyệt trở đi bị khóa.
-    /// Loại "Thiếu do kiểm kê" do hệ thống tự sinh (việc T2-8, cần bảng PhieuKiem) nên chưa tạo tay được ở đây.
+    /// Loại "Thiếu do kiểm kê" do hệ thống tự sinh qua <see cref="QuanLyKho.Web.Contracts.IXuatKhoService"/> (việc T2-8), không tạo tay được ở đây.
     /// </summary>
     public class PhieuXuat
     {
@@ -41,6 +41,8 @@ namespace QuanLyKho.Web.Areas.XuatKho.Models
 
         /// <summary>Phiếu nhập gốc; bắt buộc khi LoaiPhieu = Trả lại hàng mua (việc T2-7 kiểm không vượt số đã nhập).</summary>
         public int? MaPNGoc { get; set; }
+
+        public int? MaPK { get; set; }                               // phiếu kiểm sinh ra phiếu Thiếu do kiểm kê (T2-8); các loại khác để null
 
         public int MaNguoiLap { get; set; }
 
@@ -106,6 +108,8 @@ namespace QuanLyKho.Web.Areas.XuatKho.Models
                 t.HasCheckConstraint("CK_PhieuXuat_HuyHang", "[LoaiPhieu] <> N'Hủy hàng' OR [LyDo] IS NOT NULL");
                 t.HasCheckConstraint("CK_PhieuXuat_NguoiDuyet",
                     "[TrangThai] = N'Nháp' OR [TrangThai] = N'Đã hủy' OR [MaNguoiDuyet] IS NOT NULL");
+                t.HasCheckConstraint("CK_PhieuXuat_ThieuCoPhieuKiem",
+                    "([LoaiPhieu] = N'Thiếu do kiểm kê' AND [MaPK] IS NOT NULL) OR ([LoaiPhieu] <> N'Thiếu do kiểm kê' AND [MaPK] IS NULL)");
             });
             b.HasKey(x => x.MaPX);
             b.Property(x => x.SoPhieu).HasColumnType("varchar(20)").IsRequired();
@@ -119,6 +123,7 @@ namespace QuanLyKho.Web.Areas.XuatKho.Models
             b.Property(x => x.TrangThai).HasMaxLength(20).IsRequired().HasDefaultValue(PhieuXuat.Nhap);
             b.Ignore(x => x.DaKhoa);
             b.HasIndex(x => new { x.MaKho, x.ThoiGian });
+            b.HasIndex(x => x.MaPK);   // chưa có khóa ngoại tới PhieuKiem vì bảng đó do nhóm Kiểm tra hàng hóa tạo sau
             b.HasOne(x => x.Kho).WithMany().HasForeignKey(x => x.MaKho).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(x => x.PhieuNhapGoc).WithMany().HasForeignKey(x => x.MaPNGoc).OnDelete(DeleteBehavior.Restrict);
             b.HasOne<NguoiDung>().WithMany().HasForeignKey(x => x.MaNguoiLap).OnDelete(DeleteBehavior.Restrict);

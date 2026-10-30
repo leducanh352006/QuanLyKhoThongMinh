@@ -1,0 +1,96 @@
+@using QuanLyKho.Web.Areas.HeThong.Models
+@using QuanLyKho.Web.Areas.NhapKho.Services
+@model KetQuaTra
+@{
+    // Tra cứu vị trí và tồn (việc T1-5): chỉ hàng đã sắp xếp vào ô lưu trữ; tồn tính riêng từng kho.
+    var loc = (BoLocTra)ViewBag.Loc;
+    var kho = (List<Kho>)ViewBag.Kho;
+    ViewData["Title"] = "Tra cứu vị trí và tồn";
+}
+
+<header class="trang-dau">
+    <h1>@ViewData["Title"]</h1>
+    <p class="mota">
+        Hàng đang nằm ở ô nào và còn bao nhiêu. Chỉ hiện hàng đã sắp xếp vào ô lưu trữ; hàng còn ở khu tiếp nhận chưa tính.
+        Để trống các ô lọc để xem tất cả.
+    </p>
+</header>
+
+<form method="get" class="row g-2 align-items-end mb-4">
+    <div class="col-auto">
+        <label class="form-label" for="maKho">Kho</label>
+        <select class="form-select form-select-sm" name="maKho" id="maKho">
+            <option value="">Tất cả kho</option>
+            @foreach (var k in kho)
+            {
+                <option value="@k.MaKho" selected="@(loc.MaKho == k.MaKho)">@k.TenKho</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <label class="form-label" for="bienThe">Biến thể</label>
+        <input class="form-control form-control-sm" name="bienThe" id="bienThe" value="@loc.BienThe" placeholder="Tên, thuộc tính hoặc mã vạch" />
+    </div>
+    <div class="col-auto">
+        <label class="form-label" for="lo">Lô</label>
+        <input class="form-control form-control-sm" name="lo" id="lo" value="@loc.Lo" placeholder="Mã vạch lô" />
+    </div>
+    <div class="col-auto">
+        <label class="form-label" for="o">Ô</label>
+        <input class="form-control form-control-sm" name="o" id="o" value="@loc.O" placeholder="Tên hoặc mã vạch ô" />
+    </div>
+    <div class="col-auto d-flex gap-2">
+        <button type="submit" class="btn btn-sm btn-primary">Tra cứu</button>
+        <a class="btn btn-sm btn-outline-secondary" asp-action="Index">Xóa lọc</a>
+        <a class="btn btn-sm btn-outline-secondary" asp-action="BaoCao">Báo cáo tổng hợp tồn</a>
+    </div>
+</form>
+
+@if (Model.BiCat)
+{
+    <div class="alert alert-warning" role="status">Có hơn @TraCuuTonService.ToiDa dòng, chỉ hiện @TraCuuTonService.ToiDa dòng đầu. Hãy lọc thêm để thu hẹp kết quả.</div>
+}
+
+@if (Model.Dong.Count == 0)
+{
+    <p class="khung-trong">Không có hàng nào đã sắp xếp khớp với bộ lọc.</p>
+}
+
+@foreach (var nhom in Model.Dong.GroupBy(d => d.MaKho))
+{
+    <section class="mb-4" aria-labelledby="kho@(nhom.Key)">
+        <h2 class="h5" id="kho@(nhom.Key)">@nhom.First().TenKho</h2>
+        <div class="bang-cuon">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">Vị trí (từ kho đến ô)</th><th scope="col">Hàng</th><th scope="col">Lô</th><th scope="col">Hạn dùng</th>
+                        <th scope="col" class="text-end">Tồn</th><th scope="col" class="text-end">Giữ chỗ</th><th scope="col" class="text-end">Khả dụng</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var d in nhom)
+                    {
+                        <tr>
+                            <td>@d.DuongDan @if (d.MaVachO is not null) { <span class="text-body-secondary">(@d.MaVachO)</span> }</td>
+                            <td>@d.TenHang</td>
+                            <td>@d.MaVachLo</td>
+                            <td>@(d.HanDung?.ToString("dd/MM/yyyy"))</td>
+                            <td class="text-end">@d.SoLuongTon</td>
+                            <td class="text-end">@d.SoLuongGiu</td>
+                            <td class="text-end">@d.KhaDung</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th scope="row" colspan="4">Cộng @nhom.First().TenKho</th>
+                        <td class="text-end">@(nhom.Sum(d => d.SoLuongTon))</td>
+                        <td class="text-end">@(nhom.Sum(d => d.SoLuongGiu))</td>
+                        <td class="text-end">@(nhom.Sum(d => d.KhaDung))</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </section>
+}

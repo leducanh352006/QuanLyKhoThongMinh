@@ -335,6 +335,49 @@ namespace QuanLyKho.Web.Migrations
                         });
                 });
 
+            modelBuilder.Entity("QuanLyKho.Web.Areas.HeThong.Models.NhatKyThaoTac", b =>
+                {
+                    b.Property<long>("MaNK")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("MaNK"));
+
+                    b.Property<string>("ChiTiet")
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("HanhDong")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("LoaiCT")
+                        .HasColumnType("varchar(2)");
+
+                    b.Property<int?>("MaCT")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaND")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ThoiGian")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("MaNK");
+
+                    b.HasIndex("MaND");
+
+                    b.HasIndex("ThoiGian");
+
+                    b.HasIndex("LoaiCT", "MaCT");
+
+                    b.ToTable("NhatKyThaoTac", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_NhatKyThaoTac_ChungTu", "([LoaiCT] IS NULL AND [MaCT] IS NULL) OR ([LoaiCT] IS NOT NULL AND [MaCT] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_NhatKyThaoTac_LoaiCT", "[LoaiCT] IS NULL OR [LoaiCT] IN ('NK', 'XK', 'CK', 'KK')");
+                        });
+                });
+
             modelBuilder.Entity("QuanLyKho.Web.Areas.HeThong.Models.PhanQuyen", b =>
                 {
                     b.Property<int>("MaVaiTro")
@@ -373,6 +416,47 @@ namespace QuanLyKho.Web.Migrations
                     b.ToTable("PhanQuyen", null, t =>
                         {
                             t.HasCheckConstraint("CK_PhanQuyen_LoaiChungTu", "[LoaiChungTu] IN ('NK', 'XK', 'CK', 'KK')");
+                        });
+                });
+
+            modelBuilder.Entity("QuanLyKho.Web.Areas.HeThong.Models.TepDinhKem", b =>
+                {
+                    b.Property<int>("MaTep")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MaTep"));
+
+                    b.Property<string>("DuongDan")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("LoaiCT")
+                        .IsRequired()
+                        .HasColumnType("varchar(2)");
+
+                    b.Property<int>("MaCT")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaND")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TenTep")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<DateTime>("ThoiGian")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("MaTep");
+
+                    b.HasIndex("MaND");
+
+                    b.HasIndex("LoaiCT", "MaCT");
+
+                    b.ToTable("TepDinhKem", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_TepDinhKem_LoaiCT", "[LoaiCT] IN ('NK', 'XK', 'CK', 'KK')");
                         });
                 });
 
@@ -675,6 +759,119 @@ namespace QuanLyKho.Web.Migrations
                         });
                 });
 
+            modelBuilder.Entity("QuanLyKho.Web.Areas.XuatKho.Models.ChiTietPhieuXuat", b =>
+                {
+                    b.Property<int>("MaCTX")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MaCTX"));
+
+                    b.Property<int>("MaBT")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaPX")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SoLuong")
+                        .HasColumnType("int");
+
+                    b.HasKey("MaCTX");
+
+                    b.HasIndex("MaBT");
+
+                    b.HasIndex("MaPX");
+
+                    b.ToTable("ChiTietPhieuXuat", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ChiTietPhieuXuat_SoLuong", "[SoLuong] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("QuanLyKho.Web.Areas.XuatKho.Models.PhieuXuat", b =>
+                {
+                    b.Property<int>("MaPX")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MaPX"));
+
+                    b.Property<string>("DienGiai")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("DoiTuong")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("LoaiPhieu")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("LyDo")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<int>("MaKho")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MaNguoiDuyet")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaNguoiLap")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MaPNGoc")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SoPhieu")
+                        .IsRequired()
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("ThamChieu")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("ThoiGian")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(0)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<string>("TrangThai")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Nháp");
+
+                    b.HasKey("MaPX");
+
+                    b.HasIndex("MaNguoiDuyet");
+
+                    b.HasIndex("MaNguoiLap");
+
+                    b.HasIndex("MaPNGoc");
+
+                    b.HasIndex("SoPhieu")
+                        .IsUnique();
+
+                    b.HasIndex("MaKho", "ThoiGian");
+
+                    b.ToTable("PhieuXuat", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PhieuXuat_HuyHang", "[LoaiPhieu] <> N'Hủy hàng' OR [LyDo] IS NOT NULL");
+
+                            t.HasCheckConstraint("CK_PhieuXuat_LoaiPhieu", "[LoaiPhieu] IN (N'Khác', N'Trả lại hàng mua', N'Hủy hàng', N'Thiếu do kiểm kê')");
+
+                            t.HasCheckConstraint("CK_PhieuXuat_NguoiDuyet", "[TrangThai] = N'Nháp' OR [TrangThai] = N'Đã hủy' OR [MaNguoiDuyet] IS NOT NULL");
+
+                            t.HasCheckConstraint("CK_PhieuXuat_TraHangMua", "([LoaiPhieu] <> N'Trả lại hàng mua' OR [MaPNGoc] IS NOT NULL) AND ([LoaiPhieu] = N'Trả lại hàng mua' OR [MaPNGoc] IS NULL)");
+
+                            t.HasCheckConstraint("CK_PhieuXuat_TrangThai", "[TrangThai] IN (N'Nháp', N'Đã duyệt', N'Đang lấy hàng', N'Đã đối chiếu', N'Hoàn tất', N'Đã hủy')");
+                        });
+                });
+
             modelBuilder.Entity("QuanLyKho.Web.Areas.HangHoa.Models.BienThe", b =>
                 {
                     b.HasOne("QuanLyKho.Web.Areas.HangHoa.Models.SanPham", null)
@@ -741,12 +938,30 @@ namespace QuanLyKho.Web.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("QuanLyKho.Web.Areas.HeThong.Models.NhatKyThaoTac", b =>
+                {
+                    b.HasOne("QuanLyKho.Web.Areas.HeThong.Models.NguoiDung", null)
+                        .WithMany()
+                        .HasForeignKey("MaND")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("QuanLyKho.Web.Areas.HeThong.Models.PhanQuyen", b =>
                 {
                     b.HasOne("QuanLyKho.Web.Areas.HeThong.Models.VaiTro", null)
                         .WithMany()
                         .HasForeignKey("MaVaiTro")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QuanLyKho.Web.Areas.HeThong.Models.TepDinhKem", b =>
+                {
+                    b.HasOne("QuanLyKho.Web.Areas.HeThong.Models.NguoiDung", null)
+                        .WithMany()
+                        .HasForeignKey("MaND")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
@@ -819,6 +1034,50 @@ namespace QuanLyKho.Web.Migrations
                     b.Navigation("NhaCungCap");
                 });
 
+            modelBuilder.Entity("QuanLyKho.Web.Areas.XuatKho.Models.ChiTietPhieuXuat", b =>
+                {
+                    b.HasOne("QuanLyKho.Web.Areas.HangHoa.Models.BienThe", null)
+                        .WithMany()
+                        .HasForeignKey("MaBT")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QuanLyKho.Web.Areas.XuatKho.Models.PhieuXuat", null)
+                        .WithMany("ChiTiet")
+                        .HasForeignKey("MaPX")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QuanLyKho.Web.Areas.XuatKho.Models.PhieuXuat", b =>
+                {
+                    b.HasOne("QuanLyKho.Web.Areas.HeThong.Models.Kho", "Kho")
+                        .WithMany()
+                        .HasForeignKey("MaKho")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QuanLyKho.Web.Areas.HeThong.Models.NguoiDung", null)
+                        .WithMany()
+                        .HasForeignKey("MaNguoiDuyet")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QuanLyKho.Web.Areas.HeThong.Models.NguoiDung", null)
+                        .WithMany()
+                        .HasForeignKey("MaNguoiLap")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QuanLyKho.Web.Areas.NhapKho.Models.PhieuNhap", "PhieuNhapGoc")
+                        .WithMany()
+                        .HasForeignKey("MaPNGoc")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Kho");
+
+                    b.Navigation("PhieuNhapGoc");
+                });
+
             modelBuilder.Entity("QuanLyKho.Web.Areas.NhapKho.Models.PhieuNhap", b =>
                 {
                     b.Navigation("ChiTiet");
@@ -842,6 +1101,11 @@ namespace QuanLyKho.Web.Migrations
                         .HasForeignKey("MaViTri")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("QuanLyKho.Web.Areas.XuatKho.Models.PhieuXuat", b =>
+                {
+                    b.Navigation("ChiTiet");
                 });
 #pragma warning restore 612, 618
         }

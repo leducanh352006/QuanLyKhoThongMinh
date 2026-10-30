@@ -121,6 +121,8 @@ else
     </form>
 }
 
+@await Component.InvokeAsync("DinhKem", new { loai = QuanLyKho.Web.Contracts.LoaiChungTu.NK, maCT = Model.MaPN })
+
 @section Scripts {
     <script>
         (function () {

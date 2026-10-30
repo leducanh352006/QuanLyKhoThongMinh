@@ -16,5 +16,6 @@ public sealed class HangHoaMenu : IMenuNguon
         new MenuMuc("Sản phẩm", "Thêm, sửa sản phẩm.", "HangHoa", "SanPham", "Index", new[] { VaiTroTen.QuanTriVien, VaiTroTen.QuanLyKho, VaiTroTen.ThuKho }),
         new MenuMuc("Biến thể", "Size, màu... kèm kích thước và khối lượng của từng sản phẩm.", "HangHoa", "BienThe", "Index", new[] { VaiTroTen.QuanTriVien, VaiTroTen.QuanLyKho, VaiTroTen.ThuKho }),
         new MenuMuc("Lô hàng", "Danh sách lô và hạn dùng, lọc theo biến thể.", "HangHoa", "LoHang", "Index", new[] { VaiTroTen.QuanTriVien, VaiTroTen.QuanLyKho, VaiTroTen.ThuKho }),
+        new MenuMuc("Phiếu kiểm", "Danh sách và tạo phiếu kiểm kê, khai báo người tham gia kiểm.", "HangHoa", "PhieuKiem", "Index", new[] { VaiTroTen.QuanTriVien, VaiTroTen.QuanLyKho, VaiTroTen.ThuKho }),
     });
 }

@@ -1,0 +1,180 @@
+@using QuanLyKho.Web.Areas.HangHoa.Models
+@model PhieuKiem
+@{
+    // Tạo phiếu là bắt đầu kiểm ngay nên không có bước sửa: phiếu đã tạo (MaPK > 0) luôn chỉ xem.
+    var laMoi = Model.MaPK == 0;
+    var khoa = !laMoi;
+    var dsKho = (Dictionary<int, string>)ViewBag.Kho;
+    var dsBienThe = (Dictionary<int, string>)ViewBag.BienThe;
+    var dsNguoiDung = (Dictionary<int, string>)ViewBag.NguoiDung;
+    ViewData["Title"] = laMoi ? "Tạo phiếu kiểm" : $"Phiếu kiểm {Model.SoPhieu}";
+}
+
+<header class="trang-dau">
+    <h1>@ViewData["Title"]</h1>
+    @if (!laMoi)
+    {
+        <p class="mota">
+            <span class="nhan @(Model.TrangThai == PhieuKiem.HoanTat ? "nhan-tot" : "nhan-chu-y")">@Model.TrangThai</span>
+            Bắt đầu kiểm lúc @Model.ThoiGianBatDau.ToLocalTime().ToString("dd/MM/yyyy HH:mm"). Các ô liên quan đã bị khóa, không nhập/xuất/chuyển được tới khi hoàn tất.
+        </p>
+    }
+</header>
+
+@if (TempData["ThongBao"] is string tb) { <div class="alert alert-success" role="status">@tb</div> }
+@if ((TempData["Loi"] ?? ViewData["Loi"]) is string loi) { <div class="alert alert-danger" role="alert">@loi</div> }
+
+<form method="post" asp-action="Tao" id="formPhieu">
+    <input type="hidden" name="MaPK" value="@Model.MaPK" />
+    <input type="hidden" name="SoPhieu" value="@Model.SoPhieu" />
+
+    <fieldset disabled="@khoa">
+        <div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <label class="form-label" for="LoaiKiemKe">Loại kiểm kê</label>
+                <select class="form-select" id="LoaiKiemKe" name="LoaiKiemKe">
+                    @foreach (var loai in new[] { PhieuKiem.ToanBo, PhieuKiem.MotPhan })
+                    {
+                        <option value="@loai" selected="@(Model.LoaiKiemKe == loai)">@loai</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="MaKho">Kho kiểm kê</label>
+                <select class="form-select" id="MaKho" name="MaKho">
+                    <option value="0">-- Chọn kho --</option>
+                    @foreach (var k in dsKho)
+                    {
+                        <option value="@k.Key" selected="@(Model.MaKho == k.Key)">@k.Value</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="ThamChieu">Tham chiếu (không bắt buộc)</label>
+                <input class="form-control" id="ThamChieu" name="ThamChieu" maxlength="100" value="@Model.ThamChieu" />
+            </div>
+            <div class="col-12">
+                <label class="form-label" for="DienGiai">Diễn giải (không bắt buộc)</label>
+                <textarea class="form-control" id="DienGiai" name="DienGiai" rows="2" maxlength="500">@Model.DienGiai</textarea>
+            </div>
+        </div>
+
+        @if (laMoi)
+        {
+            <div class="mb-3" id="oPhamVi">
+                <h2 class="h5">Phạm vi mặt hàng (kiểm Một phần)</h2>
+                <div class="bang-cuon" style="max-height:16rem">
+                    @foreach (var b in dsBienThe)
+                    {
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="PhamViMaBT" value="@b.Key" id="bt@(b.Key)" checked="@(Model.PhamViMaBT.Contains(b.Key))" />
+                            <label class="form-check-label" for="bt@(b.Key)">@b.Value</label>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <h2 class="h5">Người tham gia kiểm</h2>
+            <div class="bang-cuon">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr><th scope="col">Người kiểm</th><th scope="col">Ghi chú</th><th scope="col" style="width:6rem"><span class="visually-hidden">Thao tác</span></th></tr>
+                    </thead>
+                    <tbody id="dongThamGia">
+                        @foreach (var t in Model.ThamGia)
+                        {
+                            <tr>
+                                <td>
+                                    <select class="form-select" data-ten="MaND" aria-label="Người kiểm">
+                                        <option value="0">-- Chọn người --</option>
+                                        @foreach (var n in dsNguoiDung)
+                                        {
+                                            <option value="@n.Key" selected="@(t.MaND == n.Key)">@n.Value</option>
+                                        }
+                                    </select>
+                                </td>
+                                <td><input class="form-control" data-ten="GhiChu" value="@t.GhiChu" maxlength="255" aria-label="Ghi chú" /></td>
+                                <td><button type="button" class="btn btn-outline-secondary btn-sm" data-xoa>Xóa</button></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <h2 class="h5">Người tham gia kiểm</h2>
+            <ul>
+                @foreach (var t in Model.ThamGia)
+                {
+                    <li>@(t.NguoiDung?.HoTen ?? $"#{t.MaND}") @(string.IsNullOrWhiteSpace(t.GhiChu) ? "" : $"— {t.GhiChu}")</li>
+                }
+            </ul>
+
+            <h2 class="h5">Phạm vi và tồn hệ thống lúc bắt đầu</h2>
+            <div class="bang-cuon">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr><th scope="col">Mặt hàng</th><th scope="col">Lô</th><th scope="col">Ô</th><th scope="col" class="text-end">Tồn hệ thống</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var d in Model.ChiTiet)
+                        {
+                            <tr>
+                                <td>@(dsBienThe.GetValueOrDefault(d.MaBT) ?? $"#{d.MaBT}")</td>
+                                <td>#@d.MaLo</td>
+                                <td>#@d.MaViTri</td>
+                                <td class="text-end">@d.SoLuongHeThong</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </fieldset>
+
+    <div class="d-flex flex-wrap gap-2 mt-3">
+        @if (laMoi)
+        {
+            <button type="button" class="btn btn-outline-primary" id="themDong">Thêm người tham gia</button>
+            <button type="submit" class="btn btn-primary">Tạo phiếu và bắt đầu kiểm</button>
+        }
+        <a class="btn btn-outline-secondary" asp-action="Index">Quay lại danh sách</a>
+    </div>
+</form>
+
+@if (laMoi)
+{
+    @section Scripts {
+        <script>
+            // Thêm, xóa dòng người tham gia rồi đánh số lại tên ô: ThamGia[0].MaND, ThamGia[0].GhiChu, ThamGia[1].MaND...
+            const bang = document.getElementById('dongThamGia');
+            function danhSo() {
+                bang.querySelectorAll('tr').forEach((tr, i) =>
+                    tr.querySelectorAll('[data-ten]').forEach(o => o.name = `ThamGia[${i}].${o.dataset.ten}`));
+            }
+            document.getElementById('themDong')?.addEventListener('click', () => {
+                const dongMoi = bang.rows[0].cloneNode(true);
+                dongMoi.querySelectorAll('select, input').forEach(o => o.value = o.tagName === 'SELECT' ? '0' : '');
+                bang.appendChild(dongMoi);
+                danhSo();
+            });
+            bang.addEventListener('click', e => {
+                if (e.target.matches('[data-xoa]') && bang.rows.length > 1) { e.target.closest('tr').remove(); danhSo(); }
+            });
+            // Chỉ hiện phạm vi mặt hàng cho loại Một phần.
+            const loaiKiemKe = document.getElementById('LoaiKiemKe');
+            const oPhamVi = document.getElementById('oPhamVi');
+            function capNhatHienThi() {
+                const laMotPhan = loaiKiemKe.value === '@PhieuKiem.MotPhan';
+                oPhamVi.hidden = !laMotPhan;
+                if (!laMotPhan) oPhamVi.querySelectorAll('input[type=checkbox]').forEach(c => c.checked = false);
+            }
+            loaiKiemKe?.addEventListener('change', capNhatHienThi);
+            capNhatHienThi();
+            // Khóa nút Lưu sau khi bấm để bấm đúp không tạo hai phiếu.
+            document.getElementById('formPhieu').addEventListener('submit', e => setTimeout(() => e.submitter && (e.submitter.disabled = true)));
+            danhSo();
+        </script>
+    }
+}

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using QuanLyKho.Web.Areas.HangHoa.Models;
 using QuanLyKho.Web.Areas.HeThong.Models;
 using QuanLyKho.Web.Areas.HeThong.Services;
 using QuanLyKho.Web.Areas.NhapKho.Models;

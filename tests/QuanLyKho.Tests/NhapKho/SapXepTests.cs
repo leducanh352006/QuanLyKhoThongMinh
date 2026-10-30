@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using QuanLyKho.Tests.HangHoa;
@@ -45,7 +47,7 @@ public class SapXepTests
     {
         using var db = new KhoDbContext(new DbContextOptionsBuilder<KhoDbContext>()
             .UseSqlServer("Server=.;Database=KhongKetNoi;Trusted_Connection=True").Options);
-        var sx = db.Model.FindEntityType(typeof(SapXep))!;
+        var sx = db.GetService<IDesignTimeModel>().Model.FindEntityType(typeof(SapXep))!;
 
         Assert.Equal("SapXep", sx.GetTableName());
         Assert.False(sx.FindProperty("MaCTN")!.IsNullable);

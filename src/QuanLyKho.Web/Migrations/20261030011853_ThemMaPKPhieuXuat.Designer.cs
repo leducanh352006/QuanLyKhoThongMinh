@@ -809,7 +809,9 @@ namespace QuanLyKho.Web.Migrations
 
                     b.HasIndex("MaNguoiLap");
 
-                    b.HasIndex("MaPK");
+                    b.HasIndex("MaPK")
+                        .IsUnique()
+                        .HasFilter("[LoaiPhieu] = N'Thiếu do kiểm kê'");
 
                     b.HasIndex("MaPNGoc");
 

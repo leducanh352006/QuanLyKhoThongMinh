@@ -123,7 +123,10 @@ namespace QuanLyKho.Web.Areas.XuatKho.Models
             b.Property(x => x.TrangThai).HasMaxLength(20).IsRequired().HasDefaultValue(PhieuXuat.Nhap);
             b.Ignore(x => x.DaKhoa);
             b.HasIndex(x => new { x.MaKho, x.ThoiGian });
-            b.HasIndex(x => x.MaPK);   // chưa có khóa ngoại tới PhieuKiem vì bảng đó do nhóm Kiểm tra hàng hóa tạo sau
+            // Duy nhất trong phạm vi loại Thiếu do kiểm kê: chặn ở CSDL việc hai yêu cầu đồng thời cùng tạo phiếu Thiếu cho một phiếu kiểm
+            // (kiểm "đã có chưa" ở XuatKhoService chỉ đọc trước khi ghi, không tự chống được tranh chấp). Chưa có khóa ngoại tới PhieuKiem
+            // vì bảng đó do nhóm Kiểm tra hàng hóa tạo sau.
+            b.HasIndex(x => x.MaPK).IsUnique().HasFilter("[LoaiPhieu] = N'Thiếu do kiểm kê'");
             b.HasOne(x => x.Kho).WithMany().HasForeignKey(x => x.MaKho).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(x => x.PhieuNhapGoc).WithMany().HasForeignKey(x => x.MaPNGoc).OnDelete(DeleteBehavior.Restrict);
             b.HasOne<NguoiDung>().WithMany().HasForeignKey(x => x.MaNguoiLap).OnDelete(DeleteBehavior.Restrict);

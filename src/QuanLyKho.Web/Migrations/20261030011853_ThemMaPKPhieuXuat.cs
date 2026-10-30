@@ -19,7 +19,9 @@ namespace QuanLyKho.Web.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_PhieuXuat_MaPK",
                 table: "PhieuXuat",
-                column: "MaPK");
+                column: "MaPK",
+                unique: true,
+                filter: "[LoaiPhieu] = N'Thiếu do kiểm kê'");
 
             migrationBuilder.AddCheckConstraint(
                 name: "CK_PhieuXuat_ThieuCoPhieuKiem",

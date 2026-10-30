@@ -95,7 +95,17 @@ public sealed class XuatKhoService(KhoDbContext db, IStockService ton, IAuditSer
         try
         {
             db.PhieuXuat.Add(phieu);
-            await db.SaveChangesAsync(ct);                       // lấy được MaPX
+            try
+            {
+                await db.SaveChangesAsync(ct);                   // lấy được MaPX
+            }
+            catch (DbUpdateException) when (phieu.MaPK is not null)
+            {
+                // Chỉ mục duy nhất CK_PhieuXuat trên (MaPK, Thiếu do kiểm kê) chặn hai yêu cầu đồng thời cùng tạo phiếu Thiếu
+                // cho một phiếu kiểm; kiểm tra "đã có chưa" ở trên chỉ đọc trước, không tự chống được tranh chấp.
+                if (tuMo) GoKhoiTheoDoi(phieu);
+                return KetQua<PhieuRef>.Loi($"Phiếu kiểm {phieu.MaPK} vừa được tạo phiếu xuất Thiếu do kiểm kê ở nơi khác.", MaLoiDichVu.SaiTrangThai);
+            }
             phieu.SoPhieu = $"XK{phieu.MaPX:D6}";
             await db.SaveChangesAsync(ct);
 

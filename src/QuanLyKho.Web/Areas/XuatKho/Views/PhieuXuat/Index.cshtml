@@ -1,0 +1,45 @@
+@using QuanLyKho.Web.Areas.XuatKho.Models
+@model List<QuanLyKho.Web.Areas.XuatKho.Models.PhieuXuat>
+@{
+    ViewData["Title"] = "Phiếu xuất";
+}
+
+<header class="trang-dau d-flex flex-wrap justify-content-between align-items-end gap-2">
+    <div>
+        <h1>Phiếu xuất</h1>
+        <p class="mota">Phiếu Nháp sửa được; phiếu đã duyệt trở đi bị khóa. Hiện 200 phiếu mới nhất.</p>
+    </div>
+    <a class="btn btn-primary" asp-action="Tao">Tạo phiếu xuất</a>
+</header>
+
+@if (Model.Count == 0)
+{
+    <p class="khung-trong">Chưa có phiếu xuất nào. Bấm "Tạo phiếu xuất" để lập phiếu đầu tiên.</p>
+}
+else
+{
+    <div class="bang-cuon">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">Số phiếu</th><th scope="col">Loại</th><th scope="col">Thời gian</th><th scope="col">Kho</th>
+                    <th scope="col">Đối tượng</th><th scope="col" class="text-end">Số dòng</th><th scope="col">Trạng thái</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model)
+                {
+                    <tr>
+                        <td><a asp-action="Sua" asp-route-id="@p.MaPX">@p.SoPhieu</a></td>
+                        <td>@p.LoaiPhieu</td>
+                        <td>@p.ThoiGian.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                        <td>@(p.Kho?.TenKho)</td>
+                        <td>@(p.DoiTuong ?? "—")</td>
+                        <td class="text-end">@p.ChiTiet.Count</td>
+                        <td><span class="nhan @(p.DaKhoa ? "nhan-tot" : "nhan-chu-y")">@p.TrangThai</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

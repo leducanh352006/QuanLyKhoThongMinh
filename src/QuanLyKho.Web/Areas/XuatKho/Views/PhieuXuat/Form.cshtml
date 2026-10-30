@@ -1,0 +1,163 @@
+@using QuanLyKho.Web.Areas.XuatKho.Models
+@model PhieuXuat
+@{
+    // Một form dùng cho cả tạo mới, sửa phiếu nháp và xem phiếu đã khóa.
+    var laMoi = Model.MaPX == 0;
+    var khoa = Model.DaKhoa;
+    var dsKho = (Dictionary<int, string>)ViewBag.Kho;
+    var dsBienThe = (Dictionary<int, string>)ViewBag.BienThe;
+    var dsPhieuNhap = (Dictionary<int, string>)ViewBag.PhieuNhap;
+    ViewData["Title"] = laMoi ? "Tạo phiếu xuất" : $"Phiếu xuất {Model.SoPhieu}";
+}
+
+<header class="trang-dau">
+    <h1>@ViewData["Title"]</h1>
+    @if (!laMoi)
+    {
+        <p class="mota">
+            <span class="nhan @(khoa ? "nhan-tot" : "nhan-chu-y")">@Model.TrangThai</span>
+            @(khoa ? "Phiếu đã khóa, không sửa được." : "Phiếu nháp, còn sửa được.")
+        </p>
+    }
+</header>
+
+@if (TempData["ThongBao"] is string tb) { <div class="alert alert-success" role="status">@tb</div> }
+@if ((TempData["Loi"] ?? ViewData["Loi"]) is string loi) { <div class="alert alert-danger" role="alert">@loi</div> }
+
+<form method="post" asp-action="@(laMoi ? "Tao" : "Sua")" id="formPhieu">
+    <input type="hidden" name="MaPX" value="@Model.MaPX" />
+    <input type="hidden" name="SoPhieu" value="@Model.SoPhieu" />
+
+    <fieldset disabled="@khoa">
+        <div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <label class="form-label" for="LoaiPhieu">Loại phiếu</label>
+                <select class="form-select" id="LoaiPhieu" name="LoaiPhieu">
+                    @foreach (var loai in new[] { PhieuXuat.Khac, PhieuXuat.TraLaiHangMua, PhieuXuat.HuyHang })
+                    {
+                        <option value="@loai" selected="@(Model.LoaiPhieu == loai)">@loai</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="MaKho">Kho xuất</label>
+                <select class="form-select" id="MaKho" name="MaKho">
+                    <option value="0">-- Chọn kho --</option>
+                    @foreach (var k in dsKho)
+                    {
+                        <option value="@k.Key" selected="@(Model.MaKho == k.Key)">@k.Value</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="DoiTuong">Đối tượng (không bắt buộc)</label>
+                <input class="form-control" id="DoiTuong" name="DoiTuong" maxlength="150" value="@Model.DoiTuong" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="ThamChieu">Tham chiếu (không bắt buộc)</label>
+                <input class="form-control" id="ThamChieu" name="ThamChieu" maxlength="100" value="@Model.ThamChieu" />
+            </div>
+            <div class="col-md-4" id="oPhieuNhapGoc">
+                <label class="form-label" for="MaPNGoc">Phiếu nhập gốc</label>
+                <select class="form-select" id="MaPNGoc" name="MaPNGoc">
+                    <option value="">-- Chọn phiếu nhập --</option>
+                    @foreach (var n in dsPhieuNhap)
+                    {
+                        <option value="@n.Key" selected="@(Model.MaPNGoc == n.Key)">@n.Value</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4" id="oLyDo">
+                <label class="form-label" for="LyDo">Lý do</label>
+                <input class="form-control" id="LyDo" name="LyDo" maxlength="255" value="@Model.LyDo" />
+            </div>
+            <div class="col-12">
+                <label class="form-label" for="DienGiai">Diễn giải (không bắt buộc)</label>
+                <textarea class="form-control" id="DienGiai" name="DienGiai" rows="2" maxlength="500">@Model.DienGiai</textarea>
+            </div>
+        </div>
+
+        <h2 class="h5">Dòng hàng</h2>
+        <div class="bang-cuon">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr><th scope="col">Mặt hàng</th><th scope="col" style="width:10rem">Số lượng</th><th scope="col" style="width:6rem"><span class="visually-hidden">Thao tác</span></th></tr>
+                </thead>
+                <tbody id="dongHang">
+                    @foreach (var d in Model.ChiTiet)
+                    {
+                        <tr>
+                            <td>
+                                <select class="form-select" data-ten="MaBT" aria-label="Mặt hàng">
+                                    <option value="0">-- Chọn mặt hàng --</option>
+                                    @foreach (var b in dsBienThe)
+                                    {
+                                        <option value="@b.Key" selected="@(d.MaBT == b.Key)">@b.Value</option>
+                                    }
+                                </select>
+                            </td>
+                            <td><input class="form-control" type="number" min="1" required data-ten="SoLuong" value="@(d.SoLuong > 0 ? d.SoLuong.ToString() : "")" aria-label="Số lượng" /></td>
+                            <td><button type="button" class="btn btn-outline-secondary btn-sm" data-xoa>Xóa</button></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </fieldset>
+
+    <div class="d-flex flex-wrap gap-2">
+        @if (!khoa)
+        {
+            <button type="button" class="btn btn-outline-primary" id="themDong">Thêm dòng</button>
+            <button type="submit" class="btn btn-primary">Lưu phiếu nháp</button>
+            @if (!laMoi)
+            {
+                <button type="submit" class="btn btn-success" form="formDuyet"
+                        onclick="return confirm('Duyệt phiếu? Sau khi duyệt sẽ không sửa được nữa. Thay đổi chưa lưu sẽ mất.');">Duyệt phiếu</button>
+            }
+        }
+        <a class="btn btn-outline-secondary" asp-action="Index">Quay lại danh sách</a>
+    </div>
+</form>
+
+@if (!laMoi && !khoa)
+{
+    <form method="post" asp-action="Duyet" asp-route-id="@Model.MaPX" id="formDuyet"></form>
+}
+
+@section Scripts {
+    <script>
+        // Thêm, xóa dòng hàng rồi đánh số lại tên ô: ChiTiet[0].MaBT, ChiTiet[0].SoLuong, ChiTiet[1].MaBT...
+        const bang = document.getElementById('dongHang');
+        function danhSo() {
+            bang.querySelectorAll('tr').forEach((tr, i) =>
+                tr.querySelectorAll('[data-ten]').forEach(o => o.name = `ChiTiet[${i}].${o.dataset.ten}`));
+        }
+        document.getElementById('themDong')?.addEventListener('click', () => {
+            const dongMoi = bang.rows[0].cloneNode(true);
+            dongMoi.querySelectorAll('select, input').forEach(o => o.value = o.tagName === 'SELECT' ? '0' : '');
+            bang.appendChild(dongMoi);
+            danhSo();
+        });
+        bang.addEventListener('click', e => {
+            if (e.target.matches('[data-xoa]') && bang.rows.length > 1) { e.target.closest('tr').remove(); danhSo(); }
+        });
+        // Chỉ hiện "Phiếu nhập gốc" cho loại Trả lại hàng mua, "Lý do" cho loại Hủy hàng.
+        const loaiPhieu = document.getElementById('LoaiPhieu');
+        const oPhieuNhapGoc = document.getElementById('oPhieuNhapGoc');
+        const oLyDo = document.getElementById('oLyDo');
+        function capNhatHienThi() {
+            const laTraHang = loaiPhieu.value === '@PhieuXuat.TraLaiHangMua';
+            const laHuyHang = loaiPhieu.value === '@PhieuXuat.HuyHang';
+            oPhieuNhapGoc.hidden = !laTraHang;
+            oLyDo.hidden = !laHuyHang;
+            if (!laTraHang) document.getElementById('MaPNGoc').value = '';
+            if (!laHuyHang) document.getElementById('LyDo').value = '';
+        }
+        loaiPhieu?.addEventListener('change', capNhatHienThi);
+        capNhatHienThi();
+        // Khóa nút Lưu sau khi bấm để bấm đúp không tạo hai phiếu.
+        document.getElementById('formPhieu').addEventListener('submit', e => setTimeout(() => e.submitter && (e.submitter.disabled = true)));
+        danhSo();
+    </script>
+}

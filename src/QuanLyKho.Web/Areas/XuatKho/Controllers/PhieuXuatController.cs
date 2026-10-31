@@ -10,14 +10,15 @@ using QuanLyKho.Web.Data;
 namespace QuanLyKho.Web.Areas.XuatKho.Controllers;
 
 /// <summary>
-/// Phiếu xuất (việc T2-1): danh sách, tạo, sửa phiếu nháp, và một bước duyệt tối giản chỉ để khóa phiếu (đủ cho tiêu chí hoàn thành
-/// của việc này). Gợi ý G1 (T2-2) và duyệt kèm giữ chỗ tồn (T2-3) sẽ MỞ RỘNG đúng hành động Duyệt bên dưới, không tạo hành động mới.
-/// Trả lại hàng mua và hủy hàng (việc T2-7, Bảng 2.4 dòng 7) dùng chung Tao/Sua/Duyet ở trên.
-/// Quyền theo bảng PhanQuyen: Xem để vào, Thêm để tạo, Sửa để sửa, Duyệt để duyệt.
+/// Phiếu xuất (việc T2-1): danh sách, tạo, sửa phiếu nháp, Duyệt (giữ chỗ tồn — việc T2-8, phân bổ FIFO tối giản vì chưa có gợi ý G1)
+/// và Hủy (trả chỗ — việc T2-8). Gợi ý G1 (T2-2) sẽ THAY phần phân bổ FIFO trong Duyet bằng gợi ý AI, không tạo hành động mới;
+/// AI lỗi hoặc không có dữ liệu thì FIFO vẫn chạy được (mục 1.2.4: làm tay được toàn bộ quy trình).
+/// Trả lại hàng mua và hủy hàng (việc T2-7, Bảng 2.4 dòng 7) dùng chung Tao/Sua/Duyet/Huy ở trên.
+/// Quyền theo bảng PhanQuyen: Xem để vào, Thêm để tạo, Sửa để sửa, Duyệt để duyệt, Xóa để hủy.
 /// </summary>
 [Area("XuatKho")]
 [CanQuyen(LoaiChungTu.XK, QuyenThaoTac.Xem)]
-public class PhieuXuatController(INguoiDungHienTai hienTai, IAuditService audit, KhoDbContext? db = null) : Controller
+public class PhieuXuatController(INguoiDungHienTai hienTai, IAuditService audit, IStockService ton, KhoDbContext? db = null) : Controller
 {
     // Chưa cấu hình chuỗi kết nối thì KhoDbContext không có, báo lỗi rõ ràng thay vì lỗi khó hiểu.
     private KhoDbContext Db => db ?? throw new InvalidOperationException("Chưa cấu hình ConnectionStrings:KhoDb nên chưa dùng được phiếu xuất.");
@@ -70,13 +71,14 @@ public class PhieuXuatController(INguoiDungHienTai hienTai, IAuditService audit,
     public Task<IActionResult> Sua(PhieuXuat p) => p.MaPX > 0 ? Luu(p) : Task.FromResult<IActionResult>(NotFound());
 
     /// <summary>
-    /// Nháp thành Đã duyệt: khóa phiếu và ghi người duyệt. Một lệnh có điều kiện nên bấm hai lần cũng chỉ ghi một lần.
-    /// CHƯA giữ chỗ tồn và chưa gắn gợi ý G1 — việc T2-3 sẽ thêm vào đúng hành động này.
+    /// Nháp thành Đã duyệt: phân bổ lô/ô FIFO cho từng dòng, giữ chỗ qua IStockService.GiuCho, ghi bảng LayHang rồi khóa phiếu.
+    /// Phân bổ và duyệt cùng một giao dịch: giữ chỗ không đủ (tranh chấp đồng thời) thì hoàn tác hết, phiếu vẫn ở Nháp.
+    /// Việc T2-2 (gợi ý G1) sẽ thay <see cref="PhanBoFifo"/> bằng gợi ý AI; FIFO ở đây là phần "làm tay" khi chưa có hoặc AI lỗi (mục 1.2.4).
     /// </summary>
     [HttpPost, ValidateAntiForgeryToken, CanQuyen(LoaiChungTu.XK, QuyenThaoTac.Duyet)]
     public async Task<IActionResult> Duyet(int id)
     {
-        var p = await Db.PhieuXuat.AsNoTracking().Include(x => x.ChiTiet).FirstOrDefaultAsync(x => x.MaPX == id);
+        var p = await Db.PhieuXuat.Include(x => x.ChiTiet).FirstOrDefaultAsync(x => x.MaPX == id);
         if (p is null) return NotFound();
 
         var tuChoi = p.TrangThai != PhieuXuat.Nhap ? "Phiếu không còn ở trạng thái Nháp."
@@ -88,21 +90,45 @@ public class PhieuXuatController(INguoiDungHienTai hienTai, IAuditService audit,
             return RedirectToAction(nameof(Sua), new { id });
         }
 
+        // Trả lại hàng mua lấy từ khu tiếp nhận: không qua G1/FIFO (Bảng 2.4 dòng 7), lô là chính lô của phiếu nhập gốc, ô là ô Tiếp nhận của kho.
+        var (phan, loiPhanBo) = p.LoaiPhieu == PhieuXuat.TraLaiHangMua ? await PhanBoTraHang(p) : await PhanBoFifo(p);
+        if (loiPhanBo is not null)
+        {
+            TempData["Loi"] = loiPhanBo;
+            return RedirectToAction(nameof(Sua), new { id });
+        }
+
+        await using var giaoDich = await Db.Database.BeginTransactionAsync();
         var n = await Db.PhieuXuat.Where(x => x.MaPX == id && x.TrangThai == PhieuXuat.Nhap)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.TrangThai, PhieuXuat.DaDuyet).SetProperty(x => x.MaNguoiDuyet, MaNguoiDung()));
-        if (n == 1)
+        if (n != 1)
         {
-            await audit.Ghi(MaNguoiDung(), "Duyệt phiếu xuất", LoaiChungTu.XK, id, p.SoPhieu);
-            TempData["ThongBao"] = "Đã duyệt phiếu. Phiếu bị khóa, không sửa được nữa.";
+            TempData["Loi"] = "Không duyệt được: phiếu vừa bị đổi trạng thái ở nơi khác.";
+            return RedirectToAction(nameof(Sua), new { id });
         }
-        else TempData["Loi"] = "Không duyệt được: phiếu vừa bị đổi trạng thái ở nơi khác.";
+
+        foreach (var (maCTX, maLo, maViTri, soLuong) in phan)
+        {
+            var kqGiu = await ton.GiuCho(new DongTon(maLo, maViTri, soLuong));
+            if (!kqGiu.ThanhCong)
+            {
+                TempData["Loi"] = kqGiu.ThongBao ?? "Không giữ chỗ được tồn kho.";
+                return RedirectToAction(nameof(Sua), new { id });   // thoát không commit giaoDich: hoàn tác cả đổi trạng thái lẫn GiuCho đã chạy
+            }
+            Db.LayHang.Add(new LayHang { MaCTX = maCTX, MaLo = maLo, MaViTri = maViTri, SLGiu = soLuong });
+        }
+        await Db.SaveChangesAsync();
+        await giaoDich.CommitAsync();
+
+        await audit.Ghi(MaNguoiDung(), "Duyệt phiếu xuất", LoaiChungTu.XK, id, p.SoPhieu);
+        TempData["ThongBao"] = "Đã duyệt phiếu và giữ chỗ tồn. Phiếu bị khóa, không sửa được nữa.";
         return RedirectToAction(nameof(Sua), new { id });
     }
 
     /// <summary>
-    /// Hủy phiếu Nháp hoặc Đã duyệt (việc T2-8, Bảng 2.4). T2-1, T2-7 chưa giữ chỗ tồn khi duyệt (xem Duyet ở trên) nên hiện chưa có gì
-    /// để trả; khi việc T2-3 thêm IStockService.GiuCho vào Duyet, hàm này cần thêm bước gọi TraCho tương ứng cho từng dòng đã giữ.
-    /// Phiếu Thiếu do kiểm kê (IXuatKhoService.TaoPhieuXuatThieu) đã ở trạng thái Hoàn tất, không hủy được bằng hành động này.
+    /// Hủy phiếu Nháp hoặc Đã duyệt (việc T2-8, Bảng 2.4): trả chỗ qua IStockService.TraCho cho từng dòng LayHang đang giữ (nếu có,
+    /// tức phiếu đã Đã duyệt) rồi xóa các dòng đó, sau đó khóa phiếu. Phiếu Thiếu do kiểm kê (IXuatKhoService.TaoPhieuXuatThieu)
+    /// đã ở trạng thái Hoàn tất, không hủy được bằng hành động này.
     /// </summary>
     [HttpPost, ValidateAntiForgeryToken, CanQuyen(LoaiChungTu.XK, QuyenThaoTac.Xoa)]
     public async Task<IActionResult> Huy(int id)
@@ -115,14 +141,30 @@ public class PhieuXuatController(INguoiDungHienTai hienTai, IAuditService audit,
             return RedirectToAction(nameof(Sua), new { id });
         }
 
+        await using var giaoDich = await Db.Database.BeginTransactionAsync();
         var n = await Db.PhieuXuat.Where(x => x.MaPX == id && (x.TrangThai == PhieuXuat.Nhap || x.TrangThai == PhieuXuat.DaDuyet))
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.TrangThai, PhieuXuat.DaHuy));
-        if (n == 1)
+        if (n != 1)
         {
-            await audit.Ghi(MaNguoiDung(), "Hủy phiếu xuất", LoaiChungTu.XK, id, p.SoPhieu);
-            TempData["ThongBao"] = "Đã hủy phiếu.";
+            TempData["Loi"] = "Không hủy được: phiếu không còn ở trạng thái Nháp hoặc Đã duyệt.";
+            return RedirectToAction(nameof(Sua), new { id });
         }
-        else TempData["Loi"] = "Không hủy được: phiếu không còn ở trạng thái Nháp hoặc Đã duyệt.";
+
+        var giu = await (from l in Db.LayHang join c in Db.ChiTietPhieuXuat on l.MaCTX equals c.MaCTX where c.MaPX == id select l).ToListAsync();
+        foreach (var g in giu)
+        {
+            var kqTra = await ton.TraCho(new DongTon(g.MaLo, g.MaViTri, g.SLGiu));
+            if (!kqTra.ThanhCong)
+            {
+                TempData["Loi"] = kqTra.ThongBao ?? "Không trả được chỗ đã giữ.";
+                return RedirectToAction(nameof(Sua), new { id });
+            }
+        }
+        if (giu.Count > 0) { Db.LayHang.RemoveRange(giu); await Db.SaveChangesAsync(); }
+        await giaoDich.CommitAsync();
+
+        await audit.Ghi(MaNguoiDung(), "Hủy phiếu xuất", LoaiChungTu.XK, id, p.SoPhieu);
+        TempData["ThongBao"] = giu.Count > 0 ? "Đã hủy phiếu và trả lại tồn đã giữ chỗ." : "Đã hủy phiếu.";
         return RedirectToAction(nameof(Sua), new { id });
     }
 
@@ -213,6 +255,85 @@ public class PhieuXuatController(INguoiDungHienTai hienTai, IAuditService audit,
     private async Task<string> TenBienThe(int maBT)
         => await Db.BienThe.Where(b => b.MaBT == maBT).Join(Db.SanPham, b => b.MaSP, s => s.MaSP,
             (b, s) => s.TenSP + " (" + b.ThuocTinh + ")").FirstOrDefaultAsync() ?? $"biến thể #{maBT}";
+
+    /// <summary>
+    /// Phân bổ lô/ô khi duyệt cho loại Khác, Hủy hàng (việc T2-8): FIFO tối giản trên ô LƯU TRỮ của kho, lô hết hạn sớm trước,
+    /// không có hạn thì lô nhỏ trước (xấp xỉ "nhập trước", đúng thứ tự ưu tiên của gợi ý G1 ở Bảng 1.4). Việc T2-2 sẽ thay hàm này
+    /// bằng gợi ý G1 có AI; đây là phần "làm tay" khi AI lỗi hoặc chưa có (mục 1.2.4).
+    /// </summary>
+    private async Task<(List<(int MaCTX, int MaLo, int MaViTri, int SoLuong)> Phan, string? Loi)> PhanBoFifo(PhieuXuat p)
+    {
+        var phan = new List<(int, int, int, int)>();
+        var daDung = new Dictionary<(int MaLo, int MaViTri), int>();
+
+        foreach (var d in p.ChiTiet)
+        {
+            var canLay = d.SoLuong;
+            var ungVien = await (
+                from t in Db.TonKho
+                join l in Db.LoHang on t.MaLo equals l.MaLo
+                join v in Db.ViTri on t.MaViTri equals v.MaViTri
+                where v.MaKho == p.MaKho && v.LoaiViTri != LoaiViTriGiaTri.TiepNhan && l.MaBT == d.MaBT
+                orderby l.HanDung ?? DateOnly.MaxValue, l.MaLo
+                select new { l.MaLo, t.MaViTri, KhaDung = t.SoLuongTon - t.SoLuongGiu }
+            ).ToListAsync();
+
+            foreach (var u in ungVien)
+            {
+                if (canLay <= 0) break;
+                var daTru = daDung.GetValueOrDefault((u.MaLo, u.MaViTri));
+                var conLai = u.KhaDung - daTru;
+                if (conLai <= 0) continue;
+                var lay = Math.Min(canLay, conLai);
+                phan.Add((d.MaCTX, u.MaLo, u.MaViTri, lay));
+                daDung[(u.MaLo, u.MaViTri)] = daTru + lay;
+                canLay -= lay;
+            }
+            if (canLay > 0) return (phan, $"{await TenBienThe(d.MaBT)}: không đủ tồn khả dụng để giữ chỗ (còn thiếu {canLay}).");
+        }
+        return (phan, null);
+    }
+
+    /// <summary>
+    /// Phân bổ lô/ô khi duyệt cho loại Trả lại hàng mua (việc T2-8, Bảng 2.4 dòng 7): lấy đúng (các) lô của phiếu nhập gốc tại ô
+    /// Tiếp nhận của kho xuất, không qua FIFO/G1 (hàng không đạt không lẫn với hàng bán được nên không áp dụng cách chọn thông thường).
+    /// </summary>
+    private async Task<(List<(int MaCTX, int MaLo, int MaViTri, int SoLuong)> Phan, string? Loi)> PhanBoTraHang(PhieuXuat p)
+    {
+        var phan = new List<(int, int, int, int)>();
+        var oTiepNhan = await Db.ViTri
+            .Where(v => v.MaKho == p.MaKho && v.CapViTri == CapViTriGiaTri.O && v.LoaiViTri == LoaiViTriGiaTri.TiepNhan
+                        && v.TrangThai == TrangThaiHoatDong.HoatDong && !v.DangKhoa)
+            .OrderBy(v => v.MaViTri).Select(v => (int?)v.MaViTri).FirstOrDefaultAsync();
+        if (oTiepNhan is null) return (phan, "Kho xuất chưa có ô Tiếp nhận đang hoạt động (và không bị khóa).");
+
+        var loTheoBienThe = await Db.ChiTietPhieuNhap.Where(d => d.MaPN == p.MaPNGoc && d.MaLo != null)
+            .GroupBy(d => d.MaBT).ToDictionaryAsync(g => g.Key, g => g.Select(d => d.MaLo!.Value).Distinct().ToList());
+
+        var daDung = new Dictionary<(int MaLo, int MaViTri), int>();
+        foreach (var d in p.ChiTiet)
+        {
+            var canLay = d.SoLuong;
+            if (!loTheoBienThe.TryGetValue(d.MaBT, out var cacLo))
+                return (phan, $"{await TenBienThe(d.MaBT)}: không có lô nào của phiếu nhập gốc.");
+
+            var ton = await Db.TonKho.Where(t => cacLo.Contains(t.MaLo) && t.MaViTri == oTiepNhan.Value)
+                .ToDictionaryAsync(t => t.MaLo, t => t.SoLuongTon - t.SoLuongGiu);
+            foreach (var maLo in cacLo)
+            {
+                if (canLay <= 0) break;
+                var daTru = daDung.GetValueOrDefault((maLo, oTiepNhan.Value));
+                var conLai = ton.GetValueOrDefault(maLo) - daTru;
+                if (conLai <= 0) continue;
+                var lay = Math.Min(canLay, conLai);
+                phan.Add((d.MaCTX, maLo, oTiepNhan.Value, lay));
+                daDung[(maLo, oTiepNhan.Value)] = daTru + lay;
+                canLay -= lay;
+            }
+            if (canLay > 0) return (phan, $"{await TenBienThe(d.MaBT)}: không đủ hàng không đạt ở khu tiếp nhận để giữ chỗ (còn thiếu {canLay}).");
+        }
+        return (phan, null);
+    }
 
     /// <summary>Ghi vào CSDL. Trả về lỗi, hoặc null nếu thành công (phiếu mới thì p.MaPX được điền).</summary>
     private async Task<string?> Ghi(PhieuXuat p)

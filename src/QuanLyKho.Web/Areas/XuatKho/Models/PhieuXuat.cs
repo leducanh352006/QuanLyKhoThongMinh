@@ -83,13 +83,30 @@ namespace QuanLyKho.Web.Areas.XuatKho.Models
         }
     }
 
-    /// <summary>Một dòng hàng của phiếu xuất (Bảng 2.23). Lô và ô lấy hàng do việc T2-2, T2-4 (bảng LayHang) điền sau.</summary>
+    /// <summary>Một dòng hàng của phiếu xuất (Bảng 2.23). Lô và ô lấy hàng ở bảng LayHang (việc T2-8 giữ chỗ khi duyệt; T2-2 thay FIFO
+    /// bằng gợi ý G1, T2-4 điền SLThucLay/LyDoLech khi thủ kho quét mã lấy hàng thật).</summary>
     public class ChiTietPhieuXuat
     {
         public int MaCTX { get; set; }
         public int MaPX { get; set; }
         public int MaBT { get; set; }
         public int SoLuong { get; set; }
+    }
+
+    /// <summary>
+    /// Lô và ô lấy hàng cho từng dòng xuất (Bảng 2.23). Một dòng ChiTietPhieuXuat có thể lấy từ nhiều (lô, ô) nên tách bảng riêng.
+    /// Việc T2-8 tạo dòng này khi duyệt (giữ chỗ FIFO tối giản: lô hết hạn sớm trước, không có hạn thì lô nhỏ trước — xấp xỉ "nhập trước");
+    /// SLThucLay, LyDoLech để trống tới khi việc T2-4 (lấy hàng quét mã) điền. Hủy phiếu (T2-8) xóa dòng chưa lấy và trả chỗ qua IStockService.TraCho.
+    /// </summary>
+    public class LayHang
+    {
+        public int MaLH { get; set; }
+        public int MaCTX { get; set; }
+        public int MaLo { get; set; }
+        public int MaViTri { get; set; }
+        public int SLGiu { get; set; }
+        public int? SLThucLay { get; set; }
+        public string? LyDoLech { get; set; }
     }
 
     // ---- Cấu hình bảng (EF tự nạp các lớp này) ----
@@ -144,6 +161,25 @@ namespace QuanLyKho.Web.Areas.XuatKho.Models
             b.HasOne<BienThe>().WithMany().HasForeignKey(x => x.MaBT).OnDelete(DeleteBehavior.Restrict);
         }
     }
+
+    public class LayHangConfig : IEntityTypeConfiguration<LayHang>
+    {
+        public void Configure(EntityTypeBuilder<LayHang> b)
+        {
+            b.ToTable("LayHang", t =>
+            {
+                t.HasCheckConstraint("CK_LayHang_SLGiu", "[SLGiu] > 0");
+                t.HasCheckConstraint("CK_LayHang_SLThucLay", "[SLThucLay] >= 0 AND [SLThucLay] <= [SLGiu]");
+                t.HasCheckConstraint("CK_LayHang_LyDoLech", "[SLThucLay] IS NULL OR [SLThucLay] = [SLGiu] OR [LyDoLech] IS NOT NULL");
+            });
+            b.HasKey(x => x.MaLH);
+            b.Property(x => x.LyDoLech).HasMaxLength(255);
+            b.HasIndex(x => new { x.MaCTX, x.MaLo, x.MaViTri }).IsUnique();
+            b.HasOne<ChiTietPhieuXuat>().WithMany().HasForeignKey(x => x.MaCTX).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<LoHang>().WithMany().HasForeignKey(x => x.MaLo).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<ViTri>().WithMany().HasForeignKey(x => x.MaViTri).OnDelete(DeleteBehavior.Restrict);
+        }
+    }
 }
 
 namespace QuanLyKho.Web.Data
@@ -153,5 +189,6 @@ namespace QuanLyKho.Web.Data
     {
         public DbSet<PhieuXuat> PhieuXuat => Set<PhieuXuat>();
         public DbSet<ChiTietPhieuXuat> ChiTietPhieuXuat => Set<ChiTietPhieuXuat>();
+        public DbSet<LayHang> LayHang => Set<LayHang>();
     }
 }

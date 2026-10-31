@@ -643,6 +643,54 @@ namespace QuanLyKho.Web.Migrations
                         });
                 });
 
+            modelBuilder.Entity("QuanLyKho.Web.Areas.NhapKho.Models.SapXep", b =>
+                {
+                    b.Property<int>("MaSX")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MaSX"));
+
+                    b.Property<int>("MaCTN")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MaNguoiXN")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaViTri")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SoLuong")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ThoiGianXN")
+                        .HasColumnType("datetime2(0)");
+
+                    b.Property<string>("TrangThai")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Chờ xác nhận");
+
+                    b.HasKey("MaSX");
+
+                    b.HasIndex("MaCTN");
+
+                    b.HasIndex("MaNguoiXN");
+
+                    b.HasIndex("MaViTri", "TrangThai");
+
+                    b.ToTable("SapXep", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_SapXep_SoLuong", "[SoLuong] > 0");
+
+                            t.HasCheckConstraint("CK_SapXep_TrangThai", "[TrangThai] IN (N'Chờ xác nhận', N'Đã xác nhận', N'Đã hủy')");
+
+                            t.HasCheckConstraint("CK_SapXep_XacNhan", "([TrangThai] = N'Đã xác nhận' AND [MaNguoiXN] IS NOT NULL AND [ThoiGianXN] IS NOT NULL) OR ([TrangThai] <> N'Đã xác nhận' AND [MaNguoiXN] IS NULL AND [ThoiGianXN] IS NULL)");
+                        });
+                });
+
             modelBuilder.Entity("QuanLyKho.Web.Areas.NhapKho.Models.PhieuNhap", b =>
                 {
                     b.Property<int>("MaPN")
@@ -1109,6 +1157,26 @@ namespace QuanLyKho.Web.Migrations
             modelBuilder.Entity("QuanLyKho.Web.Areas.NhapKho.Models.PhieuNhap", b =>
                 {
                     b.Navigation("ChiTiet");
+                });
+
+            modelBuilder.Entity("QuanLyKho.Web.Areas.NhapKho.Models.SapXep", b =>
+                {
+                    b.HasOne("QuanLyKho.Web.Areas.NhapKho.Models.ChiTietPhieuNhap", null)
+                        .WithMany()
+                        .HasForeignKey("MaCTN")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QuanLyKho.Web.Areas.HeThong.Models.NguoiDung", null)
+                        .WithMany()
+                        .HasForeignKey("MaNguoiXN")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QuanLyKho.Web.Areas.HeThong.Models.ViTri", null)
+                        .WithMany()
+                        .HasForeignKey("MaViTri")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("QuanLyKho.Web.Areas.XuatKho.Models.PhieuXuat", b =>

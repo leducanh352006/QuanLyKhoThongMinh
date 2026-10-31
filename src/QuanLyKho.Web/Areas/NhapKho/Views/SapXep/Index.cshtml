@@ -1,0 +1,47 @@
+@using QuanLyKho.Web.Areas.NhapKho.Models
+@model List<PhieuNhap>
+@{
+    // Danh sách phiếu Đã kiểm tra đang chờ xếp hàng đạt vào ô (việc T1-4).
+    var lenh = (ILookup<int, SapXep>)ViewBag.Lenh;
+    ViewData["Title"] = "Sắp xếp vào ô";
+}
+
+<header class="trang-dau">
+    <h1>Sắp xếp vào ô</h1>
+    <p class="mota">Phiếu đã kiểm tra, hàng đạt còn nằm ở khu tiếp nhận. Hàng chỉ tính vào tồn khả dụng sau khi thủ kho quét mã ô và mã lô để xác nhận.</p>
+</header>
+
+@if (Model.Count == 0)
+{
+    <p class="khung-trong">Không có phiếu nào đang chờ sắp xếp. Phiếu xuất hiện ở đây sau khi hoàn tất kiểm tra hàng nhập.</p>
+}
+else
+{
+    <div class="bang-cuon">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">Số phiếu</th><th scope="col">Kho</th><th scope="col" class="text-end">Hàng đạt</th>
+                    <th scope="col" class="text-end">Đã xếp</th><th scope="col" class="text-end">Chờ xác nhận</th><th scope="col" class="text-end">Chưa lập lệnh</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model)
+                {
+                    var dat = p.ChiTiet.Sum(d => d.SLDat ?? 0);
+                    var ls = p.ChiTiet.SelectMany(d => lenh[d.MaCTN]).ToList();
+                    var daXep = ls.Where(s => s.TrangThai == SapXep.DaXacNhan).Sum(s => s.SoLuong);
+                    var dangCho = ls.Where(s => s.TrangThai == SapXep.ChoXacNhan).Sum(s => s.SoLuong);
+                    <tr>
+                        <td><a asp-action="Xep" asp-route-id="@p.MaPN">@p.SoPhieu</a></td>
+                        <td>@(p.Kho?.TenKho)</td>
+                        <td class="text-end">@dat</td>
+                        <td class="text-end">@daXep</td>
+                        <td class="text-end">@dangCho</td>
+                        <td class="text-end">@(dat - daXep - dangCho)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

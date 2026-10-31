@@ -25,6 +25,14 @@ public class ThuNghiemController(IWebHostEnvironment env, IPhanQuyenService phan
         return View(new GoiYThu(loai, maPX, maPN));
     }
 
+    /// <summary>/HeThong/ThuNghiem/DinhKem?loai=NK&amp;maCT=1: thử thành phần đính kèm dùng chung (T4-7) trên một chứng từ bất kỳ.</summary>
+    public IActionResult DinhKem(LoaiChungTu loai = LoaiChungTu.NK, int maCT = 1)
+    {
+        if (!env.IsDevelopment()) return NotFound();
+        ViewData["Title"] = "Thử thành phần đính kèm";
+        return View(new DinhKemThu(loai, maCT));
+    }
+
     /// <summary>/HeThong/ThuNghiem/DuyetPhieuXuat: chỉ vai trò có quyền Duyệt trên phiếu xuất (mặc định Quản trị viên, Quản lý kho).</summary>
     [CanQuyen(LoaiChungTu.XK, QuyenThaoTac.Duyet)]
     public IActionResult DuyetPhieuXuat()
@@ -45,3 +53,4 @@ public class ThuNghiemController(IWebHostEnvironment env, IPhanQuyenService phan
 }
 
 public sealed record GoiYThu(LoaiGoiY Loai, int? MaPX, int? MaPN);
+public sealed record DinhKemThu(LoaiChungTu Loai, int MaCT);

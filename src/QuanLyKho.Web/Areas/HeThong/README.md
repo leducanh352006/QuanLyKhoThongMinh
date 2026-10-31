@@ -227,6 +227,26 @@ dotnet test --filter "FullyQualifiedName~StockServiceStub"
 
 17 test hành vi bắt buộc (bản giả phải cư xử như bản thật): giữ/trả chỗ, vượt tồn bị từ chối kèm "cần bao nhiêu, còn bao nhiêu", ghi tăng/giảm đúng sổ cái, giảm từ phần giữ chỗ hoặc từ khả dụng, đổi ô tồn tổng không đổi, 100 luồng giữ chỗ đồng thời không làm tồn âm, đối chiếu sổ cái khớp `TonKho`. Bản thật (`StockService`, EF Core) đã kiểm tay trên SQL Server thật với cùng các tình huống (xem mục "Đã làm" phía trên) vì môi trường kiểm thử của dự án chưa có SQL Server/Sqlite cho các lớp `Ef*`, giống `EfKhoViTriStore` ở T4-3 cũng không có kiểm thử trực tiếp.
 
+# Nhật ký thao tác và đính kèm (việc T4-7, issue #33)
+
+Báo cáo: Bảng 2.26 (NhatKyThaoTac, TepDinhKem), Bảng 2.3 dòng 7.
+
+## Đã làm
+
+- Bảng `NhatKyThaoTac` (chỉ thêm) và `TepDinhKem` qua EF Core; `LoaiCT`, `MaCT` cùng null hoặc cùng có giá trị (CHECK), không có khóa ngoại tới chứng từ.
+- `AuditService : IAuditService` thay `AuditServiceStub` (không đổi interface). Ghi cùng `KhoDbContext` của nơi gọi nên hoàn tác nghiệp vụ thì dòng nhật ký cũng hoàn tác. Mọi service Area HeThong, HangHoa, NhapKho đã gọi qua đây.
+- Màn hình **Nhật ký** (`/HeThong/NhatKy`, chỉ Quản trị viên): lọc theo người, loại thao tác, loại và mã chứng từ, khoảng ngày; phân trang.
+- Đính kèm: `ITepDinhKemQuanLy`, thành phần dùng chung `DinhKem`. Nhóm khác nhúng vào view phiếu của mình:
+  `@await Component.InvokeAsync("DinhKem", new { loai = LoaiChungTu.NK, maCT = Model.MaPN })`.
+  Xem danh sách cần quyền Xem, đính kèm cần quyền Thêm hoặc Sửa trên loại chứng từ đó (kiểm ở máy chủ); mỗi lần đính kèm ghi nhật ký "Đính kèm tệp".
+- Tệp lưu ngoài `wwwroot` và ngoài git, tại `App_Data/dinh-kem` (đổi bằng `Storage:TepDinhKem`); tên lưu là GUID nên không trùng hay thoát thư mục; chỉ nhận pdf, ảnh, txt, csv, doc(x), xls(x), tối đa 10 MB; tải về luôn là tệp đính kèm (`nosniff`).
+- Trang thử (chỉ Development): `/HeThong/ThuNghiem/DinhKem?loai=NK&maCT=1`.
+
+## Giới hạn đã biết
+
+- Kiểm chứng từ tồn tại qua `IChungTuTonTai` (đã có bản cho NK); XK, CK, KK chưa có bản nào nên chưa kiểm, nhóm sở hữu đăng ký bản của mình. Quyền kiểm theo loại chứng từ, không theo người lập.
+- Chưa có xóa tệp đính kèm (nhật ký và đính kèm đều chỉ thêm).
+
 # Khung gợi ý AI dùng chung (việc T4-8, issue #32)
 
 Báo cáo: mục 1.1.5, 1.2.4 (vòng đời gợi ý), Bảng 1.3 (bốn bài toán G1 đến G4), Bảng 2.26.
@@ -266,5 +286,5 @@ Báo cáo: mục 1.1.5, 1.2.4 (vòng đời gợi ý), Bảng 1.3 (bốn bài to
 ## Kiểm thử
 
 ```
-dotnet test --filter "FullyQualifiedName~QuanLyKho.Tests.GoiY"
-```
+dotnet test --filter "FullyQualifiedName~NhatKyDinhKem"
+dotnet test --filter " FullyQualifiedName~QuanLyKho.Tests.GoiY\n```

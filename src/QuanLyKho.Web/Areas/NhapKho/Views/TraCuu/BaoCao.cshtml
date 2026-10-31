@@ -1,0 +1,92 @@
+@using QuanLyKho.Web.Areas.HeThong.Models
+@using QuanLyKho.Web.Areas.NhapKho.Services
+@model IReadOnlyList<DongBaoCao>
+@{
+    // Báo cáo tổng hợp tồn (việc T1-5): đầu kỳ, nhập, xuất, cuối kỳ của từng biến thể, tính riêng từng kho.
+    var kho = (List<Kho>)ViewBag.Kho;
+    var maKho = (int?)ViewBag.MaKho;
+    var tu = (DateOnly)ViewBag.Tu;
+    var den = (DateOnly)ViewBag.Den;
+    var loi = ViewBag.Loi as string;
+    ViewData["Title"] = "Báo cáo tổng hợp tồn";
+}
+
+<header class="trang-dau">
+    <h1>@ViewData["Title"]</h1>
+    <p class="mota">
+        Tồn từng kho trong khoảng ngày chọn, tính từ sổ cái biến động tồn (gồm cả hàng ở khu tiếp nhận).
+        Nhập là hàng vào kho (nhận hàng, nhận chuyển, hoàn tác tăng), xuất là hàng ra khỏi kho (xuất kho, chuyển đi). Đổi ô trong kho không tính là nhập hay xuất.
+    </p>
+</header>
+
+<form method="get" class="row g-2 align-items-end mb-4">
+    <div class="col-auto">
+        <label class="form-label" for="maKho">Kho</label>
+        <select class="form-select form-select-sm" name="maKho" id="maKho">
+            <option value="">Tất cả kho</option>
+            @foreach (var k in kho)
+            {
+                <option value="@k.MaKho" selected="@(maKho == k.MaKho)">@k.TenKho</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <label class="form-label" for="tuNgay">Từ ngày</label>
+        <input type="date" class="form-control form-control-sm" name="tuNgay" id="tuNgay" value="@tu.ToString("yyyy-MM-dd")" required />
+    </div>
+    <div class="col-auto">
+        <label class="form-label" for="denNgay">Đến ngày</label>
+        <input type="date" class="form-control form-control-sm" name="denNgay" id="denNgay" value="@den.ToString("yyyy-MM-dd")" required />
+    </div>
+    <div class="col-auto d-flex gap-2">
+        <button type="submit" class="btn btn-sm btn-primary">Xem báo cáo</button>
+        <a class="btn btn-sm btn-outline-secondary" asp-action="Index">Tra cứu vị trí và tồn</a>
+    </div>
+</form>
+
+@if (loi is not null)
+{
+    <div class="alert alert-danger" role="alert">@loi</div>
+}
+else if (Model.Count == 0)
+{
+    <p class="khung-trong">Không có biến động tồn nào đến hết ngày @den.ToString("dd/MM/yyyy").</p>
+}
+
+@foreach (var nhom in Model.GroupBy(d => d.MaKho))
+{
+    <section class="mb-4" aria-labelledby="kho@(nhom.Key)">
+        <h2 class="h5" id="kho@(nhom.Key)">@nhom.First().TenKho</h2>
+        <div class="bang-cuon">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">Hàng</th><th scope="col" class="text-end">Đầu kỳ</th><th scope="col" class="text-end">Nhập</th>
+                        <th scope="col" class="text-end">Xuất</th><th scope="col" class="text-end">Cuối kỳ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var d in nhom)
+                    {
+                        <tr>
+                            <td>@d.TenHang</td>
+                            <td class="text-end">@d.DauKy</td>
+                            <td class="text-end">@d.Nhap</td>
+                            <td class="text-end">@d.Xuat</td>
+                            <td class="text-end">@d.CuoiKy</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th scope="row">Cộng @nhom.First().TenKho</th>
+                        <td class="text-end">@(nhom.Sum(d => d.DauKy))</td>
+                        <td class="text-end">@(nhom.Sum(d => d.Nhap))</td>
+                        <td class="text-end">@(nhom.Sum(d => d.Xuat))</td>
+                        <td class="text-end">@(nhom.Sum(d => d.CuoiKy))</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </section>
+}

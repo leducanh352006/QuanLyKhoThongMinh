@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using QuanLyKho.Tests.HangHoa;
@@ -73,7 +75,7 @@ public class NhapKhoServiceTests
     {
         using var db = new KhoDbContext(new DbContextOptionsBuilder<KhoDbContext>()
             .UseSqlServer("Server=.;Database=KhongKetNoi;Trusted_Connection=True").Options);
-        var phieu = db.Model.FindEntityType(typeof(PhieuNhap))!;
+        var phieu = db.GetService<IDesignTimeModel>().Model.FindEntityType(typeof(PhieuNhap))!;
 
         Assert.True(phieu.FindProperty("MaPK")!.IsNullable);
         Assert.Contains(phieu.GetIndexes(), i => i.Properties.Any(c => c.Name == "MaPK"));

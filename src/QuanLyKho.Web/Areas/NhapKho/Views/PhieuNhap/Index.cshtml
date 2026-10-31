@@ -39,6 +39,7 @@ else
                         <td>
                             <span class="nhan @(p.DaKhoa ? "nhan-tot" : "nhan-chu-y")">@p.TrangThai</span>
                             @if (p.TrangThai == PhieuNhap.DaXacNhan) { <a asp-action="KiemTra" asp-route-id="@p.MaPN" class="ms-2">Kiểm tra hàng</a> }
+                            @if (p.TrangThai == PhieuNhap.DaKiemTra) { <a asp-controller="SapXep" asp-action="Xep" asp-route-id="@p.MaPN" class="ms-2">Sắp xếp vào ô</a> }
                         </td>
                     </tr>
                 }

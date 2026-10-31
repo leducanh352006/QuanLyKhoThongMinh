@@ -9,7 +9,7 @@ namespace QuanLyKho.Web.Areas.XuatKho.Models
 {
     /// <summary>
     /// Phiếu xuất kho (việc T2-1, Bảng 2.23). Phiếu Nháp sửa được, phiếu Đã duyệt trở đi bị khóa.
-    /// Loại "Thiếu do kiểm kê" do hệ thống tự sinh (việc T2-8, cần bảng PhieuKiem) nên chưa tạo tay được ở đây.
+    /// Loại "Thiếu do kiểm kê" do hệ thống tự sinh qua <see cref="QuanLyKho.Web.Contracts.IXuatKhoService"/> (việc T2-8), không tạo tay được ở đây.
     /// </summary>
     public class PhieuXuat
     {
@@ -41,6 +41,8 @@ namespace QuanLyKho.Web.Areas.XuatKho.Models
 
         /// <summary>Phiếu nhập gốc; bắt buộc khi LoaiPhieu = Trả lại hàng mua (việc T2-7 kiểm không vượt số đã nhập).</summary>
         public int? MaPNGoc { get; set; }
+
+        public int? MaPK { get; set; }                               // phiếu kiểm sinh ra phiếu Thiếu do kiểm kê (T2-8); các loại khác để null
 
         public int MaNguoiLap { get; set; }
 
@@ -81,13 +83,30 @@ namespace QuanLyKho.Web.Areas.XuatKho.Models
         }
     }
 
-    /// <summary>Một dòng hàng của phiếu xuất (Bảng 2.23). Lô và ô lấy hàng do việc T2-2, T2-4 (bảng LayHang) điền sau.</summary>
+    /// <summary>Một dòng hàng của phiếu xuất (Bảng 2.23). Lô và ô lấy hàng ở bảng LayHang (việc T2-8 giữ chỗ khi duyệt; T2-2 thay FIFO
+    /// bằng gợi ý G1, T2-4 điền SLThucLay/LyDoLech khi thủ kho quét mã lấy hàng thật).</summary>
     public class ChiTietPhieuXuat
     {
         public int MaCTX { get; set; }
         public int MaPX { get; set; }
         public int MaBT { get; set; }
         public int SoLuong { get; set; }
+    }
+
+    /// <summary>
+    /// Lô và ô lấy hàng cho từng dòng xuất (Bảng 2.23). Một dòng ChiTietPhieuXuat có thể lấy từ nhiều (lô, ô) nên tách bảng riêng.
+    /// Việc T2-8 tạo dòng này khi duyệt (giữ chỗ FIFO tối giản: lô hết hạn sớm trước, không có hạn thì lô nhỏ trước — xấp xỉ "nhập trước");
+    /// SLThucLay, LyDoLech để trống tới khi việc T2-4 (lấy hàng quét mã) điền. Hủy phiếu (T2-8) xóa dòng chưa lấy và trả chỗ qua IStockService.TraCho.
+    /// </summary>
+    public class LayHang
+    {
+        public int MaLH { get; set; }
+        public int MaCTX { get; set; }
+        public int MaLo { get; set; }
+        public int MaViTri { get; set; }
+        public int SLGiu { get; set; }
+        public int? SLThucLay { get; set; }
+        public string? LyDoLech { get; set; }
     }
 
     // ---- Cấu hình bảng (EF tự nạp các lớp này) ----
@@ -106,6 +125,8 @@ namespace QuanLyKho.Web.Areas.XuatKho.Models
                 t.HasCheckConstraint("CK_PhieuXuat_HuyHang", "[LoaiPhieu] <> N'Hủy hàng' OR [LyDo] IS NOT NULL");
                 t.HasCheckConstraint("CK_PhieuXuat_NguoiDuyet",
                     "[TrangThai] = N'Nháp' OR [TrangThai] = N'Đã hủy' OR [MaNguoiDuyet] IS NOT NULL");
+                t.HasCheckConstraint("CK_PhieuXuat_ThieuCoPhieuKiem",
+                    "([LoaiPhieu] = N'Thiếu do kiểm kê' AND [MaPK] IS NOT NULL) OR ([LoaiPhieu] <> N'Thiếu do kiểm kê' AND [MaPK] IS NULL)");
             });
             b.HasKey(x => x.MaPX);
             b.Property(x => x.SoPhieu).HasColumnType("varchar(20)").IsRequired();
@@ -119,6 +140,10 @@ namespace QuanLyKho.Web.Areas.XuatKho.Models
             b.Property(x => x.TrangThai).HasMaxLength(20).IsRequired().HasDefaultValue(PhieuXuat.Nhap);
             b.Ignore(x => x.DaKhoa);
             b.HasIndex(x => new { x.MaKho, x.ThoiGian });
+            // Duy nhất trong phạm vi loại Thiếu do kiểm kê: chặn ở CSDL việc hai yêu cầu đồng thời cùng tạo phiếu Thiếu cho một phiếu kiểm
+            // (kiểm "đã có chưa" ở XuatKhoService chỉ đọc trước khi ghi, không tự chống được tranh chấp). Chưa có khóa ngoại tới PhieuKiem
+            // vì bảng đó do nhóm Kiểm tra hàng hóa tạo sau.
+            b.HasIndex(x => x.MaPK).IsUnique().HasFilter("[LoaiPhieu] = N'Thiếu do kiểm kê'");
             b.HasOne(x => x.Kho).WithMany().HasForeignKey(x => x.MaKho).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(x => x.PhieuNhapGoc).WithMany().HasForeignKey(x => x.MaPNGoc).OnDelete(DeleteBehavior.Restrict);
             b.HasOne<NguoiDung>().WithMany().HasForeignKey(x => x.MaNguoiLap).OnDelete(DeleteBehavior.Restrict);
@@ -136,6 +161,25 @@ namespace QuanLyKho.Web.Areas.XuatKho.Models
             b.HasOne<BienThe>().WithMany().HasForeignKey(x => x.MaBT).OnDelete(DeleteBehavior.Restrict);
         }
     }
+
+    public class LayHangConfig : IEntityTypeConfiguration<LayHang>
+    {
+        public void Configure(EntityTypeBuilder<LayHang> b)
+        {
+            b.ToTable("LayHang", t =>
+            {
+                t.HasCheckConstraint("CK_LayHang_SLGiu", "[SLGiu] > 0");
+                t.HasCheckConstraint("CK_LayHang_SLThucLay", "[SLThucLay] >= 0 AND [SLThucLay] <= [SLGiu]");
+                t.HasCheckConstraint("CK_LayHang_LyDoLech", "[SLThucLay] IS NULL OR [SLThucLay] = [SLGiu] OR [LyDoLech] IS NOT NULL");
+            });
+            b.HasKey(x => x.MaLH);
+            b.Property(x => x.LyDoLech).HasMaxLength(255);
+            b.HasIndex(x => new { x.MaCTX, x.MaLo, x.MaViTri }).IsUnique();
+            b.HasOne<ChiTietPhieuXuat>().WithMany().HasForeignKey(x => x.MaCTX).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<LoHang>().WithMany().HasForeignKey(x => x.MaLo).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<ViTri>().WithMany().HasForeignKey(x => x.MaViTri).OnDelete(DeleteBehavior.Restrict);
+        }
+    }
 }
 
 namespace QuanLyKho.Web.Data
@@ -145,5 +189,6 @@ namespace QuanLyKho.Web.Data
     {
         public DbSet<PhieuXuat> PhieuXuat => Set<PhieuXuat>();
         public DbSet<ChiTietPhieuXuat> ChiTietPhieuXuat => Set<ChiTietPhieuXuat>();
+        public DbSet<LayHang> LayHang => Set<LayHang>();
     }
 }

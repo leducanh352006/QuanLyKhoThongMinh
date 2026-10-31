@@ -740,6 +740,52 @@ namespace QuanLyKho.Web.Migrations
                         });
                 });
 
+            modelBuilder.Entity("QuanLyKho.Web.Areas.XuatKho.Models.LayHang", b =>
+                {
+                    b.Property<int>("MaLH")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MaLH"));
+
+                    b.Property<string>("LyDoLech")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<int>("MaCTX")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaLo")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaViTri")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SLGiu")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SLThucLay")
+                        .HasColumnType("int");
+
+                    b.HasKey("MaLH");
+
+                    b.HasIndex("MaLo");
+
+                    b.HasIndex("MaViTri");
+
+                    b.HasIndex("MaCTX", "MaLo", "MaViTri")
+                        .IsUnique();
+
+                    b.ToTable("LayHang", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_LayHang_LyDoLech", "[SLThucLay] IS NULL OR [SLThucLay] = [SLGiu] OR [LyDoLech] IS NOT NULL");
+
+                            t.HasCheckConstraint("CK_LayHang_SLGiu", "[SLGiu] > 0");
+
+                            t.HasCheckConstraint("CK_LayHang_SLThucLay", "[SLThucLay] >= 0 AND [SLThucLay] <= [SLGiu]");
+                        });
+                });
+
             modelBuilder.Entity("QuanLyKho.Web.Areas.XuatKho.Models.PhieuXuat", b =>
                 {
                     b.Property<int>("MaPX")
@@ -774,6 +820,9 @@ namespace QuanLyKho.Web.Migrations
                     b.Property<int>("MaNguoiLap")
                         .HasColumnType("int");
 
+                    b.Property<int?>("MaPK")
+                        .HasColumnType("int");
+
                     b.Property<int?>("MaPNGoc")
                         .HasColumnType("int");
 
@@ -803,6 +852,10 @@ namespace QuanLyKho.Web.Migrations
 
                     b.HasIndex("MaNguoiLap");
 
+                    b.HasIndex("MaPK")
+                        .IsUnique()
+                        .HasFilter("[LoaiPhieu] = N'Thiếu do kiểm kê'");
+
                     b.HasIndex("MaPNGoc");
 
                     b.HasIndex("SoPhieu")
@@ -817,6 +870,8 @@ namespace QuanLyKho.Web.Migrations
                             t.HasCheckConstraint("CK_PhieuXuat_LoaiPhieu", "[LoaiPhieu] IN (N'Khác', N'Trả lại hàng mua', N'Hủy hàng', N'Thiếu do kiểm kê')");
 
                             t.HasCheckConstraint("CK_PhieuXuat_NguoiDuyet", "[TrangThai] = N'Nháp' OR [TrangThai] = N'Đã hủy' OR [MaNguoiDuyet] IS NOT NULL");
+
+                            t.HasCheckConstraint("CK_PhieuXuat_ThieuCoPhieuKiem", "([LoaiPhieu] = N'Thiếu do kiểm kê' AND [MaPK] IS NOT NULL) OR ([LoaiPhieu] <> N'Thiếu do kiểm kê' AND [MaPK] IS NULL)");
 
                             t.HasCheckConstraint("CK_PhieuXuat_TraHangMua", "([LoaiPhieu] <> N'Trả lại hàng mua' OR [MaPNGoc] IS NOT NULL) AND ([LoaiPhieu] = N'Trả lại hàng mua' OR [MaPNGoc] IS NULL)");
 
@@ -997,6 +1052,27 @@ namespace QuanLyKho.Web.Migrations
                     b.HasOne("QuanLyKho.Web.Areas.XuatKho.Models.PhieuXuat", null)
                         .WithMany("ChiTiet")
                         .HasForeignKey("MaPX")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QuanLyKho.Web.Areas.XuatKho.Models.LayHang", b =>
+                {
+                    b.HasOne("QuanLyKho.Web.Areas.XuatKho.Models.ChiTietPhieuXuat", null)
+                        .WithMany()
+                        .HasForeignKey("MaCTX")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QuanLyKho.Web.Areas.HangHoa.Models.LoHang", null)
+                        .WithMany()
+                        .HasForeignKey("MaLo")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QuanLyKho.Web.Areas.HeThong.Models.ViTri", null)
+                        .WithMany()
+                        .HasForeignKey("MaViTri")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

@@ -2,13 +2,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using QuanLyKho.Web.Areas.HangHoa.Models;
 using QuanLyKho.Web.Areas.NhapKho.Models;
+using QuanLyKho.Web.Areas.XuatKho.Models;
 
 namespace QuanLyKho.Web.Areas.HeThong.Models;
 
 /// <summary>
 /// Bảng GoiYAI (việc T4-8): mỗi gợi ý của AI và quyết định của người dùng. LoaiGoiY là G1 đến G4, TrangThai theo Bảng 2.16
 /// (Chờ duyệt, Đã duyệt, Đã sửa và duyệt, Từ chối). MaPX, MaPN, MaPC cùng một lúc chỉ có tối đa một giá trị, theo loại (xem CHECK).
-/// MaPX, MaPC chưa có khóa ngoại vì bảng PhieuXuat, PhieuChuyen chưa có trên main; thêm khi nhóm sở hữu có bảng thật.
+/// MaPX có khóa ngoại tới PhieuXuat. MaPC chưa có khóa ngoại vì bảng PhieuChuyen chưa có trên main; thêm khi nhóm sở hữu có bảng thật.
 /// </summary>
 public class GoiYAI
 {
@@ -90,6 +91,7 @@ public sealed class GoiYAIConfiguration : IEntityTypeConfiguration<GoiYAI>
 
         b.HasOne<NguoiDung>().WithMany().HasForeignKey(x => x.MaNguoiDuyet).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<PhieuNhap>().WithMany().HasForeignKey(x => x.MaPN).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<PhieuXuat>().WithMany().HasForeignKey(x => x.MaPX).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

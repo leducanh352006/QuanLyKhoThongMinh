@@ -1,23 +1,60 @@
 @using QuanLyKho.Web.Areas.NhapKho.Models
-@model List<QuanLyKho.Web.Areas.NhapKho.Models.PhieuNhap>
+@using QuanLyKho.Web.Areas.NhapKho.Services
+@model KetQuaDanhSach
 @{
+    // Danh sách phiếu nhập có tìm kiếm và lọc (việc T1-7). Vào lần đầu hiện phiếu trong tháng này.
+    var loc = (BoLocPhieu)ViewBag.Loc;
+    var loi = ViewBag.Loi as string;
     ViewData["Title"] = "Phiếu nhập";
 }
 
 <header class="trang-dau d-flex flex-wrap justify-content-between align-items-end gap-2">
     <div>
         <h1>Phiếu nhập</h1>
-        <p class="mota">Phiếu Nháp sửa được; phiếu đã xác nhận bị khóa. Hiện 200 phiếu mới nhất.</p>
+        <p class="mota">Phiếu Nháp sửa được; phiếu đã xác nhận bị khóa; phiếu đã hủy chỉ để xem. Hiện tối đa @PhieuNhapService.ToiDa phiếu mới nhất khớp bộ lọc.</p>
     </div>
     <a class="btn btn-primary" asp-action="Tao">Tạo phiếu nhập</a>
 </header>
 
-@if (Model.Count == 0)
+<form method="get" class="row g-2 align-items-end mb-3">
+    <div class="col-12 col-md-auto">
+        <label class="form-label" for="tim">Số phiếu hoặc nhà cung cấp</label>
+        <input class="form-control form-control-sm" id="tim" name="tim" value="@loc.Tim" maxlength="100" placeholder="VD: NK000012 hoặc tên nhà cung cấp" />
+    </div>
+    <div class="col-auto">
+        <label class="form-label" for="tuNgay">Từ ngày</label>
+        <input type="date" class="form-control form-control-sm" id="tuNgay" name="tuNgay" value="@loc.TuNgay?.ToString("yyyy-MM-dd")" />
+    </div>
+    <div class="col-auto">
+        <label class="form-label" for="denNgay">Đến ngày</label>
+        <input type="date" class="form-control form-control-sm" id="denNgay" name="denNgay" value="@loc.DenNgay?.ToString("yyyy-MM-dd")" />
+    </div>
+    <div class="col-auto">
+        <label class="form-label" for="trangThai">Trạng thái</label>
+        <select class="form-select form-select-sm" id="trangThai" name="trangThai">
+            <option value="">Tất cả</option>
+            @foreach (var tt in PhieuNhap.TatCaTrangThai)
+            {
+                <option selected="@(loc.TrangThai == tt)">@tt</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto d-flex gap-2">
+        <button type="submit" class="btn btn-sm btn-primary">Lọc</button>
+        <a class="btn btn-sm btn-outline-secondary" asp-action="Index">Phiếu trong tháng</a>
+    </div>
+</form>
+
+@if (loi is not null) { <div class="alert alert-danger" role="alert">@loi</div> }
+else if (Model.Phieu.Count == 0)
 {
-    <p class="khung-trong">Chưa có phiếu nhập nào. Bấm "Tạo phiếu nhập" để lập phiếu đầu tiên.</p>
+    <p class="khung-trong">Không có phiếu nhập nào khớp bộ lọc. Bỏ ngày hoặc từ khóa để xem rộng hơn, hoặc bấm "Tạo phiếu nhập" để lập phiếu mới.</p>
 }
 else
 {
+    <p class="text-body-secondary" role="status">
+        @(Model.BiCat ? $"Có hơn {PhieuNhapService.ToiDa} phiếu khớp, đang hiện {PhieuNhapService.ToiDa} phiếu mới nhất. Thu hẹp bộ lọc để xem phiếu cũ hơn." : $"{Model.Phieu.Count} phiếu.")
+    </p>
     <div class="bang-cuon">
         <table class="table table-sm align-middle">
             <thead>
@@ -27,7 +64,7 @@ else
                 </tr>
             </thead>
             <tbody>
-                @foreach (var p in Model)
+                @foreach (var p in Model.Phieu)
                 {
                     <tr>
                         <td><a asp-action="Sua" asp-route-id="@p.MaPN">@p.SoPhieu</a></td>
@@ -37,7 +74,7 @@ else
                         <td>@(p.NhaCungCap?.TenNCC ?? "Chưa chọn")</td>
                         <td class="text-end">@p.ChiTiet.Count</td>
                         <td>
-                            <span class="nhan @(p.DaKhoa ? "nhan-tot" : "nhan-chu-y")">@p.TrangThai</span>
+                            <span class="nhan @(p.TrangThai == PhieuNhap.DaHuy ? "nhan-loi" : p.DaKhoa ? "nhan-tot" : "nhan-chu-y")">@p.TrangThai</span>
                             @if (p.TrangThai == PhieuNhap.DaXacNhan) { <a asp-action="KiemTra" asp-route-id="@p.MaPN" class="ms-2">Kiểm tra hàng</a> }
                             @if (p.TrangThai == PhieuNhap.DaKiemTra) { <a asp-controller="SapXep" asp-action="Xep" asp-route-id="@p.MaPN" class="ms-2">Sắp xếp vào ô</a> }
                         </td>

@@ -1,0 +1,34 @@
+@model QuanLyKho.Web.Areas.HeThong.Controllers.GoiYThu
+@using QuanLyKho.Web.Contracts
+
+<header class="trang-dau">
+    <h1>@ViewData["Title"]</h1>
+    <p class="mota">
+        Màn hình phiếu của nhóm khác nhúng:
+        <code>@@await Component.InvokeAsync("DuyetGoiY", new { loai = LoaiGoiY.G1, maPX = Model.MaPX })</code>
+        (G2 truyền maPN; G3, G4 không cần phiếu). Tạo gợi ý mẫu ở trang <a asp-controller="GoiY" asp-action="Index">Gợi ý AI</a>.
+    </p>
+</header>
+
+<form method="get" class="row g-2 align-items-end mb-3">
+    <div class="col-auto">
+        <label for="tLoai" class="form-label">Loại</label>
+        <select id="tLoai" name="loai" class="form-select">
+            @foreach (var l in Enum.GetValues<LoaiGoiY>())
+            {
+                <option value="@l" selected="@(l == Model.Loai)">@l</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <label for="tPX" class="form-label">Mã phiếu xuất</label>
+        <input id="tPX" name="maPX" type="number" min="1" class="form-control" value="@Model.MaPX" />
+    </div>
+    <div class="col-auto">
+        <label for="tPN" class="form-label">Mã phiếu nhập</label>
+        <input id="tPN" name="maPN" type="number" min="1" class="form-control" value="@Model.MaPN" />
+    </div>
+    <div class="col-auto"><button type="submit" class="btn btn-primary">Xem</button></div>
+</form>
+
+@await Component.InvokeAsync("DuyetGoiY", new { loai = Model.Loai, maPX = Model.MaPX, maPN = Model.MaPN })

@@ -44,6 +44,20 @@ public static class GiaTriCsdl
         _ => throw new ArgumentOutOfRangeException(nameof(v), v, null),
     };
 
+    /// <summary>Chiều ngược của ToCsdl(TrangThaiGoiY): đọc cột GoiYAI.TrangThai (chuỗi) ra lại enum.</summary>
+    public static TrangThaiGoiY ParseTrangThaiGoiY(string v) => v switch
+    {
+        "Chờ duyệt" => TrangThaiGoiY.ChoDuyet,
+        "Đã duyệt" => TrangThaiGoiY.DaDuyet,
+        "Đã sửa và duyệt" => TrangThaiGoiY.DaSuaVaDuyet,
+        "Từ chối" => TrangThaiGoiY.TuChoi,
+        _ => throw new ArgumentOutOfRangeException(nameof(v), v, null),
+    };
+
+    /// <summary>Chiều ngược của ToCsdl(LoaiGoiY): "G1" đến "G4".</summary>
+    public static LoaiGoiY ParseLoaiGoiY(string v) => Enum.TryParse<LoaiGoiY>(v, out var l) && Enum.IsDefined(l)
+        ? l : throw new ArgumentOutOfRangeException(nameof(v), v, null);
+
     public static string ToCsdl(this TrangThaiGoiY v) => v switch
     {
         TrangThaiGoiY.ChoDuyet => "Chờ duyệt",

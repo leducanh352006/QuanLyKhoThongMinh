@@ -1,0 +1,99 @@
+@model QuanLyKho.Web.Areas.HeThong.Controllers.GoiYDanhSachViewModel
+@using QuanLyKho.Web.Areas.HeThong.Services
+@using QuanLyKho.Web.Contracts
+
+<header class="trang-dau">
+    <h1>Gợi ý AI</h1>
+    <p class="mota">
+        AI chỉ đề xuất; gợi ý có hiệu lực sau khi người có thẩm quyền duyệt, sửa rồi duyệt hoặc từ chối. Khi duyệt, hệ thống tự tạo thao tác
+        của nhóm sở hữu; AI lỗi hoặc chưa nối thao tác thì quy trình làm tay vẫn dùng bình thường.
+        @if (Model.LoaiDuocXuLy.Count > 0)
+        {
+            <br /><text>Bạn được xử lý: @string.Join(", ", Model.LoaiDuocXuLy).</text>
+        }
+    </p>
+</header>
+
+@if (TempData["GoiYThongBao"] is string tb) { <div class="alert alert-success" role="status">@tb</div> }
+@if (TempData["GoiYLoi"] is string loi) { <div class="alert alert-danger" role="alert">@loi</div> }
+
+<form method="get" asp-action="Index" class="row g-2 align-items-end mb-3">
+    <div class="col-auto">
+        <label for="locLoai" class="form-label">Loại gợi ý</label>
+        <select id="locLoai" name="loai" class="form-select">
+            <option value="">Tất cả</option>
+            @foreach (var l in Enum.GetValues<LoaiGoiY>())
+            {
+                <option value="@l" selected="@(Model.Loai == l.ToString())">@l - @QuyTacGoiY.Ten(l)</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <label for="locTrangThai" class="form-label">Trạng thái</label>
+        <select id="locTrangThai" name="trangThai" class="form-select">
+            <option value="cho" selected="@(Model.TrangThai == "cho")">Chờ duyệt</option>
+            <option value="daxuly" selected="@(Model.TrangThai == "daxuly")">Đã xử lý</option>
+        </select>
+    </div>
+    <div class="col-auto"><button type="submit" class="btn btn-primary">Lọc</button></div>
+</form>
+
+@if (Model.GoiY.Count == 0)
+{
+    <section class="khung-trong mb-3"><p>Không có gợi ý nào khớp bộ lọc.</p></section>
+}
+else
+{
+    @foreach (var k in Model.GoiY)
+    {
+        <partial name="~/Areas/HeThong/Views/Shared/_GoiYKhung.cshtml" model="k" />
+    }
+}
+
+@if (Model.LaPhatTrien)
+{
+    <section class="mt-4" aria-labelledby="tieuDeMau">
+        <h2 id="tieuDeMau" class="h5">Thử khung (chỉ môi trường Development)</h2>
+        <p class="text-secondary small">Tạo gợi ý giả từ dữ liệu mẫu chung rồi duyệt để xem thao tác được sinh ra; hoặc giả lập AI lỗi.</p>
+        @if (User.IsInRole(VaiTroTen.QuanTriVien) || User.IsInRole(VaiTroTen.QuanLyKho))
+        {
+            <div class="d-flex flex-wrap gap-2 align-items-end mb-3">
+                <form method="post" asp-action="TaoMau" class="d-flex flex-wrap gap-2 align-items-end">
+                    <div>
+                        <label for="mauMaPN" class="form-label small">Mã phiếu nhập cho G2 (không bắt buộc)</label>
+                        <input id="mauMaPN" name="maPN" type="number" min="1" class="form-control form-control-sm" />
+                    </div>
+                    <button type="submit" class="btn btn-outline-primary btn-sm">Tạo gợi ý mẫu</button>
+                </form>
+                <form method="post" asp-action="TaoMau">
+                    <input type="hidden" name="aiLoi" value="true" />
+                    <button type="submit" class="btn btn-outline-secondary btn-sm">Giả lập AI lỗi</button>
+                </form>
+            </div>
+        }
+
+        <h3 class="h6">Thao tác mẫu đã sinh sau khi duyệt</h3>
+        @if (Model.ThaoTacMau.Count == 0)
+        {
+            <p class="text-secondary small">Chưa có.</p>
+        }
+        else
+        {
+            <div class="bang-cuon">
+                <table class="table table-sm align-middle">
+                    <thead><tr><th scope="col">Gợi ý</th><th scope="col">Thao tác</th><th scope="col">Dòng đã dùng (biến thể × số lượng)</th></tr></thead>
+                    <tbody>
+                        @foreach (var t in Model.ThaoTacMau)
+                        {
+                            <tr>
+                                <td><a asp-action="ChiTiet" asp-route-id="@t.MaGoiY">@t.Loai #@t.MaGoiY</a></td>
+                                <td>@t.MoTa</td>
+                                <td>@string.Join("; ", t.Dong.Select(d => $"#{d.MaBT} × {d.SoLuong}"))</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+}

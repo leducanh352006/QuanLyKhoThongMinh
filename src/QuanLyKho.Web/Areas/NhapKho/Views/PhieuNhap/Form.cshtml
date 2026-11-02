@@ -4,6 +4,7 @@
     // Một form dùng cho cả tạo mới, sửa phiếu nháp và xem phiếu đã khóa.
     var laMoi = Model.MaPN == 0;
     var khoa = Model.DaKhoa;
+    var daHuy = Model.TrangThai == PhieuNhap.DaHuy;
     var dsKho = (Dictionary<int, string>)ViewBag.Kho;
     var dsNcc = (Dictionary<int, string>)ViewBag.NhaCungCap;
     var dsBienThe = (Dictionary<int, string>)ViewBag.BienThe;
@@ -15,8 +16,8 @@
     @if (!laMoi)
     {
         <p class="mota">
-            <span class="nhan @(khoa ? "nhan-tot" : "nhan-chu-y")">@Model.TrangThai</span>
-            @(khoa ? "Phiếu đã khóa, không sửa được." : "Phiếu nháp, còn sửa được.")
+            <span class="nhan @(daHuy ? "nhan-loi" : khoa ? "nhan-tot" : "nhan-chu-y")">@Model.TrangThai</span>
+            @(daHuy ? "Phiếu đã hủy, chỉ để xem." : khoa ? "Phiếu đã khóa, không sửa được." : "Phiếu nháp, còn sửa được.")
         </p>
     }
 </header>
@@ -104,7 +105,7 @@
                         onclick="return confirm('Xác nhận phiếu? Sau khi xác nhận sẽ không sửa được nữa. Thay đổi chưa lưu sẽ mất.');">Xác nhận phiếu</button>
             }
         }
-        @if (khoa)
+        @if (khoa && !daHuy)
         {
             <a class="btn btn-outline-primary" asp-action="InTem" asp-route-id="@Model.MaPN" target="_blank" rel="noopener">In tem mã</a>
             <a class="btn btn-outline-primary" asp-action="KiemTra" asp-route-id="@Model.MaPN">@(Model.TrangThai == PhieuNhap.DaXacNhan ? "Kiểm tra hàng nhập" : "Xem kết quả kiểm tra")</a>
@@ -116,6 +117,11 @@
 @if (!laMoi && !khoa)
 {
     <form method="post" asp-action="XacNhan" asp-route-id="@Model.MaPN" id="formXacNhan"></form>
+}
+
+@if (!laMoi && Model.HuyDuoc)
+{
+    <partial name="_HuyPhieu" model="Model" />
 }
 
 @if (!laMoi)

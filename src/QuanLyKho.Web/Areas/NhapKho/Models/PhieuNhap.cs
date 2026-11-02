@@ -50,6 +50,13 @@ namespace QuanLyKho.Web.Areas.NhapKho.Models
         /// <summary>Phiếu do hệ thống tự sinh khi quản lý kho duyệt kiểm kê (T1-8): tự hoàn tất, không qua kiểm tra và sắp xếp.</summary>
         public const string LoaiThua = "Thừa do kiểm kê";
         public const string HoanTat = "Hoàn tất";
+        public const string DaHuy = "Đã hủy";
+
+        /// <summary>Năm trạng thái theo Bảng 2.22, dùng cho bộ lọc danh sách.</summary>
+        public static readonly IReadOnlyList<string> TatCaTrangThai = new[] { Nhap, DaXacNhan, DaKiemTra, HoanTat, DaHuy };
+
+        /// <summary>Phiếu còn hủy được về trạng thái (Bảng 2.3 dòng 7): chưa hoàn tất và chưa hủy. Còn phải chưa có dòng nào xếp vào ô, xem PhieuNhapService.Huy.</summary>
+        public bool HuyDuoc => TrangThai is Nhap or DaXacNhan or DaKiemTra;
 
         /// <summary>Quy tắc không cần CSDL (Bảng 2.3 dòng 1). Trả về lỗi, hoặc null nếu hợp lệ.</summary>
         public string? KiemTra()
@@ -112,6 +119,7 @@ namespace QuanLyKho.Web.Areas.NhapKho.Models
             b.Property(x => x.DienGiai).HasMaxLength(500);
             b.Property(x => x.TrangThai).HasMaxLength(20).IsRequired().HasDefaultValue(PhieuNhap.Nhap);
             b.Ignore(x => x.DaKhoa);
+            b.Ignore(x => x.HuyDuoc);
             b.HasIndex(x => new { x.MaKho, x.ThoiGian });
             b.HasIndex(x => x.MaPK);   // chưa có khóa ngoại tới PhieuKiem vì bảng đó do nhóm Kiểm tra hàng hóa tạo sau
             b.HasOne(x => x.Kho).WithMany().HasForeignKey(x => x.MaKho).OnDelete(DeleteBehavior.Restrict);

@@ -66,11 +66,11 @@ public class MenuVaAreaTests
     [Fact]
     public void ThuKho_ThayNhapXuatHangHoaDieuChuyenVaVitriTrongHeThong()
     {
-        // Từ việc T4-3: Thủ kho cần xem cây vị trí để thao tác đúng chỗ, nên thấy Area HeThong qua đúng một mục "Vị trí".
+        // T4-3: Thủ kho cần xem cây vị trí để thao tác đúng chỗ. T4-8: Thủ kho duyệt gợi ý G2 (xếp hàng) nên thấy thêm "Gợi ý AI".
         Assert.Equal(NamArea.OrderBy(x => x).ToArray(), AreaThay(TaoMenu(), VaiTroTen.ThuKho));
 
         var mucHeThong = TaoMenu().LayMenu(VaiTroTen.ThuKho).Single(g => g.Ten == "Hệ thống").Muc;
-        Assert.Equal(new[] { "Vị trí" }, mucHeThong.Select(m => m.Ten).ToArray());
+        Assert.Equal(new[] { "Vị trí", "Gợi ý AI" }, mucHeThong.Select(m => m.Ten).ToArray());
     }
 
     [Fact]

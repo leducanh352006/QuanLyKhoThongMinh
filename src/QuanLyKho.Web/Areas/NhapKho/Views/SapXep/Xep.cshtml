@@ -133,6 +133,9 @@
     <a class="btn btn-outline-secondary" asp-controller="PhieuNhap" asp-action="Index">Phiếu nhập</a>
 </div>
 
+@* Tệp đính kèm của phiếu nhập (T4-7): đặt ngoài mọi thẻ form vì component có form tải tệp riêng. *@
+@await Component.InvokeAsync("DinhKem", new { loai = LoaiChungTu.NK, maCT = Model.MaPN })
+
 @section Scripts {
     <script>
         // Máy quét gõ mã rồi nhấn Enter: ở ô mã ô thì nhảy sang ô mã lô, ở ô mã lô thì gửi form.

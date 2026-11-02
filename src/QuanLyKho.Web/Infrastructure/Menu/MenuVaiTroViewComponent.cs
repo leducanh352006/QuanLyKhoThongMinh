@@ -9,8 +9,9 @@ public sealed class MenuVaiTroViewComponent(IMenuService menu, INguoiDungHienTai
     public IViewComponentResult Invoke()
     {
         var area = ViewContext.RouteData.Values["area"] as string;
-        var dangODauTrang = area is null && (ViewContext.RouteData.Values["controller"] as string) == "Home";
+        var controller = ViewContext.RouteData.Values["controller"] as string;
+        var dangODauTrang = area is null && controller == "Home";
         var nhom = menu.LayMenu(nguoiDung.Lay()?.TenVaiTro);
-        return View(new MenuViewModel(nhom, area, dangODauTrang));
+        return View(new MenuViewModel(nhom, area, dangODauTrang, controller));
     }
 }

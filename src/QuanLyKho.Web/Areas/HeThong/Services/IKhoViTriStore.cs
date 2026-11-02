@@ -29,6 +29,7 @@ public interface IKhoViTriStore
 
     Task LuuThayDoi(CancellationToken ct = default);
 
-    /// <summary>Xóa cứng một vị trí; chỉ gọi khi đã chắc chắn không còn biến động tồn hay dòng con tham chiếu tới.</summary>
+    /// <summary>Xóa cứng một vị trí.</summary>
+    /// <exception cref="XungDotDuLieuException">Vị trí còn dữ liệu khác tham chiếu tới (sổ cái, tồn, phiếu...).</exception>
     Task XoaViTri(ViTri viTri, CancellationToken ct = default);
 }

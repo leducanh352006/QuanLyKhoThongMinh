@@ -10,15 +10,16 @@ using QuanLyKho.Web.Data;
 namespace QuanLyKho.Web.Areas.XuatKho.Controllers;
 
 /// <summary>
-/// Phiếu xuất (việc T2-1): danh sách, tạo, sửa phiếu nháp, Duyệt (giữ chỗ tồn — việc T2-8, phân bổ FIFO tối giản vì chưa có gợi ý G1)
-/// và Hủy (trả chỗ — việc T2-8). Gợi ý G1 (T2-2) sẽ THAY phần phân bổ FIFO trong Duyet bằng gợi ý AI, không tạo hành động mới;
-/// AI lỗi hoặc không có dữ liệu thì FIFO vẫn chạy được (mục 1.2.4: làm tay được toàn bộ quy trình).
-/// Trả lại hàng mua và hủy hàng (việc T2-7, Bảng 2.4 dòng 7) dùng chung Tao/Sua/Duyet/Huy ở trên.
+/// Phiếu xuất (việc T2-1): danh sách, tạo, sửa phiếu nháp, Duyệt (giữ chỗ tồn, việc T2-8) và Hủy (trả chỗ, việc T2-8).
+/// Gợi ý G1 "lấy hàng từ lô, ô nào" (việc T2-2, issue #22, loại Khác và Hủy hàng): TaoGoiY tính phân bổ FEFO/FIFO (PhanBoFifo) thành
+/// đề xuất rồi lưu qua IGoiYService.Tao; quản lý kho duyệt ở khung DuyetGoiY nhúng trong Form, khung gọi HandlerG1 để giữ chỗ và
+/// khóa phiếu thật. Duyet ở đây vẫn là đường làm tay trực tiếp (cùng PhanBoFifo) khi chưa tạo gợi ý hoặc AI lỗi (mục 1.2.4).
+/// Trả lại hàng mua và hủy hàng (việc T2-7, Bảng 2.4 dòng 7) dùng chung Tao/Sua/Duyet/Huy ở trên; trả lại hàng mua không áp dụng G1.
 /// Quyền theo bảng PhanQuyen: Xem để vào, Thêm để tạo, Sửa để sửa, Duyệt để duyệt, Xóa để hủy.
 /// </summary>
 [Area("XuatKho")]
 [CanQuyen(LoaiChungTu.XK, QuyenThaoTac.Xem)]
-public class PhieuXuatController(INguoiDungHienTai hienTai, IAuditService audit, IStockService ton, KhoDbContext? db = null) : Controller
+public class PhieuXuatController(INguoiDungHienTai hienTai, IAuditService audit, IStockService ton, IGoiYService goiY, KhoDbContext? db = null) : Controller
 {
     // Chưa cấu hình chuỗi kết nối thì KhoDbContext không có, báo lỗi rõ ràng thay vì lỗi khó hiểu.
     private KhoDbContext Db => db ?? throw new InvalidOperationException("Chưa cấu hình ConnectionStrings:KhoDb nên chưa dùng được phiếu xuất.");
@@ -73,7 +74,8 @@ public class PhieuXuatController(INguoiDungHienTai hienTai, IAuditService audit,
     /// <summary>
     /// Nháp thành Đã duyệt: phân bổ lô/ô FIFO cho từng dòng, giữ chỗ qua IStockService.GiuCho, ghi bảng LayHang rồi khóa phiếu.
     /// Phân bổ và duyệt cùng một giao dịch: giữ chỗ không đủ (tranh chấp đồng thời) thì hoàn tác hết, phiếu vẫn ở Nháp.
-    /// Việc T2-2 (gợi ý G1) sẽ thay <see cref="PhanBoFifo"/> bằng gợi ý AI; FIFO ở đây là phần "làm tay" khi chưa có hoặc AI lỗi (mục 1.2.4).
+    /// Đường làm tay/dự phòng của việc T2-2: quản lý kho dùng khi chưa tạo gợi ý G1 (TaoGoiY) hoặc gợi ý AI lỗi (mục 1.2.4);
+    /// khi có gợi ý Chờ duyệt, nên duyệt ở khung DuyetGoiY (gọi HandlerG1) để tận dụng lô/ô do AI chọn.
     /// </summary>
     [HttpPost, ValidateAntiForgeryToken, CanQuyen(LoaiChungTu.XK, QuyenThaoTac.Duyet)]
     public async Task<IActionResult> Duyet(int id)
@@ -122,6 +124,41 @@ public class PhieuXuatController(INguoiDungHienTai hienTai, IAuditService audit,
 
         await audit.Ghi(MaNguoiDung(), "Duyệt phiếu xuất", LoaiChungTu.XK, id, p.SoPhieu);
         TempData["ThongBao"] = "Đã duyệt phiếu và giữ chỗ tồn. Phiếu bị khóa, không sửa được nữa.";
+        return RedirectToAction(nameof(Sua), new { id });
+    }
+
+    /// <summary>
+    /// Tạo gợi ý G1 "lấy hàng từ lô, ô nào" (việc T2-2, issue #22) cho phiếu Nháp loại Khác hoặc Hủy hàng: tính phân bổ FEFO/FIFO
+    /// (như <see cref="PhanBoFifo"/>, không giữ chỗ ngay) rồi lưu qua IGoiYService.Tao, bọc an toàn bởi GoiYAnToan (mục 1.2.4: AI lỗi
+    /// không chặn quy trình). Quản lý kho duyệt gợi ý ở khung DuyetGoiY nhúng dưới form; duyệt xong khung gọi HandlerG1 để giữ chỗ
+    /// và khóa phiếu thật. Nút "Duyệt phiếu" (ở trên) vẫn là đường làm tay khi không muốn hoặc không tạo được gợi ý.
+    /// </summary>
+    [HttpPost, ValidateAntiForgeryToken, CanQuyen(LoaiChungTu.XK, QuyenThaoTac.Sua)]
+    public async Task<IActionResult> TaoGoiY(int id)
+    {
+        var p = await Db.PhieuXuat.Include(x => x.ChiTiet).FirstOrDefaultAsync(x => x.MaPX == id);
+        if (p is null) return NotFound();
+
+        var tuChoi = p.TrangThai != PhieuXuat.Nhap ? "Phiếu không còn ở trạng thái Nháp."
+            : p.LoaiPhieu == PhieuXuat.TraLaiHangMua ? "Trả lại hàng mua lấy từ khu tiếp nhận, không áp dụng gợi ý G1."
+            : p.KiemTra() ?? await KiemTraDanhMuc(p) ?? await KiemTraTonKhaDung(p);
+        if (tuChoi is not null)
+        {
+            TempData["Loi"] = tuChoi;
+            return RedirectToAction(nameof(Sua), new { id });
+        }
+
+        var (chiTiet, loiPhanBo) = await TaoChiTietGoiYG1(p);
+        if (loiPhanBo is not null)
+        {
+            TempData["Loi"] = loiPhanBo;
+            return RedirectToAction(nameof(Sua), new { id });
+        }
+
+        var kq = await GoiYAnToan.Chay(ct => goiY.Tao(LoaiGoiY.G1, new ThamChieuGoiY(MaPX: id), chiTiet, ct));
+        TempData[kq.ThanhCong ? "ThongBao" : "Loi"] = kq.ThanhCong
+            ? "Đã tạo gợi ý lấy hàng (G1); mời quản lý kho duyệt ở khung bên dưới."
+            : (kq.ThongBao ?? "Không tạo được gợi ý.") + " Bạn vẫn duyệt tay được bằng nút \"Duyệt phiếu\".";
         return RedirectToAction(nameof(Sua), new { id });
     }
 
@@ -257,9 +294,9 @@ public class PhieuXuatController(INguoiDungHienTai hienTai, IAuditService audit,
             (b, s) => s.TenSP + " (" + b.ThuocTinh + ")").FirstOrDefaultAsync() ?? $"biến thể #{maBT}";
 
     /// <summary>
-    /// Phân bổ lô/ô khi duyệt cho loại Khác, Hủy hàng (việc T2-8): FIFO tối giản trên ô LƯU TRỮ của kho, lô hết hạn sớm trước,
-    /// không có hạn thì lô nhỏ trước (xấp xỉ "nhập trước", đúng thứ tự ưu tiên của gợi ý G1 ở Bảng 1.4). Việc T2-2 sẽ thay hàm này
-    /// bằng gợi ý G1 có AI; đây là phần "làm tay" khi AI lỗi hoặc chưa có (mục 1.2.4).
+    /// Phân bổ lô/ô cho loại Khác, Hủy hàng: FEFO/FIFO tối giản trên ô LƯU TRỮ của kho, lô hết hạn sớm trước, không có hạn thì lô
+    /// nhỏ trước (xấp xỉ "nhập trước", đúng thứ tự ưu tiên của gợi ý G1 ở Bảng 1.4). Việc T2-2 dùng lại hàm này ở cả hai nơi:
+    /// làm nền cho đề xuất gợi ý G1 (<see cref="TaoChiTietGoiYG1"/>) và làm phân bổ khi Duyệt tay trực tiếp (không qua gợi ý).
     /// </summary>
     private async Task<(List<(int MaCTX, int MaLo, int MaViTri, int SoLuong)> Phan, string? Loi)> PhanBoFifo(PhieuXuat p)
     {
@@ -292,6 +329,33 @@ public class PhieuXuatController(INguoiDungHienTai hienTai, IAuditService audit,
             if (canLay > 0) return (phan, $"{await TenBienThe(d.MaBT)}: không đủ tồn khả dụng để giữ chỗ (còn thiếu {canLay}).");
         }
         return (phan, null);
+    }
+
+    /// <summary>
+    /// Chuyển phân bổ FEFO/FIFO (<see cref="PhanBoFifo"/>) thành các dòng đề xuất của gợi ý G1 (việc T2-2), kèm lý do có số liệu
+    /// căn cứ (hạn dùng của lô, mã vạch ô) theo yêu cầu của khung gợi ý AI (QuyTacGoiY.KiemTraChiTiet). Không giữ chỗ tồn ở đây;
+    /// chỉ thật sự giữ chỗ khi quản lý kho duyệt gợi ý (HandlerG1.ThucHien).
+    /// </summary>
+    private async Task<(List<ChiTietGoiYDto> ChiTiet, string? Loi)> TaoChiTietGoiYG1(PhieuXuat p)
+    {
+        var (phan, loi) = await PhanBoFifo(p);
+        if (loi is not null) return (new(), loi);
+
+        var maLo = phan.Select(x => x.MaLo).Distinct().ToList();
+        var maViTri = phan.Select(x => x.MaViTri).Distinct().ToList();
+        var lo = await Db.LoHang.Where(l => maLo.Contains(l.MaLo)).ToDictionaryAsync(l => l.MaLo, l => new { l.MaVachLo, l.HanDung });
+        var viTri = await Db.ViTri.Where(v => maViTri.Contains(v.MaViTri)).ToDictionaryAsync(v => v.MaViTri, v => v.MaVachO ?? $"#{v.MaViTri}");
+        var bienThe = p.ChiTiet.ToDictionary(d => d.MaCTX, d => d.MaBT);
+
+        var chiTiet = phan.Select(x =>
+        {
+            var l = lo[x.MaLo];
+            var han = l.HanDung is DateOnly h ? h.ToString("dd/MM/yyyy") : "không có";
+            var lyDo = $"Hết hạn trước lấy trước: lô {l.MaVachLo} (hạn {han}) được ưu tiên lấy trước các lô hết hạn muộn hơn hoặc không có " +
+                $"hạn trong kho; lấy {x.SoLuong} tại ô {viTri[x.MaViTri]}, không vượt tồn khả dụng còn lại ở ô đó.";
+            return new ChiTietGoiYDto(bienThe[x.MaCTX], x.SoLuong, lyDo, x.MaLo, x.MaViTri);
+        }).ToList();
+        return (chiTiet, null);
     }
 
     /// <summary>

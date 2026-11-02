@@ -8,6 +8,8 @@
     var dsBienThe = (Dictionary<int, string>)ViewBag.BienThe;
     var dsPhieuNhap = (Dictionary<int, string>)ViewBag.PhieuNhap;
     var coTheHuy = !laMoi && (Model.TrangThai == PhieuXuat.Nhap || Model.TrangThai == PhieuXuat.DaDuyet);
+    // Gợi ý G1 (việc T2-2) chỉ áp dụng loại Khác, Hủy hàng: Trả lại hàng mua lấy từ khu tiếp nhận, không qua FIFO/AI (Bảng 2.4 dòng 7).
+    var coApDungG1 = Model.LoaiPhieu != PhieuXuat.TraLaiHangMua && Model.LoaiPhieu != PhieuXuat.ThieuDoKiemKe;
     ViewData["Title"] = laMoi ? "Tạo phiếu xuất" : $"Phiếu xuất {Model.SoPhieu}";
 }
 
@@ -113,6 +115,10 @@
             <button type="submit" class="btn btn-primary">Lưu phiếu nháp</button>
             @if (!laMoi)
             {
+                @if (coApDungG1)
+                {
+                    <button type="submit" class="btn btn-outline-success" form="formGoiY">Gợi ý AI lấy hàng (G1)</button>
+                }
                 <button type="submit" class="btn btn-success" form="formDuyet"
                         onclick="return confirm('Duyệt phiếu? Sau khi duyệt sẽ không sửa được nữa. Thay đổi chưa lưu sẽ mất.');">Duyệt phiếu</button>
             }
@@ -129,10 +135,20 @@
 @if (!laMoi && !khoa)
 {
     <form method="post" asp-action="Duyet" asp-route-id="@Model.MaPX" id="formDuyet"></form>
+    @if (coApDungG1)
+    {
+        <form method="post" asp-action="TaoGoiY" asp-route-id="@Model.MaPX" id="formGoiY"></form>
+    }
 }
 @if (coTheHuy)
 {
     <form method="post" asp-action="Huy" asp-route-id="@Model.MaPX" id="formHuy"></form>
+}
+
+@if (!laMoi && coApDungG1)
+{
+    <h2 class="h5 mt-4">Gợi ý AI (G1): lô, ô cần lấy</h2>
+    @await Component.InvokeAsync("DuyetGoiY", new { loai = QuanLyKho.Web.Contracts.LoaiGoiY.G1, maPX = Model.MaPX })
 }
 
 @if (!laMoi)

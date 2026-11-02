@@ -1,0 +1,33 @@
+@model QuanLyKho.Web.Areas.HeThong.Controllers.DinhKemThu
+@using QuanLyKho.Web.Contracts
+
+<header class="trang-dau">
+    <h1>@ViewData["Title"]</h1>
+    <p class="mota">
+        Thành phần dùng chung cho mọi phiếu: nhóm khác nhúng
+        <code>@@await Component.InvokeAsync("DinhKem", new { loai = LoaiChungTu.NK, maCT = 1 })</code> vào view của mình.
+        Đang xem chứng từ <strong>@Model.Loai #@Model.MaCT</strong>.
+    </p>
+</header>
+
+<form method="get" class="row g-2 align-items-end mb-3">
+    <div class="col-auto">
+        <label for="dkLoai" class="form-label">Loại chứng từ</label>
+        <select id="dkLoai" name="loai" class="form-select">
+            @foreach (var l in Enum.GetValues<LoaiChungTu>())
+            {
+                <option value="@l" selected="@(l == Model.Loai)">@l - @l.Ten()</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <label for="dkMa" class="form-label">Mã chứng từ</label>
+        <input id="dkMa" name="maCT" type="number" min="1" class="form-control" value="@Model.MaCT" />
+    </div>
+    <div class="col-auto"><button type="submit" class="btn btn-primary">Xem</button></div>
+</form>
+
+@if (TempData["ThongBao"] is string tb) { <div class="alert alert-success" role="status">@tb</div> }
+@if (TempData["Loi"] is string loi) { <div class="alert alert-danger" role="alert">@loi</div> }
+
+@await Component.InvokeAsync("DinhKem", new { loai = Model.Loai, maCT = Model.MaCT })

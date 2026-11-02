@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore;
 using QuanLyKho.Web.Areas.NhapKho.Models;
 using QuanLyKho.Web.Data;
@@ -59,7 +61,7 @@ public class KiemTraHangNhapTests
     {
         using var db = new KhoDbContext(new DbContextOptionsBuilder<KhoDbContext>()
             .UseSqlServer("Server=.;Database=KhongKetNoi;Trusted_Connection=True").Options);
-        var dong = db.Model.FindEntityType(typeof(ChiTietPhieuNhap))!;
+        var dong = db.GetService<IDesignTimeModel>().Model.FindEntityType(typeof(ChiTietPhieuNhap))!;
 
         // MaLo, SLThucNhan, SLDat, LyDoLech cho phép NULL: dòng chưa tiếp nhận thì chưa có kết quả.
         foreach (var cot in new[] { "MaLo", "SLThucNhan", "SLDat", "LyDoLech" })

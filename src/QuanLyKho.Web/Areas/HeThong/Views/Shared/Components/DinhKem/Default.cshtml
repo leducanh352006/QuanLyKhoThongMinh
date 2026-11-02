@@ -1,0 +1,63 @@
+@model QuanLyKho.Web.Areas.HeThong.Controllers.DinhKemViewModel
+@using QuanLyKho.Web.Areas.HeThong.Services
+@{
+    var id = $"dinhKem{Model.Loai}{Model.MaCT}";
+}
+
+<section class="mt-4" aria-labelledby="@(id)Tieu">
+    <h2 id="@(id)Tieu" class="h5">Tệp đính kèm</h2>
+
+    @if (!Model.DuocXem && !Model.DuocThem)
+    {
+        <p class="text-secondary">Bạn không có quyền xem tệp đính kèm của chứng từ này.</p>
+    }
+    else
+    {
+        @if (Model.DuocXem)
+        {
+            @if (Model.Tep.Count == 0)
+            {
+                <p class="text-secondary">Chưa có tệp đính kèm.</p>
+            }
+            else
+            {
+                <div class="bang-cuon">
+                    <table class="table table-sm align-middle">
+                        <thead>
+                            <tr>
+                                <th scope="col">Tên tệp</th>
+                                <th scope="col">Người đính kèm</th>
+                                <th scope="col">Thời gian</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var t in Model.Tep)
+                            {
+                                <tr>
+                                    <td><a asp-area="HeThong" asp-controller="DinhKem" asp-action="Tai" asp-route-id="@t.MaTep">@t.TenTep</a></td>
+                                    <td>@t.NguoiTai</td>
+                                    <td>@TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(t.ThoiGianUtc, DateTimeKind.Utc), TimeZoneInfo.Local).ToString("dd/MM/yyyy HH:mm")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        }
+
+        @if (Model.DuocThem)
+        {
+            <form method="post" enctype="multipart/form-data" asp-area="HeThong" asp-controller="DinhKem" asp-action="Them" class="d-flex flex-wrap align-items-end gap-2">
+                <input type="hidden" name="loai" value="@Model.Loai" />
+                <input type="hidden" name="maCT" value="@Model.MaCT" />
+                <input type="hidden" name="quayLai" value="@Model.QuayLai" />
+                <div>
+                    <label for="@(id)Tep" class="form-label">Chọn tệp (tối đa 10 MB)</label>
+                    <input type="file" id="@(id)Tep" name="tep" class="form-control" required
+                           accept="@string.Join(",", QuyTacTep.DuoiChoPhep)" />
+                </div>
+                <button type="submit" class="btn btn-outline-primary">Đính kèm</button>
+            </form>
+        }
+    }
+</section>

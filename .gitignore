@@ -31,3 +31,6 @@ Thumbs.db
 
 ## Tệp người dùng tải lên khi chạy thử (mục đính kèm chứng từ)
 src/QuanLyKho.Web/wwwroot/uploads/
+
+## Tệp đính kèm chứng từ (T4-7), lưu ngoài git
+src/QuanLyKho.Web/App_Data/

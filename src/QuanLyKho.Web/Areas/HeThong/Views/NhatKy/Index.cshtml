@@ -1,0 +1,105 @@
+@model QuanLyKho.Web.Areas.HeThong.Controllers.NhatKyViewModel
+@using QuanLyKho.Web.Contracts
+@{
+    string Ngay(DateTime utc) => TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), TimeZoneInfo.Local).ToString("dd/MM/yyyy HH:mm:ss");
+    var ket = Model.Ket;
+    object Tuyen(int trang) => new { Model.MaND, Model.HanhDong, Model.LoaiCT, Model.MaCT, TuNgay = Model.TuNgay?.ToString("yyyy-MM-dd"), DenNgay = Model.DenNgay?.ToString("yyyy-MM-dd"), Trang = trang };
+}
+
+<header class="trang-dau">
+    <h1>Nhật ký thao tác</h1>
+    <p class="mota">Ai làm gì, lúc nào trên các chứng từ. Chỉ thêm, không sửa, không xóa. Giờ hiển thị theo giờ máy chủ.</p>
+</header>
+
+<form method="get" asp-action="Index" class="mb-3 row g-2 align-items-end">
+    <div class="col-md-3">
+        <label for="loNguoi" class="form-label">Người thực hiện</label>
+        <select id="loNguoi" name="MaND" class="form-select">
+            <option value="">Tất cả</option>
+            @foreach (var n in Model.NguoiDung)
+            {
+                <option value="@n.Value" selected="@n.Selected">@n.Text</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-3">
+        <label for="loHanhDong" class="form-label">Loại thao tác</label>
+        <input id="loHanhDong" name="HanhDong" class="form-control" value="@Model.HanhDong" placeholder="Ví dụ: Khóa ô, Đính kèm" maxlength="100" />
+    </div>
+    <div class="col-md-2">
+        <label for="loLoai" class="form-label">Loại chứng từ</label>
+        <select id="loLoai" name="LoaiCT" class="form-select">
+            <option value="">Tất cả</option>
+            @foreach (var loai in Enum.GetValues<LoaiChungTu>())
+            {
+                <option value="@loai" selected="@(Model.LoaiCT == loai.ToString())">@loai.ToString() - @loai.Ten()</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <label for="loMa" class="form-label">Mã chứng từ</label>
+        <input id="loMa" name="MaCT" type="number" min="1" class="form-control" value="@Model.MaCT" />
+    </div>
+    <div class="col-md-2">
+        <label for="loTu" class="form-label">Từ ngày</label>
+        <input id="loTu" name="TuNgay" type="date" class="form-control" value="@Model.TuNgay?.ToString("yyyy-MM-dd")" />
+    </div>
+    <div class="col-md-2">
+        <label for="loDen" class="form-label">Đến ngày</label>
+        <input id="loDen" name="DenNgay" type="date" class="form-control" value="@Model.DenNgay?.ToString("yyyy-MM-dd")" />
+    </div>
+    <div class="col-md-3 d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Lọc</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Bỏ lọc</a>
+    </div>
+</form>
+
+<p class="text-secondary" role="status">@ket.Tong dòng khớp.</p>
+
+@if (ket.Dong.Count == 0)
+{
+    <section class="khung-trong"><p class="mb-0">Không có dòng nhật ký nào khớp bộ lọc.</p></section>
+}
+else
+{
+    <div class="bang-cuon">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">Thời gian</th>
+                    <th scope="col">Người thực hiện</th>
+                    <th scope="col">Thao tác</th>
+                    <th scope="col">Chứng từ</th>
+                    <th scope="col">Chi tiết</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var d in ket.Dong)
+                {
+                    <tr>
+                        <td class="text-nowrap">@Ngay(d.ThoiGianUtc)</td>
+                        <td>@d.NguoiThucHien</td>
+                        <td>@d.HanhDong</td>
+                        <td>@(d.LoaiCT is null ? "—" : $"{d.LoaiCT} #{d.MaCT}")</td>
+                        <td>@d.ChiTiet</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (ket.TongTrang > 1)
+    {
+        <nav aria-label="Phân trang nhật ký">
+            <ul class="pagination">
+                <li class="page-item @(ket.Trang <= 1 ? "disabled" : "")">
+                    <a class="page-link" href="@Url.Action("Index", Tuyen(ket.Trang - 1))">Trước</a>
+                </li>
+                <li class="page-item disabled"><span class="page-link">Trang @ket.Trang / @ket.TongTrang</span></li>
+                <li class="page-item @(ket.Trang >= ket.TongTrang ? "disabled" : "")">
+                    <a class="page-link" href="@Url.Action("Index", Tuyen(ket.Trang + 1))">Sau</a>
+                </li>
+            </ul>
+        </nav>
+    }
+}

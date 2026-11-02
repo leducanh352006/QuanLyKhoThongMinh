@@ -22,7 +22,7 @@ public sealed class StockService(KhoDbContext db) : IStockService
     public Task<KetQua> GiuCho(DongTon dong, CancellationToken ct = default) =>
         ThuLai(async () =>
         {
-            var loi = await KiemTraDong(dong, ct, chanKhoa: true, chanTiepNhan: true);
+            var loi = await KiemTraDong(dong, ct, chanKhoa: true);
             if (loi is not null) return loi;
 
             var ton = await LayHoacTaoTon(dong.MaLo, dong.MaViTri, ct);
@@ -66,8 +66,7 @@ public sealed class StockService(KhoDbContext db) : IStockService
     public Task<KetQua> GhiGiam(DongTon dong, LoaiBienDong loai, ThamChieuChungTu chungTu, int maND, bool tuGiuCho = false, CancellationToken ct = default) =>
         ThuLai(async () =>
         {
-            var loi = await KiemTraDong(dong, ct, chanKhoa: chungTu.Loai != LoaiChungTu.KK,
-                chanTiepNhan: loai is LoaiBienDong.XuatKho or LoaiBienDong.ChuyenDi);
+            var loi = await KiemTraDong(dong, ct, chanKhoa: chungTu.Loai != LoaiChungTu.KK);
             if (loi is not null) return loi;
             if (await DaGhi(dong.MaLo, dong.MaViTri, -dong.SoLuong, loai, chungTu, ct)) return KetQua.Ok();
 
@@ -184,10 +183,11 @@ public sealed class StockService(KhoDbContext db) : IStockService
 
     /// <summary>
     /// <paramref name="chanKhoa"/>: từ chối ô đang khóa kiểm kê (ILockService). <paramref name="canHoatDong"/>: ô nhận hàng phải đang hoạt động
-    /// (ô đã khóa mềm không nhận thêm hàng). <paramref name="chanTiepNhan"/>: hàng ở ô Tiếp nhận chưa tính vào tồn khả dụng (chưa kiểm, chưa xếp)
-    /// nên không giữ chỗ, xuất bán hay chuyển kho từ đó; muốn đưa vào kệ thì dùng <see cref="ChuyenO"/>.
+    /// (ô đã khóa mềm không nhận thêm hàng).
+    /// Không chặn ô Tiếp nhận ở đây: luồng Trả lại hàng mua / Hủy hàng cần giữ chỗ và xuất hàng không đạt từ chính ô đó; việc loại
+    /// ô Tiếp nhận khỏi tồn khả dụng khi chọn hàng bán thường do phía Xuất kho đảm nhiệm.
     /// </summary>
-    private async Task<KetQua?> KiemTraDong(DongTon d, CancellationToken ct, bool chanKhoa = false, bool canHoatDong = false, bool chanTiepNhan = false)
+    private async Task<KetQua?> KiemTraDong(DongTon d, CancellationToken ct, bool chanKhoa = false, bool canHoatDong = false)
     {
         if (d.SoLuong <= 0)
             return KetQua.Loi("Số lượng phải lớn hơn 0.", MaLoiDichVu.DuLieuKhongHopLe);
@@ -201,8 +201,6 @@ public sealed class StockService(KhoDbContext db) : IStockService
             return KetQua.Loi($"Ô '{vt.TenViTri}' đang bị khóa để kiểm kê.", MaLoiDichVu.OBiKhoa);
         if (canHoatDong && !vt.DangHoatDong)
             return KetQua.Loi($"Ô '{vt.TenViTri}' đã ngừng hoạt động, không nhận thêm hàng.", MaLoiDichVu.DuLieuKhongHopLe);
-        if (chanTiepNhan && vt.LoaiViTri == LoaiViTriGiaTri.TiepNhan)
-            return KetQua.Loi($"Hàng ở '{vt.TenViTri}' (khu tiếp nhận) chưa sẵn sàng xuất: phải kiểm và xếp lên kệ trước.", MaLoiDichVu.VuotTon);
 
         return null;
     }

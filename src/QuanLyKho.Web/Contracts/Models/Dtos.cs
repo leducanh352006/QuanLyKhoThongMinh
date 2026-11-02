@@ -22,6 +22,9 @@ public sealed record BienDongTonDto(
 /// <summary>Chênh lệch giữa tồn hiện tại (TonKho) và tồn tính lại từ sổ cái.</summary>
 public sealed record ChenhLechSoCai(int MaLo, int MaViTri, int TonHienTai, int TonTheoSoCai);
 
+/// <summary>Lượng xuất trong một ngày (giờ máy chủ) của một biến thể tại một kho; SoLuong luôn dương (việc T4-6, cho G3 và G4).</summary>
+public sealed record XuatTheoNgayDto(DateOnly Ngay, int MaBT, int MaKho, int SoLuong);
+
 // ---- Sức chứa ----------------------------------------------------------------------------
 
 /// <summary>Kết quả kiểm tra một ô còn nhận thêm được hàng không (thể tích và khối lượng, Bảng 2.3 dòng 3 và 4).</summary>

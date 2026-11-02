@@ -1,0 +1,116 @@
+@model QuanLyKho.Web.Areas.HeThong.Controllers.LichSuTonViewModel
+@using QuanLyKho.Web.Areas.HeThong.Models
+@using QuanLyKho.Web.Contracts
+@{
+    string Ngay(DateTime utc) => TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), TimeZoneInfo.Local).ToString("dd/MM/yyyy HH:mm:ss");
+    var ket = Model.Ket;
+    object Tuyen(int trang) => new { Model.MaLo, Model.MaViTri, Model.LoaiBienDong, Model.LoaiCT, Model.MaCT, TuNgay = Model.TuNgay?.ToString("yyyy-MM-dd"), DenNgay = Model.DenNgay?.ToString("yyyy-MM-dd"), Trang = trang };
+}
+
+<header class="trang-dau">
+    <h1>Lịch sử biến động tồn</h1>
+    <p class="mota">Sổ cái mọi lần đổi tồn: nhận hàng, sắp xếp, xuất kho, chuyển kho, đổi ô. Chỉ xem, không sửa, không xóa. Giờ hiển thị theo giờ máy chủ.</p>
+    <a asp-action="DoiChieu" class="btn btn-outline-primary btn-sm">Đối chiếu sổ cái với tồn kho</a>
+</header>
+
+<form method="get" asp-action="Index" class="mb-3 row g-2 align-items-end">
+    <div class="col-md-2">
+        <label for="loLo" class="form-label">Mã lô</label>
+        <input id="loLo" name="MaLo" type="number" min="1" class="form-control" value="@Model.MaLo" />
+    </div>
+    <div class="col-md-2">
+        <label for="loO" class="form-label">Mã ô (vị trí)</label>
+        <input id="loO" name="MaViTri" type="number" min="1" class="form-control" value="@Model.MaViTri" />
+    </div>
+    <div class="col-md-2">
+        <label for="loBienDong" class="form-label">Loại biến động</label>
+        <select id="loBienDong" name="LoaiBienDong" class="form-select">
+            <option value="">Tất cả</option>
+            @foreach (var b in LoaiBienDongGiaTri.TatCa)
+            {
+                <option value="@b" selected="@(Model.LoaiBienDong == b)">@b</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <label for="loLoaiCT" class="form-label">Loại chứng từ</label>
+        <select id="loLoaiCT" name="LoaiCT" class="form-select">
+            <option value="">Tất cả</option>
+            @foreach (var loai in Enum.GetValues<LoaiChungTu>())
+            {
+                <option value="@loai" selected="@(Model.LoaiCT == loai.ToString())">@loai.ToString() - @loai.Ten()</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <label for="loMaCT" class="form-label">Mã chứng từ</label>
+        <input id="loMaCT" name="MaCT" type="number" min="0" class="form-control" value="@Model.MaCT" />
+    </div>
+    <div class="col-md-2"></div>
+    <div class="col-md-2">
+        <label for="loTu" class="form-label">Từ ngày</label>
+        <input id="loTu" name="TuNgay" type="date" class="form-control" value="@Model.TuNgay?.ToString("yyyy-MM-dd")" />
+    </div>
+    <div class="col-md-2">
+        <label for="loDen" class="form-label">Đến ngày</label>
+        <input id="loDen" name="DenNgay" type="date" class="form-control" value="@Model.DenNgay?.ToString("yyyy-MM-dd")" />
+    </div>
+    <div class="col-md-3 d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Lọc</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Bỏ lọc</a>
+    </div>
+</form>
+
+<p class="text-secondary" role="status">@ket.Tong dòng khớp.</p>
+
+@if (ket.Dong.Count == 0)
+{
+    <section class="khung-trong"><p class="mb-0">Không có dòng sổ cái nào khớp bộ lọc.</p></section>
+}
+else
+{
+    <div class="bang-cuon">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">Thời gian</th>
+                    <th scope="col">Lô</th>
+                    <th scope="col">Ô</th>
+                    <th scope="col" class="text-end">Số lượng</th>
+                    <th scope="col">Loại biến động</th>
+                    <th scope="col">Chứng từ</th>
+                    <th scope="col">Người thực hiện</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var d in ket.Dong)
+                {
+                    <tr>
+                        <td class="text-nowrap">@Ngay(d.ThoiGianUtc)</td>
+                        <td>@d.MaVachLo <span class="text-secondary">(#@d.MaLo)</span></td>
+                        <td>@d.TenViTri <span class="text-secondary">(#@d.MaViTri)</span></td>
+                        <td class="text-end text-nowrap @(d.SoLuong > 0 ? "text-success" : "text-danger")">@(d.SoLuong > 0 ? "+" : "")@d.SoLuong</td>
+                        <td>@d.LoaiBienDong</td>
+                        <td>@d.LoaiCT #@d.MaCT</td>
+                        <td>@d.NguoiThucHien</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (ket.TongTrang > 1)
+    {
+        <nav aria-label="Phân trang lịch sử biến động tồn">
+            <ul class="pagination">
+                <li class="page-item @(ket.Trang <= 1 ? "disabled" : "")">
+                    <a class="page-link" href="@Url.Action("Index", Tuyen(ket.Trang - 1))">Trước</a>
+                </li>
+                <li class="page-item disabled"><span class="page-link">Trang @ket.Trang / @ket.TongTrang</span></li>
+                <li class="page-item @(ket.Trang >= ket.TongTrang ? "disabled" : "")">
+                    <a class="page-link" href="@Url.Action("Index", Tuyen(ket.Trang + 1))">Sau</a>
+                </li>
+            </ul>
+        </nav>
+    }
+}

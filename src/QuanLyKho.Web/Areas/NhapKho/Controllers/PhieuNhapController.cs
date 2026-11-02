@@ -3,13 +3,15 @@ using Microsoft.EntityFrameworkCore;
 using QuanLyKho.Web.Areas.HangHoa.Models;
 using QuanLyKho.Web.Areas.HeThong.Models;
 using QuanLyKho.Web.Areas.NhapKho.Models;
+using QuanLyKho.Web.Areas.NhapKho.Services;
 using QuanLyKho.Web.Contracts;
 using QuanLyKho.Web.Data;
 
 namespace QuanLyKho.Web.Areas.NhapKho.Controllers;
 
 /// <summary>
-/// Phiếu nhập (việc T1-1), in tem (T1-6) và kiểm tra hàng nhập (T1-2): danh sách, tạo, sửa phiếu nháp, xác nhận, in tem, tiếp nhận hàng.
+/// Phiếu nhập (việc T1-1), in tem (T1-6), kiểm tra hàng nhập (T1-2) và hủy phiếu, danh sách (T1-7): danh sách có tìm kiếm và lọc, tạo, sửa phiếu nháp,
+/// xác nhận, in tem, tiếp nhận hàng, hủy phiếu (nghiệp vụ hủy và tìm nằm ở <see cref="PhieuNhapService"/>).
 /// Toàn bộ xử lý nằm trong file này cho dễ đọc. Quyền theo bảng PhanQuyen: Xem để vào, Thêm để tạo, Sửa để sửa, xác nhận và kiểm tra hàng.
 /// </summary>
 [Area("NhapKho")]
@@ -23,9 +25,30 @@ public class PhieuNhapController(INguoiDungHienTai hienTai, IAuditService audit,
 
     // ---- Xem ----
 
-    public async Task<IActionResult> Index() =>
-        View(await Db.PhieuNhap.Include(p => p.Kho).Include(p => p.NhaCungCap).Include(p => p.ChiTiet)
-            .OrderByDescending(p => p.MaPN).Take(200).ToListAsync());
+    private PhieuNhapService Pn => new(Db, ton, audit);
+
+    /// <summary>
+    /// Danh sách phiếu: tìm theo số phiếu hoặc nhà cung cấp, lọc theo ngày và trạng thái. Vào lần đầu (chưa có tham số nào) hiện phiếu trong tháng này;
+    /// bấm Lọc với ô ngày để trống thì không giới hạn ngày.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> Index(string? tim, DateOnly? tuNgay, DateOnly? denNgay, string? trangThai)
+    {
+        if (Request.Query.Count == 0)
+        {
+            var homNay = DateOnly.FromDateTime(DateTime.Now);
+            tuNgay = new DateOnly(homNay.Year, homNay.Month, 1);
+            denNgay = homNay;
+        }
+        var loc = new BoLocPhieu(tim, tuNgay, denNgay, trangThai);
+        ViewBag.Loc = loc;
+        if (tuNgay is { Year: < 2000 or > 2100 } || denNgay is { Year: < 2000 or > 2100 } || tuNgay > denNgay)
+        {
+            ViewBag.Loi = "Chọn khoảng ngày hợp lệ: từ ngày không sau đến ngày, trong khoảng năm 2000 đến 2100.";
+            return View(new KetQuaDanhSach(new List<PhieuNhap>(), false));
+        }
+        return View(await Pn.TimKiem(loc));
+    }
 
     [HttpGet, CanQuyen(LoaiChungTu.NK, QuyenThaoTac.Them)]
     public Task<IActionResult> Tao() => HienForm(new PhieuNhap { ChiTiet = { new ChiTietPhieuNhap() } });
@@ -46,9 +69,9 @@ public class PhieuNhapController(INguoiDungHienTai hienTai, IAuditService audit,
     {
         var p = await Db.PhieuNhap.Include(x => x.ChiTiet).FirstOrDefaultAsync(x => x.MaPN == id);
         if (p is null) return NotFound();
-        if (!p.DaKhoa)
+        if (!p.DaKhoa || p.TrangThai == PhieuNhap.DaHuy)
         {
-            TempData["Loi"] = "Chỉ in tem cho phiếu đã xác nhận. Hãy xác nhận phiếu trước.";
+            TempData["Loi"] = p.DaKhoa ? "Phiếu đã hủy nên không in tem." : "Chỉ in tem cho phiếu đã xác nhận. Hãy xác nhận phiếu trước.";
             return RedirectToAction(nameof(Sua), new { id });
         }
         var ma = p.ChiTiet.Select(d => d.MaBT).Distinct().ToList();
@@ -72,6 +95,11 @@ public class PhieuNhapController(INguoiDungHienTai hienTai, IAuditService audit,
         if (p.TrangThai == PhieuNhap.Nhap)
         {
             TempData["Loi"] = "Phiếu còn ở trạng thái Nháp. Hãy xác nhận phiếu trước khi kiểm tra hàng.";
+            return RedirectToAction(nameof(Sua), new { id });
+        }
+        if (p.TrangThai == PhieuNhap.DaHuy)
+        {
+            TempData["Loi"] = "Phiếu đã hủy nên không có màn hình kiểm tra hàng.";
             return RedirectToAction(nameof(Sua), new { id });
         }
         return await HienKiemTra(p, null);
@@ -113,6 +141,15 @@ public class PhieuNhapController(INguoiDungHienTai hienTai, IAuditService audit,
         }
         else TempData["Loi"] = "Không xác nhận được: phiếu không còn ở trạng thái Nháp, hoặc chưa có nhà cung cấp hoặc dòng hàng.";
         return RedirectToAction(nameof(Sua), new { id });
+    }
+
+    /// <summary>Hủy phiếu (việc T1-7): cần lý do, chỉ khi chưa có dòng nào xếp vào ô. Cần quyền Xóa phiếu nhập. Nghiệp vụ ở <see cref="PhieuNhapService.Huy"/>.</summary>
+    [HttpPost, ValidateAntiForgeryToken, CanQuyen(LoaiChungTu.NK, QuyenThaoTac.Xoa)]
+    public async Task<IActionResult> Huy(int id, string? lyDo)
+    {
+        var kq = await Pn.Huy(id, lyDo, MaNguoiDung());
+        TempData[kq.ThanhCong ? "ThongBao" : "Loi"] = kq.ThongBao;
+        return kq.MaLoi == MaLoiDichVu.KhongTimThay ? NotFound() : RedirectToAction(nameof(Sua), new { id });
     }
 
     // ---- Phần xử lý bên trong ----

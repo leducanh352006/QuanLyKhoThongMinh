@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using QuanLyKho.Tests.HangHoa;
 using QuanLyKho.Web.Areas.HangHoa.Models;
 using QuanLyKho.Web.Areas.HeThong.Models;

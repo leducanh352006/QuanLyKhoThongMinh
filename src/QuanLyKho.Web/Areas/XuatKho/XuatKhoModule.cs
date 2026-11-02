@@ -28,6 +28,9 @@ public static class XuatKhoModule
             throw new InvalidOperationException("Chưa cấu hình ConnectionStrings:KhoDb nên không lưu được phiếu xuất. Xem README, mục \"Chạy lần đầu\".");
         });
 
+        // T2-2: phân bổ FEFO/FIFO và dựng đề xuất gợi ý G1 (dùng chung cho TaoGoiY và Duyet tay trực tiếp).
+        services.AddScoped<IGoiYG1Service, GoiYG1Service>();
+
         // T2-2: bộ xử lý gợi ý G1 (lấy hàng từ lô, ô nào) cho khung gợi ý AI dùng chung (T4-8, xem README của Area HeThong,
         // mục "Các nhóm khác dùng thế nào" của T4-8). Luôn đăng ký (khung giải quyết IEnumerable<IGoiYHandler> ngay khi dựng
         // GoiYService nên không được ném lỗi ở đây); thiếu KhoDbContext thì HandlerG1 tự báo lỗi rõ ràng khi thật sự được gọi.

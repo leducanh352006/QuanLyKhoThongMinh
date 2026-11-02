@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using QuanLyKho.Web.Areas.HangHoa.Models;
+using QuanLyKho.Web.Areas.HeThong.Models;
 using QuanLyKho.Web.Areas.XuatKho.Models;
 using QuanLyKho.Web.Contracts;
 using QuanLyKho.Web.Data;
@@ -9,9 +11,12 @@ namespace QuanLyKho.Web.Areas.XuatKho.Services;
 /// Bộ xử lý gợi ý G1 "lấy hàng từ lô, ô nào" (việc T2-2, issue #22) cho khung gợi ý AI dùng chung (T4-8). Quản lý kho duyệt gợi ý
 /// qua thành phần DuyetGoiY nhúng trong màn hình phiếu xuất; khi duyệt, khung gọi <see cref="ThucHien"/> ở đây để thật sự giữ chỗ
 /// tồn (IStockService.GiuCho), ghi các dòng LayHang rồi khóa phiếu — đúng việc mà PhieuXuatController.Duyet làm tay trước đây (T2-8),
-/// chỉ khác là lô/ô do gợi ý AI chọn thay cho PhanBoFifo tính lại. Không chạm hàng thật: thủ kho vẫn quét mã lấy hàng ở việc T2-4.
+/// chỉ khác là lô/ô do gợi ý AI chọn thay cho IGoiYG1Service tính lại. Không chạm hàng thật: thủ kho vẫn quét mã lấy hàng ở T2-4.
+/// Gợi ý có thể đã cũ (chờ duyệt nhiều ngày) hoặc bị người duyệt "sửa rồi duyệt" tự tay, nên <see cref="ThucHien"/> không tin hoàn
+/// toàn vào dòng gợi ý: kiểm lại từng ràng buộc (kho, ô Lưu trữ đang hoạt động không khóa, lô đúng biến thể còn hạn dùng) trước khi
+/// giữ chỗ, vì IStockService.GiuCho không kiểm những điều này (chỉ chặn ô khóa kiểm kê và vượt tồn khả dụng).
 /// </summary>
-public sealed class HandlerG1(IStockService ton, KhoDbContext? db = null) : IGoiYHandler
+public sealed class HandlerG1(IStockService ton, TimeProvider gio, KhoDbContext? db = null) : IGoiYHandler
 {
     public LoaiGoiY Loai => LoaiGoiY.G1;
 
@@ -33,6 +38,9 @@ public sealed class HandlerG1(IStockService ton, KhoDbContext? db = null) : IGoi
         var (phan, loi) = KhopVoiDongPhieu(goiY.ChiTiet, p.ChiTiet);
         if (loi is not null) return KetQua<ThamChieuGoiY>.Loi(loi, MaLoiDichVu.DuLieuKhongHopLe);
 
+        var loiRangBuoc = await KiemTraRangBuoc(p, phan, ct);
+        if (loiRangBuoc is not null) return KetQua<ThamChieuGoiY>.Loi(loiRangBuoc, MaLoiDichVu.DuLieuKhongHopLe);
+
         foreach (var (maCTX, maLo, maViTri, soLuong) in phan)
         {
             var kqGiu = await ton.GiuCho(new DongTon(maLo, maViTri, soLuong), ct);
@@ -43,6 +51,39 @@ public sealed class HandlerG1(IStockService ton, KhoDbContext? db = null) : IGoi
         p.MaNguoiDuyet = maNguoiDuyet;
         await db.SaveChangesAsync(ct);
         return KetQua<ThamChieuGoiY>.Ok(new ThamChieuGoiY(MaPX: maPX));
+    }
+
+    /// <summary>
+    /// Kiểm lại ràng buộc thật của từng dòng đã khớp trước khi giữ chỗ (gợi ý có thể đã cũ hoặc bị người duyệt sửa tay nên không
+    /// còn đáng tin hoàn toàn — issue #22 "gợi ý không vi phạm ràng buộc"): kho còn hoạt động; mỗi ô thuộc đúng kho của phiếu, là
+    /// ô Lưu trữ (không phải khu tiếp nhận hay cấp khác), đang hoạt động, không bị khóa kiểm kê; mỗi lô còn tồn tại, đúng biến thể
+    /// của dòng phiếu, chưa hết hạn dùng. IStockService.GiuCho không kiểm những điều này (chỉ chặn ô khóa và vượt tồn khả dụng).
+    /// </summary>
+    private async Task<string?> KiemTraRangBuoc(PhieuXuat p, List<(int MaCTX, int MaLo, int MaViTri, int SoLuong)> phan, CancellationToken ct)
+    {
+        if (!await db!.Kho.AnyAsync(k => k.MaKho == p.MaKho && k.TrangThai == TrangThaiHoatDong.HoatDong, ct))
+            return "Kho xuất không còn hoạt động; gợi ý không còn dùng được, hãy làm tay.";
+
+        var homNay = DateOnly.FromDateTime(gio.GetUtcNow().UtcDateTime);
+        var maBTTheoCTX = p.ChiTiet.ToDictionary(c => c.MaCTX, c => c.MaBT);
+        var maViTriCanXet = phan.Select(x => x.MaViTri).Distinct().ToList();
+        var maLoCanXet = phan.Select(x => x.MaLo).Distinct().ToList();
+        var viTri = await db.ViTri.AsNoTracking().Where(v => maViTriCanXet.Contains(v.MaViTri)).ToDictionaryAsync(v => v.MaViTri, ct);
+        var lo = await db.LoHang.AsNoTracking().Where(l => maLoCanXet.Contains(l.MaLo)).ToDictionaryAsync(l => l.MaLo, ct);
+
+        foreach (var (maCTX, maLo, maViTri, _) in phan)
+        {
+            if (!viTri.TryGetValue(maViTri, out var v)) return $"Ô #{maViTri} không còn tồn tại.";
+            if (v.MaKho != p.MaKho) return $"Ô '{v.TenViTri}' không thuộc kho xuất của phiếu.";
+            if (v.LoaiViTri != LoaiViTriGiaTri.LuuTru) return $"Ô '{v.TenViTri}' không phải ô Lưu trữ (không được lấy từ khu tiếp nhận hoặc cấp khác).";
+            if (!v.DangHoatDong) return $"Ô '{v.TenViTri}' đã ngừng hoạt động.";
+            if (v.DangKhoa) return $"Ô '{v.TenViTri}' đang bị khóa để kiểm kê.";
+
+            if (!lo.TryGetValue(maLo, out var l)) return $"Lô #{maLo} không còn tồn tại.";
+            if (l.MaBT != maBTTheoCTX.GetValueOrDefault(maCTX)) return $"Lô '{l.MaVachLo}' không đúng biến thể của dòng phiếu.";
+            if (l.HanDung is DateOnly h && h < homNay) return $"Lô '{l.MaVachLo}' đã hết hạn dùng ({h:dd/MM/yyyy}).";
+        }
+        return null;
     }
 
     /// <summary>

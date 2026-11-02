@@ -1,0 +1,11 @@
+@model QuanLyKho.Web.Areas.HeThong.Controllers.GoiYKhungViewModel
+
+<header class="trang-dau">
+    <h1>@ViewData["Title"]</h1>
+    <p class="mota">Dòng đề xuất có hiệu lực, lý do và (nếu đã sửa) đề xuất gốc của AI để so sánh. <a asp-action="Index">Về danh sách gợi ý</a></p>
+</header>
+
+@if (TempData["GoiYThongBao"] is string tb) { <div class="alert alert-success" role="status">@tb</div> }
+@if (TempData["GoiYLoi"] is string loi) { <div class="alert alert-danger" role="alert">@loi</div> }
+
+<partial name="~/Areas/HeThong/Views/Shared/_GoiYKhung.cshtml" model="Model" />

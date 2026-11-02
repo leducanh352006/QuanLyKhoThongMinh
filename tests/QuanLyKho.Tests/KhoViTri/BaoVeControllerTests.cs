@@ -48,7 +48,8 @@ public class BaoVeControllerKhoViTriTests
     public void ViTriController_SuaDoiChiDanhChoQuanTriVaQuanLyKho()
     {
         var t = typeof(QuanLyKho.Web.Areas.HeThong.Controllers.ViTriController);
-        foreach (var ten in new[] { "Them", "Sua" })
+        // Thủ kho chỉ xem cây: mọi thao tác thay đổi (thêm, sửa, khóa, mở lại, khóa/mở kiểm kê, xóa) phải chặn ở máy chủ, không chỉ ẩn nút.
+        foreach (var ten in new[] { "Them", "Sua", "Khoa", "MoLai", "KhoaKiemKe", "MoKhoaKiemKe", "Xoa" })
         {
             var a = t.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
                 .First(x => x.Name == ten).GetCustomAttribute<AuthorizeAttribute>();

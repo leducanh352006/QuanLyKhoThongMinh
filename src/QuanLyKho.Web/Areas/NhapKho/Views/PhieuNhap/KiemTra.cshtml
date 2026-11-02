@@ -57,6 +57,10 @@
     </div>
     <p class="text-body-secondary">Hàng đang nằm ở ô Tiếp nhận của kho. Hàng chưa sắp xếp vào ô lưu trữ thì chưa tính vào tồn khả dụng; hàng không đạt ở lại khu tiếp nhận chờ trả lại nhà cung cấp.</p>
     <div class="d-flex flex-wrap gap-2">
+        @if (Model.TrangThai is PhieuNhap.DaKiemTra or PhieuNhap.HoanTat)
+        {
+            <a class="btn btn-primary" asp-controller="SapXep" asp-action="Xep" asp-route-id="@Model.MaPN">Sắp xếp vào ô</a>
+        }
         <a class="btn btn-outline-primary" asp-action="InTem" asp-route-id="@Model.MaPN" target="_blank" rel="noopener">In tem mã</a>
         <a class="btn btn-outline-secondary" asp-action="Sua" asp-route-id="@Model.MaPN">Xem phiếu</a>
         <a class="btn btn-outline-secondary" asp-action="Index">Quay lại danh sách</a>

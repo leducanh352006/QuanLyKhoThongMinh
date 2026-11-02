@@ -2,19 +2,43 @@
 @model List<QuanLyKho.Web.Areas.XuatKho.Models.PhieuXuat>
 @{
     ViewData["Title"] = "Phiếu xuất";
+    var q = (string?)ViewBag.Q;
+    var tuNgay = (DateOnly?)ViewBag.TuNgay;
+    var denNgay = (DateOnly?)ViewBag.DenNgay;
 }
 
 <header class="trang-dau d-flex flex-wrap justify-content-between align-items-end gap-2">
     <div>
         <h1>Phiếu xuất</h1>
-        <p class="mota">Phiếu Nháp sửa được; phiếu đã duyệt trở đi bị khóa. Hiện 200 phiếu mới nhất.</p>
+        <p class="mota">Phiếu Nháp sửa được; phiếu đã duyệt trở đi bị khóa. Hiện tối đa 200 phiếu khớp bộ lọc.</p>
     </div>
     <a class="btn btn-primary" asp-action="Tao">Tạo phiếu xuất</a>
 </header>
 
+<form method="get" asp-action="Index" class="mb-3 row g-2 align-items-end">
+    <div class="col-md-4">
+        <label for="loQ" class="form-label">Số phiếu</label>
+        <input id="loQ" name="q" class="form-control" value="@q" placeholder="Ví dụ: XK000012" maxlength="20" />
+    </div>
+    <div class="col-md-3">
+        <label for="loTu" class="form-label">Từ ngày</label>
+        <input id="loTu" name="tuNgay" type="date" class="form-control" value="@tuNgay?.ToString("yyyy-MM-dd")" />
+    </div>
+    <div class="col-md-3">
+        <label for="loDen" class="form-label">Đến ngày</label>
+        <input id="loDen" name="denNgay" type="date" class="form-control" value="@denNgay?.ToString("yyyy-MM-dd")" />
+    </div>
+    <div class="col-md-2">
+        <button type="submit" class="btn btn-outline-primary w-100">Lọc</button>
+    </div>
+</form>
+
+@if (TempData["ThongBao"] is string tb) { <div class="alert alert-success" role="status">@tb</div> }
+@if (TempData["Loi"] is string loi) { <div class="alert alert-danger" role="alert">@loi</div> }
+
 @if (Model.Count == 0)
 {
-    <p class="khung-trong">Chưa có phiếu xuất nào. Bấm "Tạo phiếu xuất" để lập phiếu đầu tiên.</p>
+    <p class="khung-trong">Không có phiếu xuất nào khớp bộ lọc.</p>
 }
 else
 {
@@ -24,6 +48,7 @@ else
                 <tr>
                     <th scope="col">Số phiếu</th><th scope="col">Loại</th><th scope="col">Thời gian</th><th scope="col">Kho</th>
                     <th scope="col">Đối tượng</th><th scope="col" class="text-end">Số dòng</th><th scope="col">Trạng thái</th>
+                    <th scope="col"><span class="visually-hidden">Thao tác</span></th>
                 </tr>
             </thead>
             <tbody>
@@ -37,6 +62,15 @@ else
                         <td>@(p.DoiTuong ?? "—")</td>
                         <td class="text-end">@p.ChiTiet.Count</td>
                         <td><span class="nhan @(p.DaKhoa ? "nhan-tot" : "nhan-chu-y")">@p.TrangThai</span></td>
+                        <td class="text-nowrap text-end">
+                            @if ((p.TrangThai == PhieuXuat.Nhap || p.TrangThai == PhieuXuat.DaDuyet) && p.LoaiPhieu != PhieuXuat.ThieuDoKiemKe)
+                            {
+                                <form method="post" asp-action="Huy" asp-route-id="@p.MaPX" class="d-inline"
+                                      onsubmit="return confirm('Hủy phiếu @p.SoPhieu? Không hoàn tác được.');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Hủy</button>
+                                </form>
+                            }
+                        </td>
                     </tr>
                 }
             </tbody>

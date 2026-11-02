@@ -52,7 +52,7 @@ public sealed class StockService(KhoDbContext db) : IStockService
     public Task<KetQua> GhiTang(DongTon dong, LoaiBienDong loai, ThamChieuChungTu chungTu, int maND, CancellationToken ct = default) =>
         ThuLai(async () =>
         {
-            var loi = await KiemTraDong(dong, ct, chanKhoa: chungTu.Loai != LoaiChungTu.KK);
+            var loi = await KiemTraDong(dong, ct, chanKhoa: chungTu.Loai != LoaiChungTu.KK, canHoatDong: true);
             if (loi is not null) return loi;
             if (await DaGhi(dong.MaLo, dong.MaViTri, dong.SoLuong, loai, chungTu, ct)) return KetQua.Ok();
 
@@ -97,7 +97,7 @@ public sealed class StockService(KhoDbContext db) : IStockService
 
             var chanKhoa = chungTu.Loai != LoaiChungTu.KK;
             var loi = await KiemTraDong(new DongTon(maLo, maViTriNguon, soLuong), ct, chanKhoa)
-                      ?? await KiemTraDong(new DongTon(maLo, maViTriDich, soLuong), ct, chanKhoa);
+                      ?? await KiemTraDong(new DongTon(maLo, maViTriDich, soLuong), ct, chanKhoa, canHoatDong: true);
             if (loi is not null) return loi;
             if (await DaGhi(maLo, maViTriNguon, -soLuong, LoaiBienDong.DoiO, chungTu, ct)) return KetQua.Ok();
 
@@ -181,8 +181,13 @@ public sealed class StockService(KhoDbContext db) : IStockService
         db.BienDongTon.AnyAsync(b => b.MaLo == maLo && b.MaViTri == maViTri && b.SoLuong == soLuong
             && b.LoaiBienDong == loai.ToCsdl() && b.LoaiCT == chungTu.Loai.ToCsdl() && b.MaCT == chungTu.MaCT, ct);
 
-    /// <summary><paramref name="chanKhoa"/> = true: từ chối ô đang khóa kiểm kê (ILockService).</summary>
-    private async Task<KetQua?> KiemTraDong(DongTon d, CancellationToken ct, bool chanKhoa = false)
+    /// <summary>
+    /// <paramref name="chanKhoa"/>: từ chối ô đang khóa kiểm kê (ILockService). <paramref name="canHoatDong"/>: ô nhận hàng phải đang hoạt động
+    /// (ô đã khóa mềm không nhận thêm hàng).
+    /// Không chặn ô Tiếp nhận ở đây: luồng Trả lại hàng mua / Hủy hàng cần giữ chỗ và xuất hàng không đạt từ chính ô đó; việc loại
+    /// ô Tiếp nhận khỏi tồn khả dụng khi chọn hàng bán thường do phía Xuất kho đảm nhiệm.
+    /// </summary>
+    private async Task<KetQua?> KiemTraDong(DongTon d, CancellationToken ct, bool chanKhoa = false, bool canHoatDong = false)
     {
         if (d.SoLuong <= 0)
             return KetQua.Loi("Số lượng phải lớn hơn 0.", MaLoiDichVu.DuLieuKhongHopLe);
@@ -194,6 +199,8 @@ public sealed class StockService(KhoDbContext db) : IStockService
             return KetQua.Loi($"Hàng chỉ được để ở ô, '{vt.TenViTri}' là cấp {vt.CapViTri}.", MaLoiDichVu.DuLieuKhongHopLe);
         if (chanKhoa && vt.DangKhoa)
             return KetQua.Loi($"Ô '{vt.TenViTri}' đang bị khóa để kiểm kê.", MaLoiDichVu.OBiKhoa);
+        if (canHoatDong && !vt.DangHoatDong)
+            return KetQua.Loi($"Ô '{vt.TenViTri}' đã ngừng hoạt động, không nhận thêm hàng.", MaLoiDichVu.DuLieuKhongHopLe);
 
         return null;
     }

@@ -7,6 +7,7 @@
     var dsKho = (Dictionary<int, string>)ViewBag.Kho;
     var dsBienThe = (Dictionary<int, string>)ViewBag.BienThe;
     var dsPhieuNhap = (Dictionary<int, string>)ViewBag.PhieuNhap;
+    var coTheHuy = !laMoi && (Model.TrangThai == PhieuXuat.Nhap || Model.TrangThai == PhieuXuat.DaDuyet);
     ViewData["Title"] = laMoi ? "Tạo phiếu xuất" : $"Phiếu xuất {Model.SoPhieu}";
 }
 
@@ -116,6 +117,11 @@
                         onclick="return confirm('Duyệt phiếu? Sau khi duyệt sẽ không sửa được nữa. Thay đổi chưa lưu sẽ mất.');">Duyệt phiếu</button>
             }
         }
+        @if (coTheHuy)
+        {
+            <button type="submit" class="btn btn-outline-danger" form="formHuy"
+                    onclick="return confirm('Hủy phiếu @Model.SoPhieu? Không hoàn tác được.');">Hủy phiếu</button>
+        }
         <a class="btn btn-outline-secondary" asp-action="Index">Quay lại danh sách</a>
     </div>
 </form>
@@ -123,6 +129,15 @@
 @if (!laMoi && !khoa)
 {
     <form method="post" asp-action="Duyet" asp-route-id="@Model.MaPX" id="formDuyet"></form>
+}
+@if (coTheHuy)
+{
+    <form method="post" asp-action="Huy" asp-route-id="@Model.MaPX" id="formHuy"></form>
+}
+
+@if (!laMoi)
+{
+    @await Component.InvokeAsync("DinhKem", new { loai = QuanLyKho.Web.Contracts.LoaiChungTu.XK, maCT = Model.MaPX })
 }
 
 @section Scripts {

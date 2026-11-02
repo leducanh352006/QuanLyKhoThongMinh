@@ -168,8 +168,9 @@ Báo cáo: Bảng 2.20 (Kho, ViTri), mục 2.8.1 (vị trí nhiều cấp; kích
 - Cây vị trí nhiều cấp (`ViTriController`, `ViTriService`): thêm, sửa, khóa (xóa mềm), xóa cứng. Cấp con phải thấp hơn cấp cha và được phép bỏ qua cấp (seed "Khu tiếp nhận" là một ví dụ: một ô gốc, không qua Dãy/Kệ).
 - Đường dẫn đầy đủ (`Kho ▷ Dãy A ▷ Kệ A1 ▷ Ô A1-01`) hiện **ngay trên cây**, không chỉ ở trang Sửa.
 - Ràng buộc đã cài, khớp CHECK ở Bảng 2.20: chỉ ô có `LoaiViTri`, `MaVachO`, kích thước; ô Lưu trữ bắt buộc đủ 4 kích thước dương; ô Tiếp nhận và các cấp khác để trống các cột đó.
-- Không khóa (xóa mềm) được khu tiếp nhận hoạt động cuối cùng của một kho, và không khóa được vị trí còn con đang hoạt động.
-- Xóa cứng chỉ khi không còn vị trí con, và nếu là ô thì phải chưa có tồn hiện tại (qua `IStockService.LayTonTheoViTri`) — xem mục "Giới hạn đã biết" bên dưới.
+- Không khóa (xóa mềm) được khu tiếp nhận hoạt động cuối cùng của một kho (kể cả đổi nó sang Lưu trữ khi sửa), không khóa được vị trí còn con đang hoạt động hoặc ô còn hàng; không thêm vị trí vào kho hoặc cấp cha đang ngừng hoạt động, không mở lại vị trí khi cấp cha đang ngừng.
+- Xóa cứng chỉ khi không còn vị trí con, nếu là ô thì chưa có tồn hiện tại, và không có dữ liệu nào tham chiếu tới (sổ cái, dòng tồn, phiếu, gợi ý): khóa ngoại của CSDL chặn và màn hình báo rõ, không lỗi 500.
+- Thủ kho chỉ xem cây vị trí: thêm, sửa, khóa, mở lại, khóa/mở kiểm kê, xóa đều chặn ở máy chủ cho Quản trị viên và Quản lý kho.
 
 ## Cấu trúc dữ liệu
 
@@ -181,7 +182,6 @@ Không có hợp đồng mới trong `Contracts/`: các nhóm khác chỉ cần 
 
 ## Giới hạn đã biết
 
-- **Xóa cứng chỉ kiểm tồn hiện tại, chưa kiểm lịch sử sổ cái.** `IStockService` đã có bản thật (T4-4, xem mục bên dưới) nhưng `ViTriService.Xoa` vẫn chỉ gọi `LayTonTheoViTri` (tồn hiện tại = 0 thì cho xóa); một ô đã hết tồn nhưng còn lịch sử `BienDongTon` vẫn bị xóa cứng, mất vết. Nêu trong issue #39 nếu cần kiểm thêm lịch sử trước khi xóa.
 - **Sửa vị trí chưa cho đổi cấp hoặc đổi cấp cha** (chỉ sửa tên, loại ô, mã vạch, kích thước). Di chuyển cả nhánh sang cấp cha khác chưa làm, vì phải kiểm lại ràng buộc cấp cho toàn bộ cây con — nêu trong issue #39 nếu cần.
 - **Thêm kho và thêm khu tiếp nhận không chạy trong một giao dịch.** Nếu bước tạo khu tiếp nhận lỗi (rất hiếm, ví dụ trùng mã vạch tự sinh), kho vẫn được tạo và ứng dụng báo rõ để vào màn Vị trí thêm thủ công.
 - **`DangKhoa` (khóa ô khi kiểm kê) chỉ là cột lưu trữ**, T4-3 không có màn hình thao tác cột này — đó là việc của nhóm Kiểm tra hàng hóa qua `ILockService` (đã có bản giả `LockServiceStub`).
@@ -205,7 +205,7 @@ Báo cáo: mục 2.8.1 (Tồn kho và sổ cái), Bảng 2.21.
 - Mỗi lần đổi tồn là một giao dịch (tham gia giao dịch của nơi gọi nếu đã mở sẵn trên cùng `KhoDbContext`), ghi đúng một dòng `BienDongTon` (hai dòng với `ChuyenO`) cùng lúc với `TonKho`.
 - **Chống tranh chấp:** khóa lạc quan trên `TonKho.PhienBan` (rowversion) — câu UPDATE của EF luôn kèm điều kiện "còn đúng phiên bản vừa đọc"; thao tác thua thử lại tối đa 5 lần với số liệu mới nhất. Đã kiểm tay: 20 luồng cùng giữ chỗ 1 đơn vị trên tồn 10 cho ra đúng 10 thành công, 10 bị từ chối, không âm.
 - **Chống ghi hai lần khi bị gọi lại:** trước khi ghi `GhiTang`/`GhiGiam`/`ChuyenO`, kiểm sổ cái đã có đúng dòng (chứng từ, loại biến động, lô, ô, số lượng) chưa; có rồi thì trả thành công mà không ghi lại.
-- Hàng ở ô loại Tiếp nhận: `IStockService` không tự loại trừ loại ô khi tính tồn (đúng như bản giả) — nhóm Nhập kho chịu trách nhiệm không gọi `GhiTang` vào `available` cho tới khi hàng đã sắp xếp (xem báo cáo mục 2.8.1); `LayTonTheoViTri`/`DoiChieuSoCai` trả đúng số đã ghi, không ẩn ô Tiếp nhận.
+- Hàng ở ô loại Tiếp nhận chưa tính vào tồn khả dụng: `GiuCho` và `GhiGiam` loại Xuất kho, Chuyển đi từ ô Tiếp nhận bị từ chối (bản thật và bản giả); muốn đưa lên kệ thì `ChuyenO`. Ô đã ngừng hoạt động không nhận thêm hàng (`GhiTang`, ô đích của `ChuyenO`). `LayTonTheoViTri`, `DoiChieuSoCai` vẫn trả đúng số đã ghi ở mọi ô.
 - `TonKhoSeeder` (`ThuTu = 6`, chạy sau `LoHangSeeder`) nạp tồn mẫu kèm một dòng `BienDongTon` loại Nhận hàng (chứng từ giả NK số 0) cho mỗi dòng, để sổ cái khớp `TonKho` ngay từ đầu.
 - Thêm migration `LoHangBangThat` tách riêng: bảng `LoHang` (T3-3) có cấu hình Entity nhưng chưa từng có migration tạo bảng trên `main`; đã tách để không lẫn vào migration của T4-4.
 
@@ -247,8 +247,44 @@ Báo cáo: Bảng 2.26 (NhatKyThaoTac, TepDinhKem), Bảng 2.3 dòng 7.
 - Kiểm chứng từ tồn tại qua `IChungTuTonTai` (đã có bản cho NK); XK, CK, KK chưa có bản nào nên chưa kiểm, nhóm sở hữu đăng ký bản của mình. Quyền kiểm theo loại chứng từ, không theo người lập.
 - Chưa có xóa tệp đính kèm (nhật ký và đính kèm đều chỉ thêm).
 
+# Khung gợi ý AI dùng chung (việc T4-8, issue #32)
+
+Báo cáo: mục 1.1.5, 1.2.4 (vòng đời gợi ý), Bảng 1.3 (bốn bài toán G1 đến G4), Bảng 2.26.
+
+## Đã làm
+
+- Bảng `GoiYAI` và `ChiTietGoiY` qua EF Core, đúng tên cột ở issue. CHECK: loại G1–G4; trạng thái theo Bảng 2.16; đã xử lý thì phải có người duyệt và thời điểm, chưa xử lý thì không; tham chiếu phiếu theo loại (G1 đúng một phiếu xuất, G2 đúng một phiếu nhập, G3 chỉ phiếu nhập, G4 chỉ phiếu chuyển); số lượng dương; lý do không rỗng; kho đi khác kho đến.
+- `GoiYService : IGoiYService` thay `GoiYServiceStub` (không đổi interface). Hàm lưu gợi ý trong interface tên là `Tao` (issue ghi `Luu`).
+- **Ba cách xử lý**: Duyệt, Sửa rồi duyệt, Từ chối (kèm lý do, ghi vào nhật ký). Thẩm quyền kiểm ở máy chủ theo `QuyTacGoiY`: G1, G3, G4 là Quản lý kho; G2 là Thủ kho; Quản trị viên xử lý được mọi loại.
+- **Tự tạo thao tác**: khi duyệt, khung gọi `IGoiYHandler` của nhóm sở hữu (G1 nhóm 3, G2 nhóm 2, G3 và G4 nhóm 5). Handler chỉ cần trả phiếu nó tạo; ô để trống thì giữ tham chiếu cũ.
+- **Một giao dịch, một người thắng**: đổi trạng thái là lệnh có điều kiện "đang Chờ duyệt", chạy cùng giao dịch với handler. Hai người duyệt cùng lúc thì handler chỉ chạy một lần, người kia nhận "đã xử lý". Handler thất bại hoặc ném lỗi thì hoàn tác hết, kể cả dữ liệu handler đã ghi trên cùng `KhoDbContext`; gợi ý vẫn Chờ duyệt. Nếu nơi gọi đã mở giao dịch thì khung dùng điểm lưu.
+- **Đường lui**:
+  - `GoiYAnToan.Chay(...)` (Contracts): bọc lời gọi thuật toán AI; lỗi hoặc quá 10 giây thì trả `MaLoiDichVu.AiKhongDung` kèm thông báo "làm tay", không bao giờ ném lỗi ra màn hình.
+  - Chưa có handler hoặc handler lỗi thì báo làm tay; quy trình phiếu không phụ thuộc gợi ý.
+- **Sửa rồi duyệt**: dòng gốc của AI giữ nguyên để so sánh. Cột thêm `ChiTietGoiY.LaBanSua` (không có trong issue) phân biệt dòng gốc với dòng người duyệt sửa.
+- **Giao diện**:
+  - Màn hình **Gợi ý AI** (`/HeThong/GoiY`): lọc theo loại và trạng thái; trang chi tiết so dòng gốc với dòng đã sửa.
+  - Thành phần dùng chung `DuyetGoiY` để nhóm khác nhúng vào phiếu: `@await Component.InvokeAsync("DuyetGoiY", new { loai = LoaiGoiY.G1, maPX = Model.MaPX })`.
+- **Bản gợi ý giả** (chỉ Development):
+  - Nút "Tạo gợi ý mẫu" tạo G1, G3, G4 (và G2 nếu nhập mã phiếu nhập) từ dữ liệu mẫu chung, số liệu khớp công thức của báo cáo.
+  - Handler mẫu ghi lại "thao tác" để xem duyệt sinh đúng thao tác; handler mẫu luôn nhường handler thật.
+  - Nút "Giả lập AI lỗi" để xem đường lui.
+  - Trang thử thành phần nhúng: `/HeThong/ThuNghiem/GoiY?loai=G1&maPX=1`.
+
+## Các nhóm khác dùng thế nào
+
+1. Tính gợi ý trong `GoiYAnToan.Chay`, rồi `IGoiYService.Tao(loai, thamChieu, chiTiet)`; mỗi dòng phải có lý do kèm số liệu căn cứ.
+2. Đăng ký handler trong module của mình: `services.AddScoped<IGoiYHandler, HandlerG3>();`. Handler chỉ tạo chứng từ; thao tác chạm hàng thật (lấy, xếp, nhận) vẫn do thủ kho quét mã.
+3. Nhúng `DuyetGoiY` vào màn hình phiếu.
+
+## Giới hạn đã biết
+
+- `MaPX`, `MaPC` chưa có khóa ngoại vì bảng `PhieuXuat`, `PhieuChuyen` chưa có trên `main`; thêm khi nhóm sở hữu có bảng.
+- Bảng `GoiYAI` theo issue, chưa có các cột dữ liệu đầu vào, phiên bản thuật toán của bản báo cáo mới (Bảng 2.70); lý do và số liệu căn cứ nằm ở `ChiTietGoiY.LyDo`.
+- Không kiểm "người lập không tự duyệt" cho gợi ý (gợi ý do hệ thống tạo, không có người lập).
+
 ## Kiểm thử
 
 ```
 dotnet test --filter "FullyQualifiedName~NhatKyDinhKem"
-```
+dotnet test --filter " FullyQualifiedName~QuanLyKho.Tests.GoiY\n```

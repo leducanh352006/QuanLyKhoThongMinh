@@ -87,11 +87,20 @@ else
                 {
                     <tr>
                         <td class="text-nowrap">@Ngay(d.ThoiGianUtc)</td>
-                        <td>@d.MaVachLo <span class="text-secondary">(#@d.MaLo)</span></td>
-                        <td>@d.TenViTri <span class="text-secondary">(#@d.MaViTri)</span></td>
+                        <td><a asp-action="Index" asp-route-MaLo="@d.MaLo" title="Chỉ xem lô này">@d.MaVachLo</a> <span class="text-secondary">(#@d.MaLo)</span></td>
+                        <td><a asp-action="Index" asp-route-MaViTri="@d.MaViTri" title="Chỉ xem ô này">@d.TenViTri</a> <span class="text-secondary">(#@d.MaViTri)</span></td>
                         <td class="text-end text-nowrap @(d.SoLuong > 0 ? "text-success" : "text-danger")">@(d.SoLuong > 0 ? "+" : "")@d.SoLuong</td>
                         <td>@d.LoaiBienDong</td>
-                        <td>@d.LoaiCT #@d.MaCT</td>
+                        <td>
+                            @if (User.IsInRole(VaiTroTen.QuanTriVien))
+                            {
+                                <a asp-controller="NhatKy" asp-action="Index" asp-route-LoaiCT="@d.LoaiCT" asp-route-MaCT="@d.MaCT" title="Xem nhật ký thao tác của chứng từ này">@d.LoaiCT #@d.MaCT</a>
+                            }
+                            else
+                            {
+                                @:@d.LoaiCT #@d.MaCT
+                            }
+                        </td>
                         <td>@d.NguoiThucHien</td>
                     </tr>
                 }

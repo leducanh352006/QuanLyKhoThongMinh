@@ -61,6 +61,15 @@ public sealed class EfKhoViTriStore(KhoDbContext db) : IKhoViTriStore
     public async Task XoaViTri(ViTri viTri, CancellationToken ct = default)
     {
         db.ViTri.Remove(viTri);
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex)
+        {
+            // Khóa ngoại Restrict: vị trí đã có sổ cái, dòng tồn, phiếu hoặc gợi ý tham chiếu tới thì không được xóa cứng.
+            db.Entry(viTri).State = EntityState.Unchanged;
+            throw new XungDotDuLieuException("Vị trí đã có dữ liệu liên quan (sổ cái tồn, phiếu, gợi ý), không xóa cứng được; hãy giữ ở trạng thái khóa.", ex);
+        }
     }
 }

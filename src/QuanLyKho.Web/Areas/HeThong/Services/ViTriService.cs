@@ -21,13 +21,15 @@ public interface IViTriQuanLy
 
     Task<KetQua> Sua(int maViTri, ViTriSuaDoi doi, int maNguoiThucHien, CancellationToken ct = default);
 
-    /// <summary>Khóa (xóa mềm) hoặc mở lại. Khóa bị từ chối nếu còn vị trí con đang hoạt động, hoặc đây là khu tiếp nhận cuối cùng của kho.</summary>
+    /// <summary>
+    /// Khóa (xóa mềm) hoặc mở lại. Khóa bị từ chối nếu còn vị trí con đang hoạt động, đây là khu tiếp nhận cuối cùng của kho,
+    /// hoặc ô còn tồn (hàng nằm trong ô ngừng hoạt động sẽ không xuất, chuyển được). Mở lại bị từ chối nếu cấp cha đang ngừng hoạt động.
+    /// </summary>
     Task<KetQua> DatTrangThai(int maViTri, bool hoatDong, int maNguoiThucHien, CancellationToken ct = default);
 
     /// <summary>
-    /// Xóa cứng. Chỉ cho phép khi không còn vị trí con (mọi trạng thái) và, nếu là ô, không còn tồn hiện tại (qua IStockService).
-    /// LƯU Ý: chỉ kiểm tra tồn hiện tại, chưa kiểm được lịch sử sổ cái (BienDongTon) vì bảng đó thuộc việc khác, chưa có khi viết hàm này;
-    /// khi có bản thật của sổ cái, bổ sung kiểm tra lịch sử trước khi cho xóa cứng.
+    /// Xóa cứng. Chỉ cho phép khi không còn vị trí con (mọi trạng thái), nếu là ô thì không còn tồn hiện tại (qua IStockService),
+    /// và không có dữ liệu nào tham chiếu tới (sổ cái BienDongTon, dòng tồn, phiếu, gợi ý: khóa ngoại của CSDL chặn và báo lỗi rõ).
     /// </summary>
     Task<KetQua> Xoa(int maViTri, int maNguoiThucHien, CancellationToken ct = default);
 }
@@ -73,6 +75,7 @@ public sealed class ViTriService(IKhoViTriStore store, IStockService stock, IAud
 
         var kho = await store.TimKho(moi.MaKho, ct);
         if (kho is null) return KetQua.Loi("Không tìm thấy kho.", MaLoiDichVu.KhongTimThay);
+        if (!kho.DangHoatDong) return KetQua.Loi($"Kho {kho.TenKho} đang ngừng hoạt động; mở lại kho trước khi thêm vị trí.", MaLoiDichVu.DuLieuKhongHopLe);
 
         ViTri? cha = null;
         if (moi.MaViTriCha is int maCha)
@@ -81,6 +84,7 @@ public sealed class ViTriService(IKhoViTriStore store, IStockService stock, IAud
             if (cha is null) return KetQua.Loi("Không tìm thấy vị trí cấp trên.", MaLoiDichVu.KhongTimThay);
             if (cha.MaKho != moi.MaKho) return KetQua.Loi("Vị trí cấp trên không thuộc kho này.", MaLoiDichVu.DuLieuKhongHopLe);
             if (cha.CapViTri == CapViTriGiaTri.O) return KetQua.Loi("Ô là cấp thấp nhất, không thể có vị trí con.", MaLoiDichVu.DuLieuKhongHopLe);
+            if (!cha.DangHoatDong) return KetQua.Loi($"'{cha.TenViTri}' đang ngừng hoạt động; mở lại trước khi thêm vị trí con.", MaLoiDichVu.DuLieuKhongHopLe);
             if (CapViTriGiaTri.ChiSo(moi.CapViTri) <= CapViTriGiaTri.ChiSo(cha.CapViTri))
                 return KetQua.Loi($"Cấp '{moi.CapViTri}' phải thấp hơn cấp cha '{cha.CapViTri}'.", MaLoiDichVu.DuLieuKhongHopLe);
         }
@@ -118,6 +122,11 @@ public sealed class ViTriService(IKhoViTriStore store, IStockService stock, IAud
 
         var loiO = KiemTraTruongCuaO(v.CapViTri, doi.LoaiViTri, doi.MaVachO, doi.Dai, doi.Rong, doi.Cao, doi.KhoiLuongToiDa);
         if (loiO is not null) return loiO;
+
+        // Đổi khu tiếp nhận hoạt động cuối cùng sang Lưu trữ thì kho mất khu tiếp nhận (Bảng 2.17, tiêu chí T4-3).
+        if (v.LaO && v.DangHoatDong && v.LoaiViTri == LoaiViTriGiaTri.TiepNhan && doi.LoaiViTri != LoaiViTriGiaTri.TiepNhan
+            && await store.DemOTiepNhanHoatDong(v.MaKho, maViTri, ct) == 0)
+            return KetQua.Loi("Đây là khu tiếp nhận hoạt động cuối cùng của kho; mỗi kho phải có ít nhất một khu tiếp nhận.", MaLoiDichVu.DuLieuKhongHopLe);
 
         if (!string.Equals(ten, v.TenViTri, StringComparison.OrdinalIgnoreCase))
         {
@@ -160,6 +169,13 @@ public sealed class ViTriService(IKhoViTriStore store, IStockService stock, IAud
             if (v.CapViTri == CapViTriGiaTri.O && v.LoaiViTri == LoaiViTriGiaTri.TiepNhan
                 && await store.DemOTiepNhanHoatDong(v.MaKho, maViTri, ct) == 0)
                 return KetQua.Loi("Đây là khu tiếp nhận hoạt động cuối cùng của kho; mỗi kho phải có ít nhất một khu tiếp nhận.", MaLoiDichVu.DuLieuKhongHopLe);
+
+            if (v.LaO && (await stock.LayTonTheoViTri(maViTri, ct)).Sum(t => t.SoLuongTon) is var con and > 0)
+                return KetQua.Loi($"Ô '{v.TenViTri}' còn {con} hàng; chuyển hết hàng sang ô khác trước khi khóa.", MaLoiDichVu.DuLieuKhongHopLe);
+        }
+        else if (v.MaViTriCha is int maCha && await store.TimViTri(maCha, ct) is { DangHoatDong: false } cha)
+        {
+            return KetQua.Loi($"Cấp cha '{cha.TenViTri}' đang ngừng hoạt động; mở lại cấp cha trước.", MaLoiDichVu.DuLieuKhongHopLe);
         }
 
         v.TrangThai = hoatDong ? TrangThaiHoatDong.HoatDong : TrangThaiHoatDong.NgungHoatDong;
@@ -182,7 +198,14 @@ public sealed class ViTriService(IKhoViTriStore store, IStockService stock, IAud
             return KetQua.Loi("Ô còn tồn kho ghi nhận, không thể xóa cứng; hãy khóa (xóa mềm) thay vào đó.", MaLoiDichVu.DuLieuKhongHopLe);
 
         var ten = v.TenViTri;
-        await store.XoaViTri(v, ct);
+        try
+        {
+            await store.XoaViTri(v, ct);
+        }
+        catch (XungDotDuLieuException ex)
+        {
+            return KetQua.Loi(ex.Message, MaLoiDichVu.DuLieuKhongHopLe);
+        }
         await audit.Ghi(maNguoiThucHien, "Xóa vị trí", chiTiet: ten, ct: ct);
         return KetQua.Ok($"Đã xóa '{ten}'.");
     }

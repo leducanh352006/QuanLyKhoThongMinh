@@ -112,12 +112,15 @@ public class ViTriController(IViTriQuanLy viTri, IKhoQuanLy kho, INguoiDungHienT
         return View(model);
     }
 
+    [Authorize(Roles = VaiTroTen.QuanTriVien + "," + VaiTroTen.QuanLyKho)]   // Thủ kho chỉ xem cây; chặn ở máy chủ, không chỉ ẩn nút
     [HttpPost, ValidateAntiForgeryToken]
     public Task<IActionResult> Khoa(int id, int maKho, CancellationToken ct) => DoiTrangThai(id, maKho, false, ct);
 
+    [Authorize(Roles = VaiTroTen.QuanTriVien + "," + VaiTroTen.QuanLyKho)]   // Thủ kho chỉ xem cây; chặn ở máy chủ, không chỉ ẩn nút
     [HttpPost, ValidateAntiForgeryToken]
     public Task<IActionResult> MoLai(int id, int maKho, CancellationToken ct) => DoiTrangThai(id, maKho, true, ct);
 
+    [Authorize(Roles = VaiTroTen.QuanTriVien + "," + VaiTroTen.QuanLyKho)]   // Thủ kho chỉ xem cây; chặn ở máy chủ, không chỉ ẩn nút
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> KhoaKiemKe(int id, int maKho, CancellationToken ct)
     {
@@ -126,6 +129,7 @@ public class ViTriController(IViTriQuanLy viTri, IKhoQuanLy kho, INguoiDungHienT
         return RedirectToAction(nameof(Index), new { maKho });
     }
 
+    [Authorize(Roles = VaiTroTen.QuanTriVien + "," + VaiTroTen.QuanLyKho)]   // Thủ kho chỉ xem cây; chặn ở máy chủ, không chỉ ẩn nút
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> MoKhoaKiemKe(int id, int maKho, CancellationToken ct)
     {
@@ -134,6 +138,7 @@ public class ViTriController(IViTriQuanLy viTri, IKhoQuanLy kho, INguoiDungHienT
         return RedirectToAction(nameof(Index), new { maKho });
     }
 
+    [Authorize(Roles = VaiTroTen.QuanTriVien + "," + VaiTroTen.QuanLyKho)]   // Thủ kho chỉ xem cây; chặn ở máy chủ, không chỉ ẩn nút
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Xoa(int id, int maKho, CancellationToken ct)
     {

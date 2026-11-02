@@ -19,7 +19,8 @@
         <ul class="menu-danh-sach">
             @foreach (var muc in nhom.Muc)
             {
-                var dangChon = string.Equals(muc.Area, Model.AreaHienTai, StringComparison.OrdinalIgnoreCase);
+                var dangChon = string.Equals(muc.Area, Model.AreaHienTai, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(muc.Controller, Model.ControllerHienTai, StringComparison.OrdinalIgnoreCase);
                 <li>
                     <a class="menu-muc@(dangChon ? " dang-chon" : "")" asp-area="@muc.Area" asp-controller="@muc.Controller" asp-action="@muc.Action"
                        aria-current="@(dangChon ? "page" : null)">@muc.Ten</a>

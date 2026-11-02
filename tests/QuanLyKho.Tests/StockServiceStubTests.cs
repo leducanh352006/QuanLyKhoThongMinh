@@ -167,4 +167,22 @@ public class StockServiceStubTests
         Assert.Equal(new[] { 1, 3 }, o3.Select(t => t.MaLo).OrderBy(x => x).ToArray());   // lô 1 và lô 3 (kem) ở ô 3
         Assert.Equal(48, o3.Single(t => t.MaLo == 1).SoLuongTon);                          // 50 + 10 - 5 - 7
     }
+
+    [Fact]
+    public async Task HangOKhuTiepNhan_VanGiuChoVaXuatDuoc_ChoLuongTraLaiHangMuaVaHuyHang()
+    {
+        var s = new StockServiceStub();
+        // Ô 7 là Khu tiếp nhận của Kho 1: hàng không đạt chỉ nằm ở đây, phiếu Trả lại hàng mua phải giữ chỗ rồi xuất từ đây.
+        Assert.True((await s.GhiTang(new DongTon(1, 7, 10), LoaiBienDong.NhanHang, new ThamChieuChungTu(LoaiChungTu.NK, 3), MaND)).ThanhCong);
+
+        Assert.True((await s.GiuCho(new DongTon(1, 7, 4))).ThanhCong);
+        Assert.True((await s.GhiGiam(new DongTon(1, 7, 4), LoaiBienDong.XuatKho, PhieuXuat, MaND, tuGiuCho: true)).ThanhCong);
+        Assert.Equal(6, (await s.LayTon(1, 7))!.SoLuongTon);
+
+        // Sắp xếp lên kệ (đổi ô) và hoàn tác nhận hàng vẫn làm được.
+        Assert.True((await s.ChuyenO(1, 7, 3, 2, new ThamChieuChungTu(LoaiChungTu.NK, 3), MaND)).ThanhCong);
+        Assert.True((await s.GhiGiam(new DongTon(1, 7, 4), LoaiBienDong.HoanTac, new ThamChieuChungTu(LoaiChungTu.NK, 3), MaND)).ThanhCong);
+        Assert.Equal(0, (await s.LayTon(1, 7))!.SoLuongTon);
+        Assert.Equal(52, (await s.LayTon(1, 3))!.SoLuongTon);
+    }
 }

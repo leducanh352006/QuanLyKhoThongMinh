@@ -25,6 +25,10 @@
             {
                 @* Đường dẫn đầy đủ: tiêu chí hoàn thành việc T4-3, hiện ngay trên cây cho mỗi ô, không chỉ ở trang Sửa. *@
                 <span class="nut-cay-duong-dan">@Model.DuongDanDayDu</span>
+                @if (duocSua)
+                {
+                    <a asp-controller="LichSuTon" asp-action="Index" asp-route-MaViTri="@Model.MaViTri" class="nut-cay-lien-ket">Lịch sử tồn</a>
+                }
             }
             @if (!Model.DangHoatDong)
             {

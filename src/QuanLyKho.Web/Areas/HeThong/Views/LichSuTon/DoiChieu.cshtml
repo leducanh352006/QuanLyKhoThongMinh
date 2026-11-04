@@ -1,0 +1,51 @@
+@model QuanLyKho.Web.Areas.HeThong.Services.KetQuaDoiChieu
+@{
+    string Ngay(DateTime utc) => TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), TimeZoneInfo.Local).ToString("dd/MM/yyyy HH:mm:ss");
+}
+
+<header class="trang-dau">
+    <h1>Đối chiếu sổ cái</h1>
+    <p class="mota">So tồn hiện tại (TonKho) với tổng các dòng sổ cái của từng lô tại từng ô. Kiểm tra lúc @Ngay(Model.ThoiGianUtc) (giờ máy chủ).</p>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Về lịch sử biến động tồn</a>
+</header>
+
+@if (Model.Khop)
+{
+    <section class="alert alert-success" role="status">
+        <strong>Khớp.</strong> Tổng sổ cái bằng tồn kho ở mọi lô và ô.
+    </section>
+}
+else
+{
+    <section class="alert alert-danger" role="alert">
+        <strong>Có @Model.Chenh.Count lô, ô bị lệch.</strong> Xem lịch sử của từng dòng bên dưới để tìm biến động gây lệch.
+    </section>
+    <div class="bang-cuon">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">Mã lô</th>
+                    <th scope="col">Mã ô</th>
+                    <th scope="col" class="text-end">Tồn hiện tại</th>
+                    <th scope="col" class="text-end">Theo sổ cái</th>
+                    <th scope="col" class="text-end">Chênh lệch</th>
+                    <th scope="col"><span class="visually-hidden">Hành động</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in Model.Chenh)
+                {
+                    var lech = c.TonHienTai - c.TonTheoSoCai;
+                    <tr>
+                        <td>#@c.MaLo</td>
+                        <td>#@c.MaViTri</td>
+                        <td class="text-end">@c.TonHienTai</td>
+                        <td class="text-end">@c.TonTheoSoCai</td>
+                        <td class="text-end">@(lech > 0 ? "+" : "")@lech</td>
+                        <td><a asp-action="Index" asp-route-MaLo="@c.MaLo" asp-route-MaViTri="@c.MaViTri">Xem lịch sử</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

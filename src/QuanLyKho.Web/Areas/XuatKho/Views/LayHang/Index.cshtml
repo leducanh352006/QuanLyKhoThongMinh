@@ -1,0 +1,47 @@
+@using QuanLyKho.Web.Areas.XuatKho.Models
+@model List<PhieuXuat>
+@{
+    ViewData["Title"] = "Lấy hàng";
+    var tong = (Dictionary<int, (int Tong, int ConLai)>)ViewBag.TongDong;
+}
+
+<header class="trang-dau">
+    <h1>Lấy hàng</h1>
+    <p class="mota">Phiếu xuất Đã duyệt hoặc Đang lấy hàng, thủ kho quét mã ô, mã lô, mã vạch để xác nhận từng dòng đã giữ chỗ.</p>
+</header>
+
+@if (TempData["ThongBao"] is string tb) { <div class="alert alert-success" role="status">@tb</div> }
+@if (TempData["Loi"] is string loi) { <div class="alert alert-danger" role="alert">@loi</div> }
+
+@if (Model.Count == 0)
+{
+    <p class="khung-trong">Không có phiếu nào đang chờ lấy hàng.</p>
+}
+else
+{
+    <div class="bang-cuon">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">Số phiếu</th><th scope="col">Loại</th><th scope="col">Kho</th>
+                    <th scope="col">Trạng thái</th><th scope="col" class="text-end">Đã lấy / tổng dòng</th>
+                    <th scope="col"><span class="visually-hidden">Thao tác</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model)
+                {
+                    var (t, conLai) = tong.GetValueOrDefault(p.MaPX, (0, 0));
+                    <tr>
+                        <td>@p.SoPhieu</td>
+                        <td>@p.LoaiPhieu</td>
+                        <td>@(p.Kho?.TenKho)</td>
+                        <td><span class="nhan @(conLai == 0 ? "nhan-tot" : "nhan-chu-y")">@p.TrangThai</span></td>
+                        <td class="text-end">@(t - conLai) / @t</td>
+                        <td class="text-end"><a class="btn btn-sm btn-primary" asp-action="Lay" asp-route-id="@p.MaPX">Lấy hàng</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

@@ -31,6 +31,7 @@
 @if (chuaXong.Count == 0)
 {
     <p class="khung-trong">Đã lấy xong mọi dòng của phiếu này.</p>
+    <a class="btn btn-primary btn-lg" asp-controller="DoiChieu" asp-action="Xem" asp-route-id="@p.MaPX">Đối chiếu hàng đã lấy</a>
 }
 else
 {

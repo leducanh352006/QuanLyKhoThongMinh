@@ -126,7 +126,7 @@ public class GoiYController(
 /// <summary>
 /// Thành phần duyệt gợi ý dùng chung. Nhóm khác nhúng vào màn hình của mình:
 /// <c>@await Component.InvokeAsync("DuyetGoiY", new { loai = LoaiGoiY.G1, maPX = Model.MaPX })</c>
-/// (G2 truyền maPN; G3, G4 không cần phiếu). Hiện các gợi ý Chờ duyệt kèm lý do và ba nút; không có gợi ý thì báo người dùng làm tay.
+/// (G1 truyền maPX; G2 truyền maPN). Hiện các gợi ý Chờ duyệt kèm lý do và ba nút; không có gợi ý thì báo người dùng làm tay.
 /// </summary>
 public sealed class DuyetGoiYViewComponent(IGoiYService goiY, IGoiYQuanLy quanLy, INguoiDungHienTai hienTai) : ViewComponent
 {

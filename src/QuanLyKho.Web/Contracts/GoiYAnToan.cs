@@ -3,7 +3,7 @@ namespace QuanLyKho.Web.Contracts;
 /// <summary>
 /// Đường lui khi AI lỗi (báo cáo mục 1.2.4): nơi tính gợi ý bọc lời gọi AI bằng hàm này để một lỗi, một lần quá thời gian
 /// hay thiếu dữ liệu không bao giờ làm hỏng màn hình hoặc chặn quy trình làm tay. Hàm không ném lỗi, luôn trả <see cref="KetQua{T}"/>.
-/// <code>var kq = await GoiYAnToan.Chay(ct2 => tinhG3(ct2));
+/// <code>var kq = await GoiYAnToan.Chay(ct2 => tinhG1(ct2));
 /// if (!kq.ThanhCong) { /* hiện kq.ThongBao, người dùng làm tay */ }</code>
 /// </summary>
 public static class GoiYAnToan

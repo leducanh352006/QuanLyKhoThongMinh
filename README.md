@@ -1,6 +1,6 @@
 # Quản lý kho thông minh
 
-Ứng dụng web quản lý kho cho cửa hàng bán lẻ có một hoặc nhiều kho: nhập kho, xuất kho, kiểm tra hàng hóa, điều chuyển giữa các kho, kèm bốn gợi ý AI (G1 đến G4). Đồ án nhóm 5 người; báo cáo mô tả đầy đủ nghiệp vụ và cơ sở dữ liệu.
+Ứng dụng web quản lý kho cho cửa hàng bán lẻ có một hoặc nhiều kho: nhập kho, xuất kho, kiểm tra hàng hóa, điều chuyển giữa các kho, kèm hai gợi ý AI (G1, G2). Đồ án nhóm 5 người; báo cáo mô tả đầy đủ nghiệp vụ và cơ sở dữ liệu.
 
 Công nghệ: ASP.NET Core MVC trên .NET 10, Entity Framework Core, SQL Server, HTML/CSS/JavaScript (báo cáo mục 1.4).
 
@@ -92,7 +92,7 @@ tests/QuanLyKho.Tests/    Kiểm thử (xUnit)
 | `IHangHoaService` (`TaoLo`) | HangHoa (TV3) |
 | `INhapKhoService` (`TaoPhieuNhapThua`, `TaoPhieuNhapNhap`) | NhapKho (TV1) |
 | `IXuatKhoService` (`TaoPhieuXuatThieu`) | XuatKho (TV2) |
-| `IGoiYHandler` của G1 / G2 / G3 và G4 | XuatKho / NhapKho / DieuChuyen |
+| `IGoiYHandler` của G1 / G2 | XuatKho / NhapKho |
 
 Thay bản giả bằng bản thật: trong module Area của mình thêm một dòng, ví dụ `services.AddScoped<IStockService, StockService>();`. Đăng ký sau cùng thắng nên bản thật tự thay bản giả; **không đổi interface**. Tên phương thức giữ đúng như issue (không có hậu tố `Async`). Nơi gọi dịch vụ phải dùng interface, không `new` bản giả.
 

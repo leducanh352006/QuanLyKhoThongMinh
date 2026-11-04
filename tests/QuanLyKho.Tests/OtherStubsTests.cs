@@ -148,32 +148,29 @@ public class GoiYServiceStubTests
     private static GoiYServiceStub Tao(params IGoiYHandler[] handlers) => new(new GoiYStubStore(), handlers);
 
     [Fact]
-    public async Task Tao_G1CanMaPX_G2CanMaPN_G3G4KhongCoPhieuLucTao()
+    public async Task Tao_G1CanMaPX_G2CanMaPN()
     {
         var s = Tao();
         Assert.False((await s.Tao(LoaiGoiY.G1, new ThamChieuGoiY(), MotDong)).ThanhCong);
         Assert.False((await s.Tao(LoaiGoiY.G2, new ThamChieuGoiY(MaPX: 1), MotDong)).ThanhCong);
-        Assert.False((await s.Tao(LoaiGoiY.G3, new ThamChieuGoiY(MaPN: 1), MotDong)).ThanhCong);
         Assert.True((await s.Tao(LoaiGoiY.G1, new ThamChieuGoiY(MaPX: 1), MotDong)).ThanhCong);
         Assert.True((await s.Tao(LoaiGoiY.G2, new ThamChieuGoiY(MaPN: 1), MotDong)).ThanhCong);
-        Assert.True((await s.Tao(LoaiGoiY.G3, new ThamChieuGoiY(), MotDong)).ThanhCong);
-        Assert.True((await s.Tao(LoaiGoiY.G4, new ThamChieuGoiY(), MotDong)).ThanhCong);
     }
 
     [Fact]
     public async Task Tao_DongKhongCoLyDo_HoacKhongCoDong_BiTuChoi()
     {
         var s = Tao();
-        Assert.False((await s.Tao(LoaiGoiY.G3, new ThamChieuGoiY(), Array.Empty<ChiTietGoiYDto>())).ThanhCong);
-        Assert.False((await s.Tao(LoaiGoiY.G3, new ThamChieuGoiY(), new[] { new ChiTietGoiYDto(4, 5, "  ") })).ThanhCong);
-        Assert.False((await s.Tao(LoaiGoiY.G4, new ThamChieuGoiY(), new[] { new ChiTietGoiYDto(4, 5, "lý do", MaKhoNguon: 1, MaKhoDich: 1) })).ThanhCong);
+        Assert.False((await s.Tao(LoaiGoiY.G1, new ThamChieuGoiY(MaPX: 1), Array.Empty<ChiTietGoiYDto>())).ThanhCong);
+        Assert.False((await s.Tao(LoaiGoiY.G1, new ThamChieuGoiY(MaPX: 1), new[] { new ChiTietGoiYDto(4, 5, "  ") })).ThanhCong);
+        Assert.False((await s.Tao(LoaiGoiY.G2, new ThamChieuGoiY(MaPN: 1), new[] { new ChiTietGoiYDto(4, 5, "lý do", MaKhoNguon: 1, MaKhoDich: 1) })).ThanhCong);
     }
 
     [Fact]
     public async Task ChuaCoHandler_Duyet_BiTuChoi_GoiYVanChoDuyet_LamTayDuoc()
     {
         var s = Tao();
-        var ma = (await s.Tao(LoaiGoiY.G3, new ThamChieuGoiY(), MotDong)).GiaTri;
+        var ma = (await s.Tao(LoaiGoiY.G1, new ThamChieuGoiY(MaPX: 1), MotDong)).GiaTri;
         var kq = await s.Duyet(ma, 2);
         Assert.False(kq.ThanhCong);
         Assert.Equal(MaLoiDichVu.ChuaCoXuLy, kq.MaLoi);
@@ -184,9 +181,9 @@ public class GoiYServiceStubTests
     [Fact]
     public async Task Duyet_GoiHandler_RoiDoiTrangThai_VaLuuPhieuDuocTao()
     {
-        var handler = new HandlerThanhCong(LoaiGoiY.G3, new ThamChieuGoiY(MaPN: 77));
+        var handler = new HandlerThanhCong(LoaiGoiY.G1, new ThamChieuGoiY(MaPX: 77));
         var s = Tao(handler);
-        var ma = (await s.Tao(LoaiGoiY.G3, new ThamChieuGoiY(), MotDong)).GiaTri;
+        var ma = (await s.Tao(LoaiGoiY.G1, new ThamChieuGoiY(MaPX: 1), MotDong)).GiaTri;
 
         Assert.True((await s.Duyet(ma, 2)).ThanhCong);
 
@@ -194,7 +191,7 @@ public class GoiYServiceStubTests
         Assert.Equal(TrangThaiGoiY.DaDuyet, g.TrangThai);
         Assert.Equal(2, g.MaNguoiDuyet);
         Assert.NotNull(g.ThoiGianDuyetUtc);
-        Assert.Equal(77, g.ThamChieu.MaPN);
+        Assert.Equal(77, g.ThamChieu.MaPX);
         Assert.Single(handler.DaNhan);
         Assert.Empty(await s.DanhSachChoDuyet());
     }
@@ -202,9 +199,9 @@ public class GoiYServiceStubTests
     [Fact]
     public async Task SuaVaDuyet_HandlerNhanDongDaSua_TrangThaiDaSuaVaDuyet()
     {
-        var handler = new HandlerThanhCong(LoaiGoiY.G4, new ThamChieuGoiY(MaPC: 9));
+        var handler = new HandlerThanhCong(LoaiGoiY.G1, new ThamChieuGoiY(MaPX: 9));
         var s = Tao(handler);
-        var ma = (await s.Tao(LoaiGoiY.G4, new ThamChieuGoiY(), MotDong)).GiaTri;
+        var ma = (await s.Tao(LoaiGoiY.G1, new ThamChieuGoiY(MaPX: 1), MotDong)).GiaTri;
         var daSua = new[] { new ChiTietGoiYDto(4, 12, "Quản lý giảm số lượng", MaKhoNguon: 1, MaKhoDich: 2) };
 
         Assert.True((await s.SuaVaDuyet(ma, daSua, 2)).ThanhCong);
@@ -213,14 +210,14 @@ public class GoiYServiceStubTests
         var g = (await s.Lay(ma))!;
         Assert.Equal(TrangThaiGoiY.DaSuaVaDuyet, g.TrangThai);
         Assert.Equal(12, g.ChiTiet.Single().SoLuong);
-        Assert.Equal(9, g.ThamChieu.MaPC);
+        Assert.Equal(9, g.ThamChieu.MaPX);
     }
 
     [Fact]
     public async Task HandlerLoi_GoiYVanChoDuyet()
     {
-        var s = Tao(new HandlerLoi(LoaiGoiY.G3));
-        var ma = (await s.Tao(LoaiGoiY.G3, new ThamChieuGoiY(), MotDong)).GiaTri;
+        var s = Tao(new HandlerLoi(LoaiGoiY.G1));
+        var ma = (await s.Tao(LoaiGoiY.G1, new ThamChieuGoiY(MaPX: 1), MotDong)).GiaTri;
         var kq = await s.Duyet(ma, 2);
         Assert.False(kq.ThanhCong);
         Assert.Equal(TrangThaiGoiY.ChoDuyet, (await s.Lay(ma))!.TrangThai);
@@ -229,8 +226,8 @@ public class GoiYServiceStubTests
     [Fact]
     public async Task TuChoi_DoiTrangThai_VaKhongXuLyLaiDuoc()
     {
-        var s = Tao(new HandlerThanhCong(LoaiGoiY.G3, new ThamChieuGoiY(MaPN: 1)));
-        var ma = (await s.Tao(LoaiGoiY.G3, new ThamChieuGoiY(), MotDong)).GiaTri;
+        var s = Tao(new HandlerThanhCong(LoaiGoiY.G1, new ThamChieuGoiY(MaPX: 1)));
+        var ma = (await s.Tao(LoaiGoiY.G1, new ThamChieuGoiY(MaPX: 1), MotDong)).GiaTri;
 
         Assert.True((await s.TuChoi(ma, 2, "không cần")).ThanhCong);
         Assert.Equal(TrangThaiGoiY.TuChoi, (await s.Lay(ma))!.TrangThai);
@@ -315,7 +312,7 @@ public class DichVuKhacStubTests
         Assert.Equal("Đã sửa và duyệt", TrangThaiGoiY.DaSuaVaDuyet.ToCsdl());
         Assert.Equal("Chờ duyệt", TrangThaiGoiY.ChoDuyet.ToCsdl());
         Assert.Equal("XK", LoaiChungTu.XK.ToCsdl());
-        Assert.Equal("G3", LoaiGoiY.G3.ToCsdl());
+        Assert.Equal("G2", LoaiGoiY.G2.ToCsdl());
     }
 
     [Fact]
@@ -340,14 +337,14 @@ public class DichVuKhacStubTests
     {
         var services = new ServiceCollection().AddContractStubs();
         services.AddSingleton<ILockService, LockThat>();                          // nhóm sở hữu đăng ký bản thật sau
-        services.AddScoped<IGoiYHandler, HandlerG3>();                            // handler thường là scoped
+        services.AddScoped<IGoiYHandler, HandlerGiaXuat>();                            // handler thường là scoped
         using var sp = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
         using var scope = sp.CreateScope();
 
         Assert.IsType<LockThat>(scope.ServiceProvider.GetRequiredService<ILockService>());
 
         var goiY = scope.ServiceProvider.GetRequiredService<IGoiYService>();
-        var ma = (await goiY.Tao(LoaiGoiY.G3, new ThamChieuGoiY(), new[] { new ChiTietGoiYDto(4, 5, "sắp hết") })).GiaTri;
+        var ma = (await goiY.Tao(LoaiGoiY.G1, new ThamChieuGoiY(MaPX: 1), new[] { new ChiTietGoiYDto(4, 5, "sắp hết") })).GiaTri;
         Assert.True((await goiY.Duyet(ma, 2)).ThanhCong);
     }
 
@@ -358,10 +355,10 @@ public class DichVuKhacStubTests
         public Task<bool> DangKhoa(int maViTri, CancellationToken ct = default) => Task.FromResult(false);
     }
 
-    private sealed class HandlerG3 : IGoiYHandler
+    private sealed class HandlerGiaXuat : IGoiYHandler
     {
-        public LoaiGoiY Loai => LoaiGoiY.G3;
+        public LoaiGoiY Loai => LoaiGoiY.G1;
         public Task<KetQua<ThamChieuGoiY>> ThucHien(GoiYDto goiY, int maNguoiDuyet, CancellationToken ct = default) =>
-            Task.FromResult(KetQua<ThamChieuGoiY>.Ok(new ThamChieuGoiY(MaPN: 1)));
+            Task.FromResult(KetQua<ThamChieuGoiY>.Ok(new ThamChieuGoiY(MaPX: 1)));
     }
 }

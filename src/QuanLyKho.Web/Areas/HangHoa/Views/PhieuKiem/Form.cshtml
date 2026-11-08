@@ -81,11 +81,16 @@
                         <tr><th scope="col">Người kiểm</th><th scope="col">Ghi chú</th><th scope="col" style="width:6rem"><span class="visually-hidden">Thao tác</span></th></tr>
                     </thead>
                     <tbody id="dongThamGia">
-                        @foreach (var t in Model.ThamGia)
+                        @if (Model.ThamGia.Count == 0)
                         {
+                            Model.ThamGia.Add(new ThamGiaKiem());
+                        }
+                        @for (int i = 0; i < Model.ThamGia.Count; i++)
+                        {
+                            var t = Model.ThamGia[i];
                             <tr>
                                 <td>
-                                    <select class="form-select" data-ten="MaND" aria-label="Người kiểm">
+                                    <select class="form-select" data-ten="MaND" name="ThamGia[@i].MaND" aria-label="Người kiểm">
                                         <option value="0">-- Chọn người --</option>
                                         @foreach (var n in dsNguoiDung)
                                         {
@@ -93,7 +98,7 @@
                                         }
                                     </select>
                                 </td>
-                                <td><input class="form-control" data-ten="GhiChu" value="@t.GhiChu" maxlength="255" aria-label="Ghi chú" /></td>
+                                <td><input class="form-control" data-ten="GhiChu" name="ThamGia[@i].GhiChu" value="@t.GhiChu" maxlength="255" aria-label="Ghi chú" /></td>
                                 <td><button type="button" class="btn btn-outline-secondary btn-sm" data-xoa>Xóa</button></td>
                             </tr>
                         }

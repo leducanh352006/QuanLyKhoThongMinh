@@ -4,12 +4,6 @@ using QuanLyKho.Web.Areas.HeThong.Models;
 
 namespace QuanLyKho.Web.Areas.HangHoa.Models
 {
-    /// <summary>
-    /// Phiếu kiểm kê (việc T3-4, Bảng 2.25). Tạo xong là bắt đầu kiểm ngay (ThoiGianBatDau = lúc tạo): ô liên quan bị khóa qua
-    /// ILockService và tồn hệ thống được chụp vào ChiTietPhieuKiem.SoLuongHeThong tại đúng thời điểm đó.
-    /// Nhập kết quả đếm, đối chiếu lệch và hoàn tất phiếu (sinh phiếu Thừa/Thiếu do kiểm kê qua INhapKhoService/IXuatKhoService)
-    /// là việc của bước sau, KHÔNG làm ở đây — phiếu chỉ ở trạng thái Đang kiểm khi việc này xong.
-    /// </summary>
     public class PhieuKiem
     {
         public const string ToanBo = "Toàn bộ";
@@ -19,40 +13,30 @@ namespace QuanLyKho.Web.Areas.HangHoa.Models
         public const string HoanTat = "Hoàn tất";
 
         public int MaPK { get; set; }
-
-        public string SoPhieu { get; set; } = "";                    // KK000001, hệ thống tự sinh
-
+        public string SoPhieu { get; set; } = "";
         public int MaKho { get; set; }
-
         public string LoaiKiemKe { get; set; } = ToanBo;
-
         public string? ThamChieu { get; set; }
-
         public string? DienGiai { get; set; }
-
-        public DateTime ThoiGianBatDau { get; set; }                  // giờ UTC, = lúc tạo phiếu (xem ghi chú lớp)
-
+        public DateTime ThoiGianBatDau { get; set; }
         public int MaNguoiLap { get; set; }
-
         public string TrangThai { get; set; } = DangKiem;
 
         public Kho? Kho { get; set; }
-
         public List<ChiTietPhieuKiem> ChiTiet { get; set; } = new();
-
         public List<ThamGiaKiem> ThamGia { get; set; } = new();
-
-        /// <summary>Phạm vi mặt hàng khi LoaiKiemKe = Một phần (chọn trên form); không lưu cột riêng, chỉ dùng để tính ChiTiet lúc tạo.</summary>
         public List<int> PhamViMaBT { get; set; } = new();
 
-        /// <summary>Quy tắc không cần CSDL (Bảng 2.17). Trả về lỗi, hoặc null nếu hợp lệ.</summary>
         public string? KiemTra()
         {
+            ThamChieu = ThamChieu?.Trim();
+            DienGiai = DienGiai?.Trim();
+
             if (LoaiKiemKe is not (ToanBo or MotPhan)) return "Loại kiểm kê chỉ được chọn Toàn bộ hoặc Một phần.";
             if (MaKho <= 0) return "Chọn kho kiểm kê.";
-            if (LoaiKiemKe == MotPhan && PhamViMaBT.Count == 0) return "Kiểm kê một phần phải chọn phạm vi mặt hàng.";
-            if (LoaiKiemKe == ToanBo && PhamViMaBT.Count > 0) return "Kiểm kê toàn bộ không chọn phạm vi mặt hàng.";
-            if (ThamGia.Count == 0) return "Phiếu kiểm phải khai báo ít nhất một người tham gia kiểm.";
+            if (LoaiKiemKe == MotPhan && (PhamViMaBT == null || PhamViMaBT.Count == 0)) return "Kiểm kê một phần phải chọn phạm vi mặt hàng.";
+            if (LoaiKiemKe == ToanBo && PhamViMaBT != null && PhamViMaBT.Count > 0) return "Kiểm kê toàn bộ không chọn phạm vi mặt hàng.";
+            if (ThamGia == null || ThamGia.Count == 0) return "Phiếu kiểm phải khai báo ít nhất một người tham gia kiểm.";
             if (ThamGia.Any(t => t.MaND <= 0)) return "Chọn người cho mỗi dòng tham gia kiểm.";
             if (ThamGia.Select(t => t.MaND).Distinct().Count() != ThamGia.Count) return "Một người không khai báo tham gia hai lần trên cùng phiếu.";
             if (ThamChieu?.Length > 100) return "Tham chiếu tối đa 100 ký tự.";
@@ -61,10 +45,6 @@ namespace QuanLyKho.Web.Areas.HangHoa.Models
         }
     }
 
-    /// <summary>
-    /// Một dòng phạm vi kiểm (lô tại một ô cụ thể) kèm tồn hệ thống chụp lúc bắt đầu (Bảng 2.25).
-    /// SoLuongThucTe, người đếm từng dòng và lý do lệch là việc của bước nhập kết quả kiểm (bước sau), chưa có ở đây.
-    /// </summary>
     public class ChiTietPhieuKiem
     {
         public int MaCTK { get; set; }
@@ -75,17 +55,13 @@ namespace QuanLyKho.Web.Areas.HangHoa.Models
         public int SoLuongHeThong { get; set; }
     }
 
-    /// <summary>Người tham gia kiểm của một phiếu (Bảng 2.25); khóa chính kép (MaPK, MaND).</summary>
     public class ThamGiaKiem
     {
         public int MaPK { get; set; }
         public int MaND { get; set; }
         public string? GhiChu { get; set; }
-
         public NguoiDung? NguoiDung { get; set; }
     }
-
-    // ---- Cấu hình bảng (EF tự nạp các lớp này) ----
 
     public class PhieuKiemConfig : IEntityTypeConfiguration<PhieuKiem>
     {
@@ -131,4 +107,18 @@ namespace QuanLyKho.Web.Areas.HangHoa.Models
         {
             b.ToTable("ThamGiaKiem");
             b.HasKey(x => new { x.MaPK, x.MaND });
-            b.Property(x => x.GhiChu).HasMaxLength(2
+            b.Property(x => x.GhiChu).HasMaxLength(255);
+            b.HasOne(x => x.NguoiDung).WithMany().HasForeignKey(x => x.MaND).OnDelete(DeleteBehavior.Restrict);
+        }
+    }
+}
+
+namespace QuanLyKho.Web.Data
+{
+    public partial class KhoDbContext
+    {
+        public DbSet<Areas.HangHoa.Models.PhieuKiem> PhieuKiem => Set<Areas.HangHoa.Models.PhieuKiem>();
+        public DbSet<Areas.HangHoa.Models.ChiTietPhieuKiem> ChiTietPhieuKiem => Set<Areas.HangHoa.Models.ChiTietPhieuKiem>();
+        public DbSet<Areas.HangHoa.Models.ThamGiaKiem> ThamGiaKiem => Set<Areas.HangHoa.Models.ThamGiaKiem>();
+    }
+}

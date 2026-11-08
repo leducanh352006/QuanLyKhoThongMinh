@@ -42,18 +42,72 @@ public class PhieuKiemController(INguoiDungHienTai hienTai, IAuditService audit,
     public Task<IActionResult> Tao() => HienForm(new PhieuKiem { ThamGia = { new ThamGiaKiem() } });
 
     [HttpPost, ValidateAntiForgeryToken, CanQuyen(LoaiChungTu.KK, QuyenThaoTac.Them)]
-    public async Task<IActionResult> Tao(PhieuKiem p)
+   private async Task<string?> TaoPhieu(PhieuKiem p)
     {
-        p.MaPK = 0;
-        var loi = p.KiemTra() ?? await KiemTraDanhMuc(p) ?? await TaoPhieu(p);
-        if (loi is not null)
+        // 1. Lấy danh sách tồn kho thực tế của các ô thuộc kho (trừ khu tiếp nhận)
+        var pham = await (
+            from t in Db.TonKho
+            join l in Db.LoHang on t.MaLo equals l.MaLo
+            join v in Db.ViTri on t.MaViTri equals v.MaViTri
+            where v.MaKho == p.MaKho && v.LoaiViTri != LoaiViTriGiaTri.TiepNhan
+            select new { l.MaBT, t.MaLo, t.MaViTri, t.SoLuongTon }
+        ).ToListAsync();
+
+        if (p.LoaiKiemKe == PhieuKiem.MotPhan)
+            pham = pham.Where(x => p.PhamViMaBT.Contains(x.MaBT)).ToList();
+        if (pham.Count == 0) return "Không có tồn kho nào trong phạm vi đã chọn để kiểm.";
+
+        // 2. Khóa các ô liên quan qua ILockService (từ chối nếu ô bị khóa hoặc có hàng giữ chỗ)
+        var oCanKhoa = pham.Select(x => x.MaViTri).Distinct().ToList();
+        var daKhoa = new List<int>();
+        foreach (var maViTri in oCanKhoa)
         {
-            ViewData["Loi"] = loi;
-            if (p.ThamGia.Count == 0) p.ThamGia.Add(new ThamGiaKiem());   // form luôn có ít nhất một dòng
-            return await HienForm(p);
+            var kq = await khoa.KhoaO(maViTri, MaNguoiDung());
+            if (!kq.ThanhCong)
+            {
+                // Nếu khóa thất bại, rollback lại các ô đã khóa trước đó trong luồng này
+                foreach (var cu in daKhoa) await khoa.MoO(cu, MaNguoiDung());
+                return kq.ThongBao;
+            }
+            daKhoa.Add(maViTri);
         }
-        TempData["ThongBao"] = "Đã tạo phiếu kiểm và bắt đầu kiểm. Các ô liên quan đã bị khóa.";
-        return RedirectToAction(nameof(Xem), new { id = p.MaPK });
+
+        var thamChieu = string.IsNullOrWhiteSpace(p.ThamChieu) ? null : p.ThamChieu.Trim();
+        var dienGiai = string.IsNullOrWhiteSpace(p.DienGiai) ? null : p.DienGiai.Trim();
+        var thamGia = p.ThamGia.Select(t => new ThamGiaKiem { MaND = t.MaND, GhiChu = string.IsNullOrWhiteSpace(t.GhiChu) ? null : t.GhiChu.Trim() }).ToList();
+
+        // 3. Khởi tạo đối tượng phiếu kiểm và chụp số tồn hệ thống vào ChiTiet
+        var moi = new PhieuKiem
+        {
+            SoPhieu = "TAM" + Guid.NewGuid().ToString("N")[..12],
+            MaKho = p.MaKho,
+            LoaiKiemKe = p.LoaiKiemKe,
+            ThamChieu = thamChieu,
+            DienGiai = dienGiai,
+            ThoiGianBatDau = DateTime.UtcNow,
+            MaNguoiLap = MaNguoiDung(),
+            TrangThai = PhieuKiem.DangKiem,
+            ChiTiet = pham.Select(x => new ChiTietPhieuKiem 
+            { 
+                MaBT = x.MaBT, 
+                MaLo = x.MaLo, 
+                MaViTri = x.MaViTri, 
+                SoLuongHeThong = x.SoLuongTon 
+            }).ToList(),
+            ThamGia = thamGia,
+        };
+
+        // 4. Lưu vào Database trong Transaction, sinh số phiếu chính thức và ghi nhật ký
+        await using var tx = await Db.Database.BeginTransactionAsync();
+        Db.PhieuKiem.Add(moi);
+        await Db.SaveChangesAsync(); 
+        moi.SoPhieu = $"KK{moi.MaPK:D6}";
+        await Db.SaveChangesAsync();
+        await tx.CommitAsync();
+
+        p.MaPK = moi.MaPK;
+        await audit.Ghi(MaNguoiDung(), "Tạo phiếu kiểm", LoaiChungTu.KK, moi.MaPK, moi.SoPhieu);
+        return null;
     }
 
     // ---- Phần xử lý bên trong ----

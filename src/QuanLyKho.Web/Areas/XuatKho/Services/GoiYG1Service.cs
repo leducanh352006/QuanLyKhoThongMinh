@@ -13,8 +13,13 @@ namespace QuanLyKho.Web.Areas.XuatKho.Services;
 /// </summary>
 public interface IGoiYG1Service
 {
-    /// <summary>Phân bổ (MaCTX, MaLo, MaViTri, SoLuong) cho từng dòng phiếu; trả lỗi nếu một dòng không đủ tồn khả dụng hợp lệ.</summary>
-    Task<(List<(int MaCTX, int MaLo, int MaViTri, int SoLuong)> Phan, string? Loi)> PhanBo(PhieuXuat p, CancellationToken ct = default);
+    /// <summary>
+    /// Phân bổ (MaCTX, MaLo, MaViTri, SoLuong) cho từng dòng phiếu; trả lỗi nếu một dòng không đủ tồn khả dụng hợp lệ.
+    /// <paramref name="loaiTru"/> (nếu có) loại hẳn các cặp (MaLo, MaViTri) đó khỏi ứng viên — dùng khi gợi ý lại phần thiếu để
+    /// không đề xuất lại đúng lô/ô vừa lấy thiếu (FEFO/FIFO thường chọn lại đúng lô/ô đó vì khả dụng vừa được trả lại).
+    /// </summary>
+    Task<(List<(int MaCTX, int MaLo, int MaViTri, int SoLuong)> Phan, string? Loi)> PhanBo(
+        PhieuXuat p, CancellationToken ct = default, ISet<(int MaLo, int MaViTri)>? loaiTru = null);
 
     /// <summary>Chuyển phân bổ của <see cref="PhanBo"/> thành các dòng đề xuất (ChiTietGoiYDto) kèm lý do, sắp theo thứ tự đi lấy.</summary>
     Task<(List<ChiTietGoiYDto> ChiTiet, string? Loi)> TaoDeXuat(PhieuXuat p, CancellationToken ct = default);
@@ -29,7 +34,8 @@ public sealed class GoiYG1Service(TimeProvider gio, KhoDbContext? db = null) : I
     /// hạn bị loại hẳn (không gợi ý), còn lại lô hết hạn sớm trước, không có hạn thì lô mã nhỏ trước (xấp xỉ "nhập trước", đúng
     /// Bảng 1.4). Dùng chung cho cả việc tạo gợi ý G1 lẫn Duyệt tay trực tiếp.
     /// </summary>
-    public async Task<(List<(int MaCTX, int MaLo, int MaViTri, int SoLuong)> Phan, string? Loi)> PhanBo(PhieuXuat p, CancellationToken ct = default)
+    public async Task<(List<(int MaCTX, int MaLo, int MaViTri, int SoLuong)> Phan, string? Loi)> PhanBo(
+        PhieuXuat p, CancellationToken ct = default, ISet<(int MaLo, int MaViTri)>? loaiTru = null)
     {
         var homNay = DateOnly.FromDateTime(gio.GetUtcNow().UtcDateTime);
         var phan = new List<(int, int, int, int)>();
@@ -38,7 +44,7 @@ public sealed class GoiYG1Service(TimeProvider gio, KhoDbContext? db = null) : I
         foreach (var d in p.ChiTiet)
         {
             var canLay = d.SoLuong;
-            var ungVien = await (
+            var ungVien = (await (
                 from t in Db.TonKho
                 join l in Db.LoHang on t.MaLo equals l.MaLo
                 join v in Db.ViTri on t.MaViTri equals v.MaViTri
@@ -46,7 +52,7 @@ public sealed class GoiYG1Service(TimeProvider gio, KhoDbContext? db = null) : I
                       && !v.DangKhoa && (l.HanDung == null || l.HanDung >= homNay) && l.MaBT == d.MaBT
                 orderby l.HanDung ?? DateOnly.MaxValue, l.MaLo
                 select new { l.MaLo, t.MaViTri, KhaDung = t.SoLuongTon - t.SoLuongGiu }
-            ).ToListAsync(ct);
+            ).ToListAsync(ct)).Where(u => loaiTru is null || !loaiTru.Contains((u.MaLo, u.MaViTri))).ToList();
 
             foreach (var u in ungVien)
             {

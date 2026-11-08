@@ -131,19 +131,4 @@ namespace QuanLyKho.Web.Areas.HangHoa.Models
         {
             b.ToTable("ThamGiaKiem");
             b.HasKey(x => new { x.MaPK, x.MaND });
-            b.Property(x => x.GhiChu).HasMaxLength(255);
-            b.HasOne(x => x.NguoiDung).WithMany().HasForeignKey(x => x.MaND).OnDelete(DeleteBehavior.Restrict);
-        }
-    }
-}
-
-namespace QuanLyKho.Web.Data
-{
-    /// <summary>Gắn ba bảng kiểm kê vào DbContext dùng chung (không sửa KhoDbContext.cs).</summary>
-    public partial class KhoDbContext
-    {
-        public DbSet<Areas.HangHoa.Models.PhieuKiem> PhieuKiem => Set<Areas.HangHoa.Models.PhieuKiem>();
-        public DbSet<Areas.HangHoa.Models.ChiTietPhieuKiem> ChiTietPhieuKiem => Set<Areas.HangHoa.Models.ChiTietPhieuKiem>();
-        public DbSet<Areas.HangHoa.Models.ThamGiaKiem> ThamGiaKiem => Set<Areas.HangHoa.Models.ThamGiaKiem>();
-    }
-}
+            b.Property(x => x.GhiChu).HasMaxLength(2

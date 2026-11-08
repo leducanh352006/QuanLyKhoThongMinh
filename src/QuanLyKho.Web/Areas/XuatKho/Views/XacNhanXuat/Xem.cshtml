@@ -1,0 +1,43 @@
+@using QuanLyKho.Web.Areas.XuatKho.Models
+@using QuanLyKho.Web.Areas.XuatKho.Services
+@model (PhieuXuat Phieu, IReadOnlyList<DongXacNhanXuat> Dong)
+@{
+    var p = Model.Phieu;
+    var dong = Model.Dong;
+    ViewData["Title"] = $"Xác nhận xuất phiếu {p.SoPhieu}";
+}
+
+<header class="trang-dau">
+    <h1>Xác nhận xuất phiếu @p.SoPhieu</h1>
+    <p class="mota">
+        Kho @(p.Kho?.TenKho) · Đã đối chiếu khớp với số thực lấy — xác nhận để ghi giảm tồn kho và hoàn tất phiếu.
+    </p>
+</header>
+
+@if (TempData["ThongBao"] is string tb) { <div class="alert alert-success" role="status">@tb</div> }
+@if (TempData["Loi"] is string loi) { <div class="alert alert-danger" role="alert">@loi</div> }
+
+<div class="bang-cuon">
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr><th scope="col">Hàng</th><th scope="col" class="text-end">Số lượng xuất</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var d in dong)
+            {
+                <tr>
+                    <td>@d.TenHang</td>
+                    <td class="text-end">@d.SoLuong</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<form method="post" asp-action="XacNhan" asp-route-id="@p.MaPX" class="d-flex flex-wrap gap-2 mt-3">
+    <button type="submit" class="btn btn-danger btn-lg"
+            onclick="return confirm('Xác nhận xuất phiếu @p.SoPhieu? Thao tác này sẽ ghi giảm tồn kho thật theo đúng số đã lấy ở trên — không thể hoàn tác bằng cách bấm lại. Phiếu sẽ bị khóa hoàn toàn (Hoàn tất).');">
+        Xác nhận xuất
+    </button>
+    <a class="btn btn-outline-secondary" asp-action="Index">Quay lại danh sách</a>
+</form>

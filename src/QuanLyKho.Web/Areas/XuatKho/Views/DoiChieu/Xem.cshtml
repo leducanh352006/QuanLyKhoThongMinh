@@ -39,7 +39,17 @@
     </table>
 </div>
 
-<form method="post" asp-action="XacNhan" asp-route-id="@p.MaPX" class="d-flex flex-wrap gap-2 mt-3">
-    <button type="submit" class="btn btn-success btn-lg">@(coThieu ? "Đối chiếu (gợi ý lại phần thiếu hoặc xuất một phần)" : "Đối chiếu, chuyển bước xác nhận xuất")</button>
-    <a class="btn btn-outline-secondary" asp-action="Index">Quay lại danh sách</a>
-</form>
+@if (p.TrangThai == PhieuXuat.DaDoiChieu)
+{
+    <p class="d-flex flex-wrap gap-2 mt-3">
+        <a class="btn btn-primary btn-lg" asp-controller="XacNhanXuat" asp-action="Xem" asp-route-id="@p.MaPX">Đã khớp — sang bước xác nhận xuất</a>
+        <a class="btn btn-outline-secondary" asp-action="Index">Quay lại danh sách</a>
+    </p>
+}
+else
+{
+    <form method="post" asp-action="XacNhan" asp-route-id="@p.MaPX" class="d-flex flex-wrap gap-2 mt-3">
+        <button type="submit" class="btn btn-success btn-lg">@(coThieu ? "Đối chiếu (gợi ý lại phần thiếu hoặc xuất một phần)" : "Đối chiếu, chuyển bước xác nhận xuất")</button>
+        <a class="btn btn-outline-secondary" asp-action="Index">Quay lại danh sách</a>
+    </form>
+}

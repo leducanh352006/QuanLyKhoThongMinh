@@ -112,9 +112,10 @@ public class DoiChieuServiceTests
         e.Db.ViTri.AddRange(oA, oB);
         await e.Db.SaveChangesAsync();
 
-        var homNay = DateOnly.FromDateTime(DateTime.UtcNow);
-        var loA = await LoHangAsync(e.Db, e.MaBT, hanDung: homNay.AddDays(30));   // hạn xa hơn — FEFO không ưu tiên
-        var loB = await LoHangAsync(e.Db, e.MaBT, hanDung: homNay.AddDays(5));    // hạn gần hơn — FEFO ưu tiên gợi ý lại ở đây
+        // Cố ý KHÔNG đặt hạn dùng lệch nhau: lô A (vừa lấy thiếu) không có hạn và được tạo trước nên FEFO/FIFO vẫn xếp A lên đầu
+        // — đúng tình huống hay gặp nhất (lô ưu tiên G1 cũng là lô hay thiếu nhất). Phải tự loại A khỏi ứng viên mới ra đúng lô B.
+        var loA = await LoHangAsync(e.Db, e.MaBT);
+        var loB = await LoHangAsync(e.Db, e.MaBT);
         await TonAsync(e.Db, loA, oA.MaViTri, soLuongTon: 10, soLuongGiu: 10);   // đã giữ 10, chỉ lấy được 6 (thiếu 4)
         await TonAsync(e.Db, loB, oB.MaViTri, soLuongTon: 20, soLuongGiu: 0);    // còn tồn để gợi ý lại
         e.Db.LayHang.Add(new LayHang { MaCTX = e.MaCTX, MaLo = loA, MaViTri = oA.MaViTri, SLGiu = 10, SLThucLay = 6, LyDoLech = "Kệ chỉ còn 6." });
@@ -128,13 +129,28 @@ public class DoiChieuServiceTests
         Assert.Equal(PhieuXuat.DangLayHang, p.TrangThai);   // chưa chuyển Đã đối chiếu
         Assert.Equal(10, (await e.Db.ChiTietPhieuXuat.AsNoTracking().SingleAsync(c => c.MaCTX == e.MaCTX)).SoLuong);   // yêu cầu không đổi
 
-        // Lô A: trả lại đúng phần dư (10 - 6 = 4) nên khả dụng trở lại 4.
+        // Lô A: trả lại đúng phần dư (10 - 6 = 4) nên khả dụng trở lại 4 — nhưng KHÔNG được chọn lại (đã loại khỏi ứng viên).
         Assert.Equal(4, await KhaDungAsync(e.Db, loA, oA.MaViTri));
+        Assert.False(await e.Db.LayHang.AnyAsync(l => l.MaLo == loA && l.SLThucLay == null));   // không có dòng giữ chỗ mới nào ở lô A
         // Lô B: gợi ý lại giữ đúng 4 còn thiếu.
         Assert.Equal(16, await KhaDungAsync(e.Db, loB, oB.MaViTri));
         var moiLayHang = await e.Db.LayHang.AsNoTracking().SingleAsync(l => l.MaLo == loB && l.MaViTri == oB.MaViTri);
         Assert.Equal(4, moiLayHang.SLGiu);
         Assert.Null(moiLayHang.SLThucLay);
+
+        // Thủ kho lấy xong phần vừa gợi ý lại ở lô B rồi đối chiếu lần hai: phải khớp đủ, và lô A KHÔNG bị trả chỗ thêm lần nữa
+        // (trước khi sửa, SLGiu của dòng lô A không được chốt lại nên lần hai vẫn thấy SLThucLay 6 < SLGiu 10 và trả nhầm thêm 4).
+        var layHangLoB = await e.Db.LayHang.SingleAsync(l => l.MaLo == loB && l.MaViTri == oB.MaViTri);
+        layHangLoB.SLThucLay = 4;
+        await e.Db.SaveChangesAsync();
+
+        var kq2 = await e.Service.DoiChieu(e.MaPX, MaNguoiDoiChieu);
+
+        Assert.True(kq2.ThanhCong, kq2.ThongBao);
+        Assert.True(kq2.GiaTri);   // khớp đủ lần này (6 + 4 = 10)
+        Assert.Equal(PhieuXuat.DaDoiChieu, (await e.Db.PhieuXuat.AsNoTracking().SingleAsync(x => x.MaPX == e.MaPX)).TrangThai);
+        Assert.Equal(6, (await e.Db.TonKho.AsNoTracking().SingleAsync(t => t.MaLo == loA && t.MaViTri == oA.MaViTri)).SoLuongGiu);   // không bị trả nhầm lần hai
+        Assert.Equal(4, (await e.Db.TonKho.AsNoTracking().SingleAsync(t => t.MaLo == loB && t.MaViTri == oB.MaViTri)).SoLuongGiu);
     });
 
     [CanSqlServerFact]
@@ -197,5 +213,26 @@ public class DoiChieuServiceTests
 
         Assert.False(kq.ThanhCong);
         Assert.Equal(PhieuXuat.DangLayHang, (await e.Db.PhieuXuat.AsNoTracking().SingleAsync(x => x.MaPX == e.MaPX)).TrangThai);
+    });
+
+    [CanSqlServerFact]
+    public async Task Xem_DongLech_CoLyDoLech() => await DungAsync(async e =>
+    {
+        var o = OLuuTru(e.MaDay, "O-Xem");
+        e.Db.ViTri.Add(o);
+        await e.Db.SaveChangesAsync();
+        var maLo = await LoHangAsync(e.Db, e.MaBT);
+        await TonAsync(e.Db, maLo, o.MaViTri, soLuongTon: 10, soLuongGiu: 10);
+        e.Db.LayHang.Add(new LayHang { MaCTX = e.MaCTX, MaLo = maLo, MaViTri = o.MaViTri, SLGiu = 10, SLThucLay = 6, LyDoLech = "Kệ chỉ còn 6." });
+        await e.Db.SaveChangesAsync();
+
+        var kq = await e.Service.Xem(e.MaPX);
+
+        Assert.True(kq.ThanhCong, kq.ThongBao);
+        var dong = Assert.Single(kq.GiaTri!);
+        Assert.Equal(10, dong.YeuCau);
+        Assert.Equal(6, dong.DaLay);
+        Assert.Equal(4, dong.Thieu);
+        Assert.Equal("Kệ chỉ còn 6.", dong.LyDoLech);
     });
 }

@@ -22,7 +22,7 @@
 <div class="bang-cuon">
     <table class="table table-sm align-middle">
         <thead>
-            <tr><th scope="col">Hàng</th><th scope="col" class="text-end">Yêu cầu</th><th scope="col" class="text-end">Đã lấy</th><th scope="col" class="text-end">Thiếu</th></tr>
+            <tr><th scope="col">Hàng</th><th scope="col" class="text-end">Yêu cầu</th><th scope="col" class="text-end">Đã lấy</th><th scope="col" class="text-end">Thiếu</th><th scope="col">Lý do lệch</th></tr>
         </thead>
         <tbody>
             @foreach (var d in dong)
@@ -32,6 +32,7 @@
                     <td class="text-end">@d.YeuCau</td>
                     <td class="text-end">@d.DaLay</td>
                     <td class="text-end">@(d.Thieu > 0 ? d.Thieu.ToString() : "—")</td>
+                    <td>@(d.LyDoLech ?? "—")</td>
                 </tr>
             }
         </tbody>

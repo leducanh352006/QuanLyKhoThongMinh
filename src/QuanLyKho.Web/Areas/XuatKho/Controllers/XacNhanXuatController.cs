@@ -35,6 +35,11 @@ public class XacNhanXuatController(INguoiDungHienTai hienTai, IStockService ton,
     {
         var p = await Db.PhieuXuat.AsNoTracking().Include(x => x.Kho).FirstOrDefaultAsync(x => x.MaPX == id);
         if (p is null) return NotFound();
+        if (p.TrangThai != PhieuXuat.DaDoiChieu)
+        {
+            TempData["Loi"] = $"Phiếu {p.SoPhieu} đang {p.TrangThai}, không xác nhận xuất được.";
+            return RedirectToAction(nameof(Index));
+        }
 
         var kq = await Dv.Xem(id);
         if (!kq.ThanhCong)

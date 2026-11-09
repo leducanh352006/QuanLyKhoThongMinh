@@ -14,6 +14,9 @@ public sealed record DongXacNhanXuat(int MaBT, string TenHang, int SoLuong);
 /// (giảm cả SoLuongTon lẫn SoLuongGiu, vì hàng đã được giữ chỗ từ khi duyệt — T2-3), rồi khóa phiếu (Hoàn tất). Idempotent với
 /// bấm lại: <see cref="IStockService"/> tự chống ghi sổ cái hai lần cho cùng (chứng từ, loại, lô, ô, số lượng), và việc chuyển
 /// trạng thái dùng <c>ExecuteUpdateAsync</c> có điều kiện "còn đúng Đã đối chiếu" nên hai yêu cầu đồng thời chỉ một cái thắng.
+/// <para>Gộp các dòng LayHang theo (MaLo, MaViTri) trước khi gọi GhiGiam: nếu hai dòng của phiếu (ví dụ hai dòng cùng biến thể
+/// được PhanBo phân vào cùng một lô/ô) có cùng số lượng thực lấy, StockService.GhiGiam coi lần gọi thứ hai là trùng với lần
+/// đầu (cùng chứng từ, loại, lô, ô, số lượng) và bỏ qua — gọi gộp một lần cho mỗi (lô, ô) tránh thiếu tồn bị trừ.</para>
 /// </summary>
 public sealed class XacNhanXuatService(KhoDbContext db, IStockService ton, IAuditService audit)
 {
@@ -46,11 +49,14 @@ public sealed class XacNhanXuatService(KhoDbContext db, IStockService ton, IAudi
 
         await using var giaoDichMoi = db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync(ct) : null;
 
-        foreach (var l in layHang.Where(l => l.SLThucLay is > 0))
+        var theoLoO = layHang.Where(l => l.SLThucLay is > 0)
+            .GroupBy(l => (l.MaLo, l.MaViTri))
+            .Select(g => new DongTon(g.Key.MaLo, g.Key.MaViTri, g.Sum(l => l.SLThucLay!.Value)));
+
+        foreach (var dong in theoLoO)
         {
             var ketQua = await ton.GhiGiam(
-                new DongTon(l.MaLo, l.MaViTri, l.SLThucLay!.Value), LoaiBienDong.XuatKho,
-                new ThamChieuChungTu(LoaiChungTu.XK, maPX), maND, tuGiuCho: true, ct);
+                dong, LoaiBienDong.XuatKho, new ThamChieuChungTu(LoaiChungTu.XK, maPX), maND, tuGiuCho: true, ct);
             if (!ketQua.ThanhCong)
             {
                 if (giaoDichMoi is not null) await giaoDichMoi.RollbackAsync(ct);

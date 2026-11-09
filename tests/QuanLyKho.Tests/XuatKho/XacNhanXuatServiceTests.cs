@@ -124,6 +124,36 @@ public class XacNhanXuatServiceTests
     });
 
     [CanSqlServerFact]
+    public async Task XacNhan_HaiDongCungLoO_GhiGiamGopKhongBiMatMotLan() => await DungAsync(PhieuXuat.DaDoiChieu, async e =>
+    {
+        // Hai dòng ChiTietPhieuXuat cùng biến thể được PhanBo phân vào CHUNG một (lô, ô) — vẫn hợp lệ vì LayHang unique theo
+        // (MaCTX, MaLo, MaViTri), không phải theo (MaLo, MaViTri). Mỗi dòng lấy đủ 5 (SLThucLay bằng nhau) để lộ ra lỗi
+        // StockService.GhiGiam coi lần gọi GhiGiam thứ hai là trùng (cùng chứng từ, loại, lô, ô, số lượng) nếu gọi riêng từng dòng.
+        var dongThu2 = new ChiTietPhieuXuat { MaPX = e.MaPX, MaBT = e.MaBT, SoLuong = 5 };
+        e.Db.ChiTietPhieuXuat.Add(dongThu2);
+        await e.Db.SaveChangesAsync();
+
+        var o = OLuuTru(e.MaDay, "O-TrungLo");
+        e.Db.ViTri.Add(o);
+        await e.Db.SaveChangesAsync();
+        var maLo = await LoHangAsync(e.Db, e.MaBT);
+        await TonAsync(e.Db, maLo, o.MaViTri, soLuongTon: 20, soLuongGiu: 10);
+        e.Db.LayHang.Add(new LayHang { MaCTX = e.MaCTX, MaLo = maLo, MaViTri = o.MaViTri, SLGiu = 5, SLThucLay = 5 });
+        e.Db.LayHang.Add(new LayHang { MaCTX = dongThu2.MaCTX, MaLo = maLo, MaViTri = o.MaViTri, SLGiu = 5, SLThucLay = 5 });
+        await e.Db.SaveChangesAsync();
+
+        var kq = await e.Service.XacNhan(e.MaPX, MaNguoiXacNhan);
+
+        Assert.True(kq.ThanhCong, kq.ThongBao);
+        var ton = await e.Db.TonKho.AsNoTracking().SingleAsync(t => t.MaLo == maLo && t.MaViTri == o.MaViTri);
+        Assert.Equal(10, ton.SoLuongTon);   // 20 - (5 + 5) = 10, không phải 20 - 5 = 15
+        Assert.Equal(0, ton.SoLuongGiu);
+        var soCai = await e.Db.BienDongTon.AsNoTracking().Where(b => b.MaLo == maLo && b.MaViTri == o.MaViTri).ToListAsync();
+        var dong = Assert.Single(soCai);
+        Assert.Equal(-10, dong.SoLuong);   // một dòng sổ cái, gộp đủ cả hai dòng hàng
+    });
+
+    [CanSqlServerFact]
     public async Task XacNhan_GoiLaiLanHai_KhongGhiGiamThemLan2() => await DungAsync(PhieuXuat.DaDoiChieu, async e =>
     {
         var o = OLuuTru(e.MaDay, "O-GoiLaiLan2");

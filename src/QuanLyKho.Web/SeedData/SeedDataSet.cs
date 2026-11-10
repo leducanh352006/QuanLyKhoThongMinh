@@ -107,6 +107,16 @@ public static class SeedDataSet
         new(5, 11, 5, 0),     // tai nghe, Kho 2 ô A1-02 (sắp hết: dùng demo G3, G4)
     };
 
+    public static readonly IReadOnlyList<TuyenVanChuyenSeed> TuyenVanChuyen = new TuyenVanChuyenSeed[]
+    {
+        new(1, 2, 5000m, 150000m),   // Kho tổng → Kho quầy cửa hàng: tuyến G4 dùng để bổ sung hàng sắp hết ở Kho 2
+    };
+
+    public static readonly IReadOnlyList<DinhMucKhoSeed> DinhMucKho = new DinhMucKhoSeed[]
+    {
+        new(2, 4, 10, 3),   // tai nghe tại Kho 2 đang gần hết (tồn khả dụng 5, xem TonKho) — dùng demo G3
+    };
+
     public static ViTriSeed? TimViTri(int maViTri) => ViTri.FirstOrDefault(v => v.MaViTri == maViTri);
 
     public static BienTheSeed? TimBienThe(int maBT) => BienThe.FirstOrDefault(b => b.MaBT == maBT);

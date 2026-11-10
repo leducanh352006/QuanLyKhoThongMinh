@@ -1,0 +1,27 @@
+@model QuanLyKho.Web.Areas.DieuChuyen.Models.TuyenVanChuyenSuaViewModel
+
+<header class="trang-dau">
+    <h1>Sửa tuyến vận chuyển</h1>
+    <p class="mota">@Model.TenKhoXuat → @Model.TenKhoNhap</p>
+</header>
+
+<form method="post" asp-action="Sua" class="khung-form" novalidate>
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger" role="alert" asp-validation-summary="All"></div>
+    }
+    <input type="hidden" asp-for="MaKhoXuat" />
+    <input type="hidden" asp-for="MaKhoNhap" />
+
+    <div class="mb-3">
+        <label asp-for="DonGiaVC" class="form-label"></label>
+        <input asp-for="DonGiaVC" class="form-control" type="number" step="0.01" min="0" />
+    </div>
+    <div class="mb-3">
+        <label asp-for="PhiChuyen" class="form-label"></label>
+        <input asp-for="PhiChuyen" class="form-control" type="number" step="0.01" min="0" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Lưu</button>
+    <a class="btn btn-outline-secondary" asp-action="Index">Hủy</a>
+</form>

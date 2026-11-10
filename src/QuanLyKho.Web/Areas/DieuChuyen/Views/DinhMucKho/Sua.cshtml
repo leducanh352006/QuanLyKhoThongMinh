@@ -1,0 +1,27 @@
+@model QuanLyKho.Web.Areas.DieuChuyen.Models.DinhMucKhoSuaViewModel
+
+<header class="trang-dau">
+    <h1>Sửa định mức kho</h1>
+    <p class="mota">@Model.TenKho · @Model.TenBienThe</p>
+</header>
+
+<form method="post" asp-action="Sua" class="khung-form" novalidate>
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger" role="alert" asp-validation-summary="All"></div>
+    }
+    <input type="hidden" asp-for="MaKho" />
+    <input type="hidden" asp-for="MaBT" />
+
+    <div class="mb-3">
+        <label asp-for="TonToiThieu" class="form-label"></label>
+        <input asp-for="TonToiThieu" class="form-control" type="number" min="0" />
+    </div>
+    <div class="mb-3">
+        <label asp-for="NgayAnToan" class="form-label"></label>
+        <input asp-for="NgayAnToan" class="form-control" type="number" min="0" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Lưu</button>
+    <a class="btn btn-outline-secondary" asp-action="Index">Hủy</a>
+</form>

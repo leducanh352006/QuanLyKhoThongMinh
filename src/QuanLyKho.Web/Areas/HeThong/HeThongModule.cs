@@ -83,6 +83,7 @@ public static class HeThongModule
         services.AddScoped<INguoiDungQuanLy, NguoiDungQuanLyService>();
         services.AddScoped<IKhoQuanLy, KhoService>();
         services.AddScoped<IViTriQuanLy, ViTriService>();
+        services.AddScoped<IViTriTrucQuanService, ViTriTrucQuanService>();
         services.AddScoped<ILockService, LockService>();   // T4-5: thay bản giả LockServiceStub, khóa/mở ô qua ViTri.DangKhoa
 
         // T4-7: nhật ký thao tác và tệp đính kèm. Bản thật của IAuditService thay AuditServiceStub; chưa có CSDL thì (chỉ Development) dùng bản trong bộ nhớ.

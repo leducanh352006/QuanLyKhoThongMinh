@@ -2,7 +2,7 @@ namespace QuanLyKho.Web.Contracts;
 
 /// <summary>
 /// Lịch sử biến động tồn do Nhóm 1 (TV4) sở hữu, đọc từ sổ cái BienDongTon mà <see cref="IStockService"/> ghi (việc T4-6).
-/// Chỉ đọc, không đổi tồn. Nhóm 5 dùng để tính nhu cầu cho gợi ý G3 (nhập bổ sung) và G4 (luân chuyển kho).
+/// Chỉ đọc, không đổi tồn. Ban đầu dành cho G3, G4 (đã bỏ); giữ lại làm dịch vụ tra cứu lịch sử xuất.
 /// </summary>
 public interface ILichSuTonService
 {

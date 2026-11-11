@@ -101,9 +101,9 @@ Nạp lúc seed, chỉ thêm dòng còn thiếu, **không đè** quyền quản 
 
 **GIẢ ĐỊNH cần nhóm xác nhận.** Bảng 2.2 mô tả nhiệm vụ bằng lời, chưa nói rõ từng cờ, nên các ô trên là cách quy đổi của T4-2:
 
-- Thủ kho có Duyệt trên NK vì duyệt gợi ý G2 (xếp hàng) thuộc phiếu nhập. Quản lý kho có Duyệt trên XK, CK, KK vì duyệt phiếu xuất cùng G1, G4 và phát sinh kiểm kê.
+- Thủ kho có Duyệt trên NK vì duyệt gợi ý G2 (xếp hàng) thuộc phiếu nhập. Quản lý kho có Duyệt trên XK, CK, KK vì duyệt phiếu xuất cùng G1 và phát sinh kiểm kê.
 - Quản trị viên "toàn quyền" theo Bảng 2.2, trừ Duyệt phát sinh kiểm kê.
-- Ma trận chỉ có 4 loại chứng từ nên **chưa có cờ riêng** cho: duyệt gợi ý G1 đến G4, lấy hàng, quét xác nhận, "xem tồn và vị trí" của Nhân viên bán hàng. Các nhóm nên chốt gắn vào cờ nào (ví dụ G1 gắn XK.Duyệt, G4 gắn CK.Duyệt) rồi dùng `[CanQuyen]` tương ứng.
+- Ma trận chỉ có 4 loại chứng từ nên **chưa có cờ riêng** cho: duyệt gợi ý G1, G2, lấy hàng, quét xác nhận, "xem tồn và vị trí" của Nhân viên bán hàng. Các nhóm nên chốt gắn vào cờ nào (ví dụ G1 gắn XK.Duyệt, G4 gắn CK.Duyệt) rồi dùng `[CanQuyen]` tương ứng.
 - Quyền duyệt phát sinh của phiếu kiểm **chỉ gán cho Quản lý kho** (Bảng 2.2, ghi chú dưới bảng). Hệ thống từ chối lưu nếu gán cho vai trò khác.
 
 ## Quy tắc đã cài (thêm ngoài danh sách của issue, để tránh khóa nhầm hệ thống)
@@ -249,14 +249,14 @@ Báo cáo: Bảng 2.26 (NhatKyThaoTac, TepDinhKem), Bảng 2.3 dòng 7.
 
 # Khung gợi ý AI dùng chung (việc T4-8, issue #32)
 
-Báo cáo: mục 1.1.5, 1.2.4 (vòng đời gợi ý), Bảng 1.3 (bốn bài toán G1 đến G4), Bảng 2.26.
+Báo cáo: mục 1.1.5, 1.2.4 (vòng đời gợi ý), Bảng 1.3 (bài toán G1, G2; G3, G4 đã bỏ), Bảng 2.26.
 
 ## Đã làm
 
-- Bảng `GoiYAI` và `ChiTietGoiY` qua EF Core, đúng tên cột ở issue. CHECK: loại G1–G4; trạng thái theo Bảng 2.16; đã xử lý thì phải có người duyệt và thời điểm, chưa xử lý thì không; tham chiếu phiếu theo loại (G1 đúng một phiếu xuất, G2 đúng một phiếu nhập, G3 chỉ phiếu nhập, G4 chỉ phiếu chuyển); số lượng dương; lý do không rỗng; kho đi khác kho đến.
+- Bảng `GoiYAI` và `ChiTietGoiY` qua EF Core, đúng tên cột ở issue. CHECK: loại G1, G2; trạng thái theo Bảng 2.16; đã xử lý thì phải có người duyệt và thời điểm, chưa xử lý thì không; tham chiếu phiếu theo loại (G1 đúng một phiếu xuất, G2 đúng một phiếu nhập); số lượng dương; lý do không rỗng; kho đi khác kho đến.
 - `GoiYService : IGoiYService` thay `GoiYServiceStub` (không đổi interface). Hàm lưu gợi ý trong interface tên là `Tao` (issue ghi `Luu`).
-- **Ba cách xử lý**: Duyệt, Sửa rồi duyệt, Từ chối (kèm lý do, ghi vào nhật ký). Thẩm quyền kiểm ở máy chủ theo `QuyTacGoiY`: G1, G3, G4 là Quản lý kho; G2 là Thủ kho; Quản trị viên xử lý được mọi loại.
-- **Tự tạo thao tác**: khi duyệt, khung gọi `IGoiYHandler` của nhóm sở hữu (G1 nhóm 3, G2 nhóm 2, G3 và G4 nhóm 5). Handler chỉ cần trả phiếu nó tạo; ô để trống thì giữ tham chiếu cũ.
+- **Ba cách xử lý**: Duyệt, Sửa rồi duyệt, Từ chối (kèm lý do, ghi vào nhật ký). Thẩm quyền kiểm ở máy chủ theo `QuyTacGoiY`: G1 là Quản lý kho; G2 là Thủ kho; Quản trị viên xử lý được mọi loại.
+- **Tự tạo thao tác**: khi duyệt, khung gọi `IGoiYHandler` của nhóm sở hữu (G1 nhóm 3, G2 nhóm 2). Handler chỉ cần trả phiếu nó tạo; ô để trống thì giữ tham chiếu cũ.
 - **Một giao dịch, một người thắng**: đổi trạng thái là lệnh có điều kiện "đang Chờ duyệt", chạy cùng giao dịch với handler. Hai người duyệt cùng lúc thì handler chỉ chạy một lần, người kia nhận "đã xử lý". Handler thất bại hoặc ném lỗi thì hoàn tác hết, kể cả dữ liệu handler đã ghi trên cùng `KhoDbContext`; gợi ý vẫn Chờ duyệt. Nếu nơi gọi đã mở giao dịch thì khung dùng điểm lưu.
 - **Đường lui**:
   - `GoiYAnToan.Chay(...)` (Contracts): bọc lời gọi thuật toán AI; lỗi hoặc quá 10 giây thì trả `MaLoiDichVu.AiKhongDung` kèm thông báo "làm tay", không bao giờ ném lỗi ra màn hình.
@@ -266,7 +266,7 @@ Báo cáo: mục 1.1.5, 1.2.4 (vòng đời gợi ý), Bảng 1.3 (bốn bài to
   - Màn hình **Gợi ý AI** (`/HeThong/GoiY`): lọc theo loại và trạng thái; trang chi tiết so dòng gốc với dòng đã sửa.
   - Thành phần dùng chung `DuyetGoiY` để nhóm khác nhúng vào phiếu: `@await Component.InvokeAsync("DuyetGoiY", new { loai = LoaiGoiY.G1, maPX = Model.MaPX })`.
 - **Bản gợi ý giả** (chỉ Development):
-  - Nút "Tạo gợi ý mẫu" tạo G1, G3, G4 (và G2 nếu nhập mã phiếu nhập) từ dữ liệu mẫu chung, số liệu khớp công thức của báo cáo.
+  - Nút "Tạo gợi ý mẫu" tạo G1 (và G2 nếu nhập mã phiếu nhập) từ dữ liệu mẫu chung, số liệu khớp công thức của báo cáo.
   - Handler mẫu ghi lại "thao tác" để xem duyệt sinh đúng thao tác; handler mẫu luôn nhường handler thật.
   - Nút "Giả lập AI lỗi" để xem đường lui.
   - Trang thử thành phần nhúng: `/HeThong/ThuNghiem/GoiY?loai=G1&maPX=1`.
@@ -274,7 +274,7 @@ Báo cáo: mục 1.1.5, 1.2.4 (vòng đời gợi ý), Bảng 1.3 (bốn bài to
 ## Các nhóm khác dùng thế nào
 
 1. Tính gợi ý trong `GoiYAnToan.Chay`, rồi `IGoiYService.Tao(loai, thamChieu, chiTiet)`; mỗi dòng phải có lý do kèm số liệu căn cứ.
-2. Đăng ký handler trong module của mình: `services.AddScoped<IGoiYHandler, HandlerG3>();`. Handler chỉ tạo chứng từ; thao tác chạm hàng thật (lấy, xếp, nhận) vẫn do thủ kho quét mã.
+2. Đăng ký handler trong module của mình: `services.AddScoped<IGoiYHandler, HandlerG2>();`. Handler chỉ tạo chứng từ; thao tác chạm hàng thật (lấy, xếp, nhận) vẫn do thủ kho quét mã.
 3. Nhúng `DuyetGoiY` vào màn hình phiếu.
 
 ## Giới hạn đã biết

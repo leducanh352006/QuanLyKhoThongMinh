@@ -63,7 +63,7 @@ public static class HeThongModule
         });
         services.AddScoped<IDbSeeder, TonKhoSeeder>();   // T4-4: thay bản giả StockServiceStub, TonKho/BienDongTon qua EF Core
 
-        // T4-6: lịch sử biến động tồn. Chỉ đọc sổ cái mà IStockService (T4-4) ghi; cùng dịch vụ phục vụ màn hình và ILichSuTonService cho G3, G4.
+        // T4-6: lịch sử biến động tồn. Chỉ đọc sổ cái mà IStockService (T4-4) ghi; cùng dịch vụ phục vụ màn hình và ILichSuTonService.
         services.AddScoped<ILichSuTonStore>(sp =>
         {
             var db = sp.GetService<KhoDbContext>();

@@ -1,80 +1,111 @@
 @model TrangChuViewModel
 
-<header class="trang-dau">
-    <h1>Quản lý kho thông minh</h1>
-    @if (Model.NguoiDung is not null)
-    {
-        <p class="mota">Bạn đang dùng với vai trò <strong>@Model.NguoiDung.TenVaiTro</strong>.</p>
-    }
-    else
-    {
-        <p class="mota">Bạn chưa đăng nhập. <a asp-area="HeThong" asp-controller="TaiKhoan" asp-action="DangNhap">Đăng nhập</a> để dùng hệ thống.</p>
-    }
+<header class="trang-dau trang-dau-hang">
+    <div>
+        <h1>Bàn làm việc quản lý kho</h1>
+        @if (Model.NguoiDung is not null)
+        {
+            <p class="mota">
+                Xin chào <strong>@Model.NguoiDung.HoTen</strong> — bạn đang đăng nhập với vai trò
+                <span class="nhan nhan-lam">@Model.NguoiDung.TenVaiTro</span>.
+            </p>
+        }
+        else
+        {
+            <p class="mota">Bạn chưa đăng nhập. <a asp-area="HeThong" asp-controller="TaiKhoan" asp-action="DangNhap">Đăng nhập</a> để thao tác nghiệp vụ kho.</p>
+        }
+    </div>
 </header>
 
-@if (Model.Nhom.Count > 0)
-{
-    <section aria-labelledby="tieuDeViec">
-        <h2 id="tieuDeViec" class="h5">Chức năng của bạn</h2>
-        <ul class="danh-sach-viec">
-            @foreach (var nhom in Model.Nhom)
-            {
-                foreach (var muc in nhom.Muc)
+<div class="row g-4">
+    <div class="col-12 col-xl-8">
+        @if (Model.Nhom.Count > 0)
+        {
+            <section aria-labelledby="tieuDeViec" class="d-grid gap-3">
+                <h2 id="tieuDeViec" class="visually-hidden">Các phân hệ chức năng theo vai trò</h2>
+                @foreach (var nhom in Model.Nhom)
                 {
-                    <li>
-                        <a asp-area="@muc.Area" asp-controller="@muc.Controller" asp-action="@muc.Action">
-                            <span class="viec-ten">@muc.Ten</span>
-                            <span class="viec-mota">@nhom.Ten · @muc.MoTa</span>
-                        </a>
-                    </li>
+                    <div class="khung-the">
+                        <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                            <h3 class="h6 mb-0 fw-bold text-uppercase tracking-wide text-secondary">@nhom.Ten</h3>
+                            <span class="small text-muted so-bang">@nhom.Muc.Count màn hình</span>
+                        </div>
+                        <ul class="luoi-chuc-nang">
+                            @foreach (var muc in nhom.Muc)
+                            {
+                                <li>
+                                    <a class="the-chuc-nang" asp-area="@muc.Area" asp-controller="@muc.Controller" asp-action="@muc.Action">
+                                        <span class="viec-ten">@muc.Ten</span>
+                                        <span class="viec-mota">@muc.MoTa</span>
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    </div>
                 }
-            }
-        </ul>
-    </section>
-}
+            </section>
+        }
+    </div>
 
-<section class="mt-4" aria-labelledby="tieuDeTrangThai">
-    <h2 id="tieuDeTrangThai" class="h5">Trạng thái hệ thống</h2>
-    <dl class="trang-thai">
-        <dt>Môi trường</dt>
-        <dd>@Model.MoiTruong</dd>
+    <div class="col-12 col-xl-4">
+        <section class="khung-the mb-3" aria-labelledby="tieuDeTrangThai">
+            <h2 id="tieuDeTrangThai" class="h6 fw-bold text-uppercase text-secondary mb-3 pb-2 border-bottom">Trạng thái hệ thống</h2>
+            <dl class="trang-thai">
+                <dt>Môi trường</dt>
+                <dd><code>@Model.MoiTruong</code></dd>
 
-        <dt>Cơ sở dữ liệu</dt>
-        <dd>
-            @switch (Model.Csdl.TrangThai)
-            {
-                case TrangThaiKetNoi.DaKetNoi:
-                    <span class="nhan nhan-tot">Đã kết nối</span>
-                    break;
-                case TrangThaiKetNoi.Loi:
-                    <span class="nhan nhan-loi">Lỗi kết nối</span>
-                    break;
-                default:
-                    <span class="nhan nhan-chu-y">Chưa cấu hình</span>
-                    break;
-            }
-            <span class="trang-thai-chu-thich">@Model.Csdl.ThongBao</span>
-        </dd>
+                <dt>Cơ sở dữ liệu</dt>
+                <dd>
+                    @switch (Model.Csdl.TrangThai)
+                    {
+                        case TrangThaiKetNoi.DaKetNoi:
+                            <span class="nhan nhan-tot">Đã kết nối</span>
+                            break;
+                        case TrangThaiKetNoi.Loi:
+                            <span class="nhan nhan-loi">Lỗi kết nối</span>
+                            break;
+                        default:
+                            <span class="nhan nhan-chu-y">Chế độ bộ nhớ</span>
+                            break;
+                    }
+                    <span class="trang-thai-chu-thich">@Model.Csdl.ThongBao</span>
+                </dd>
+
+                @if (Model.LaDevelopment)
+                {
+                    <dt>Dữ liệu mẫu</dt>
+                    <dd class="so-bang">
+                        @Model.DuLieuMau.Kho kho · @Model.DuLieuMau.ViTri vị trí (@Model.DuLieuMau.O ô) · @Model.DuLieuMau.SanPham sản phẩm ·
+                        @Model.DuLieuMau.BienThe biến thể · @Model.DuLieuMau.Lo lô · @Model.DuLieuMau.NguoiDung tài khoản.
+                    </dd>
+                }
+            </dl>
+        </section>
+
+        <section class="khung-the mb-3" aria-labelledby="tieuDeAI">
+            <h2 id="tieuDeAI" class="h6 fw-bold text-uppercase text-secondary mb-2 pb-2 border-bottom">Hai gợi ý AI cốt lõi</h2>
+            <div class="small text-muted d-grid gap-2">
+                <div>
+                    <strong class="text-dark">G1 — Lấy hàng xuất kho:</strong>
+                    Lọc ràng buộc cứng + ưu tiên hạn dùng FEFO/FIFO + sắp lộ trình cây vị trí một chiều.
+                </div>
+                <div>
+                    <strong class="text-dark">G2 — Sắp xếp hàng nhập kho:</strong>
+                    Kiểm lọt lòng kích thước 3D (D×R×C), tải trọng + chấm điểm Heuristic đa tiêu chí (S = 0,5·Gần + 0,3·CùngLoại + 0,2·LấpĐầy).
+                </div>
+            </div>
+        </section>
 
         @if (Model.LaDevelopment)
         {
-            <dt>Dữ liệu mẫu</dt>
-            <dd>
-                @Model.DuLieuMau.Kho kho, @Model.DuLieuMau.ViTri vị trí (@Model.DuLieuMau.O ô), @Model.DuLieuMau.SanPham sản phẩm,
-                @Model.DuLieuMau.BienThe biến thể, @Model.DuLieuMau.Lo lô, @Model.DuLieuMau.NguoiDung người dùng.
-            </dd>
+            <section class="ghi-chu-dev" aria-labelledby="tieuDeDev">
+                <h2 id="tieuDeDev" class="h6 fw-bold mb-1">Dành cho nhóm phát triển</h2>
+                <p class="small">
+                    Tài khoản mẫu: <code>quantri</code>, <code>quanlykho</code>, <code>thukho</code>, <code>nhanvienbh</code>.
+                    Mật khẩu đặt tại <code>Auth:SeedPassword</code>.
+                    <a asp-area="HeThong" asp-controller="ThuNghiem" asp-action="QuetMa">Thử thành phần quét mã</a>.
+                </p>
+            </section>
         }
-    </dl>
-</section>
-
-@if (Model.LaDevelopment)
-{
-    <section class="mt-4 ghi-chu-dev" aria-labelledby="tieuDeDev">
-        <h2 id="tieuDeDev" class="h6">Dành cho nhóm phát triển</h2>
-        <p>
-            Đăng nhập bằng từng tài khoản mẫu (<code>quantri</code>, <code>quanlykho</code>, <code>thukho</code>, <code>nhanvienbh</code>) để xem menu của từng vai trò.
-            Mật khẩu mẫu đặt bằng User Secrets <code>Auth:SeedPassword</code>, xem <code>Areas/HeThong/README.md</code>.
-            <a asp-area="HeThong" asp-controller="ThuNghiem" asp-action="QuetMa">Thử thành phần quét mã</a>.
-        </p>
-    </section>
-}
+    </div>
+</div>

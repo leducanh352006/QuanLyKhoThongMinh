@@ -66,6 +66,18 @@ public class SapXepController(INguoiDungHienTai hienTai, IStockService ton, ICap
 
     // ---- Ghi ----
 
+    /// <summary>
+    /// Gợi ý G2 (việc T1-3): AI đề xuất ô cho các dòng hàng đạt chưa lập lệnh, lưu ở trạng thái Chờ duyệt; thủ kho duyệt ở khung DuyetGoiY của màn hình Xep.
+    /// Bọc bằng GoiYAnToan.Chay: AI lỗi hay quá thời gian chỉ hiện thông báo, lập lệnh tay ở LapLenh vẫn dùng bình thường.
+    /// </summary>
+    [HttpPost, ValidateAntiForgeryToken, CanQuyen(LoaiChungTu.NK, QuyenThaoTac.Sua)]
+    public async Task<IActionResult> TaoGoiY(int id)
+    {
+        var kq = await GoiYAnToan.Chay(ct => new GoiYG2Service(Db, sucChua, goiY, audit).TaoGoiY(id, MaNguoiDung(), ct), ct: HttpContext.RequestAborted);
+        TempData[kq.ThanhCong ? "ThongBao" : "Loi"] = kq.ThongBao;
+        return RedirectToAction(nameof(Xep), new { id });
+    }
+
     [HttpPost, ValidateAntiForgeryToken, CanQuyen(LoaiChungTu.NK, QuyenThaoTac.Sua)]
     public async Task<IActionResult> LapLenh(int id, int maCTN, int maViTri, int soLuong, bool tuChia)
     {

@@ -27,7 +27,7 @@ public sealed class CanSqlServerFactAttribute : FactAttribute
     }
 }
 
-/// <summary>Kiểm thử việc T1-8 (hàm cho nhóm khác gọi: phiếu Thừa và phiếu nháp G3).</summary>
+/// <summary>Kiểm thử việc T1-8 (hàm cho nhóm khác gọi: phiếu Thừa và phiếu nháp, vốn dành cho G3 đã bỏ).</summary>
 public class NhapKhoServiceTests
 {
     private const int MaPKThu = 987654;

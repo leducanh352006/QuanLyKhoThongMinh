@@ -10,7 +10,7 @@ public class TrangChuController : Controller
     {
         ViewData["Title"] = "Điều chuyển kho";
         ViewData["MoTa"] = "Phiếu chuyển kho, tuyến vận chuyển, định mức kho.";
-        ViewData["Nhom"] = "Nhóm 5 – Điều chuyển giữa các kho (kèm gợi ý G3, G4)";
+        ViewData["Nhom"] = "Nhóm 5 – Điều chuyển giữa các kho";
         ViewData["NguoiPhuTrach"] = "TV5 Nguyễn Minh Hiếu";
         return View();
     }

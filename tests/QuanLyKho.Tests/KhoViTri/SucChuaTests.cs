@@ -104,4 +104,72 @@ public class SucChuaTests
         o.TrangThai = TrangThaiHoatDong.NgungHoatDong;
         Assert.False(QuyTacSucChua.Tinh(o, 1m, 1m, 1, 0, 0).Du);
     }
+
+    [Fact]
+    public void KichThuoc3Chieu_VuotChieuDai_DuTheTichNho_BiTuChoi()
+    {
+        var o = new ViTri
+        {
+            MaViTri = 3, TenViTri = "Ô A1-01", CapViTri = CapViTriGiaTri.O, LoaiViTri = LoaiViTriGiaTri.LuuTru,
+            Dai = 100, Rong = 60, Cao = 50, KhoiLuongToiDa = 120
+        };
+        // Cây đèn dài 115x10x10 cm (11.500 cm3 << 300.000 cm3) nhưng cạnh dài nhất 115 > 100 nên không lọt lòng ô.
+        var kq = QuyTacSucChua.Tinh(o, 115m, 10m, 10m, 0.6m, 1, 0, 0);
+        Assert.False(kq.Du);
+        Assert.Equal(0, kq.SoLuongToiDaThem);
+        Assert.Equal(MaLoiDichVu.VuotSucChua, kq.MaLoi);
+        Assert.Contains("115×10×10", kq.LyDo);
+        Assert.Contains("100×60×50", kq.LyDo);
+    }
+
+    [Fact]
+    public void KichThuoc3Chieu_XoayHop6Huong_VuaLongO_ChapNhan()
+    {
+        var o = new ViTri
+        {
+            MaViTri = 3, TenViTri = "Ô A1-01", CapViTri = CapViTriGiaTri.O, LoaiViTri = LoaiViTriGiaTri.LuuTru,
+            Dai = 100, Rong = 60, Cao = 50, KhoiLuongToiDa = 120
+        };
+        // Khai báo ngược thứ tự 55x95x45 cm -> sắp tăng dần (45, 55, 95) <= (50, 60, 100): xoay hộp đặt vừa 1 thùng.
+        var kq = QuyTacSucChua.Tinh(o, 55m, 95m, 45m, 5m, 1, 0, 0);
+        Assert.True(kq.Du);
+        Assert.Equal(1, kq.SoLuongToiDaThem);
+    }
+
+    [Fact]
+    public void KichThuoc3Chieu_CanhGiuaVuotQua_BiTuChoi()
+    {
+        var o = new ViTri
+        {
+            MaViTri = 3, TenViTri = "Ô A1-01", CapViTri = CapViTriGiaTri.O, LoaiViTri = LoaiViTriGiaTri.LuuTru,
+            Dai = 100, Rong = 60, Cao = 50, KhoiLuongToiDa = 120
+        };
+        // Cạnh nhỏ nhất 40 <= 50, lớn nhất 80 <= 100, nhưng cạnh giữa 65 > 60 nên bất kỳ hướng xoay nào cũng cấn.
+        var kq = QuyTacSucChua.Tinh(o, 80m, 65m, 40m, 2m, 1, 0, 0);
+        Assert.False(kq.Du);
+        Assert.Equal(0, kq.SoLuongToiDaThem);
+        Assert.Equal(MaLoiDichVu.VuotSucChua, kq.MaLoi);
+    }
+
+    [Fact]
+    public void KichThuoc3Chieu_CanhKhongDuong_BaoDuLieuKhongHopLe()
+    {
+        var kq = QuyTacSucChua.Tinh(O(), 0m, 10m, 10m, 1m, 1, 0, 0);
+        Assert.False(kq.Du);
+        Assert.Equal(MaLoiDichVu.DuLieuKhongHopLe, kq.MaLoi);
+
+        var kqKhoi = QuyTacSucChua.Tinh(O(), 10m, 10m, 10m, 0m, 1, 0, 0);
+        Assert.False(kqKhoi.Du);
+        Assert.Equal(MaLoiDichVu.DuLieuKhongHopLe, kqKhoi.MaLoi);
+    }
+
+    [Fact]
+    public void KichThuoc3Chieu_OTiepNhan_KhongGioiHanKichThuoc()
+    {
+        var o = O(LoaiViTriGiaTri.TiepNhan);
+        o.Dai = o.Rong = o.Cao = o.KhoiLuongToiDa = null;
+        var kq = QuyTacSucChua.Tinh(o, 500m, 500m, 500m, 100m, 50, 0, 0);
+        Assert.True(kq.Du);
+        Assert.Null(kq.SoLuongToiDaThem);
+    }
 }

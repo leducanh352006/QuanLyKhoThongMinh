@@ -10,25 +10,31 @@ namespace QuanLyKho.Web.Areas.HeThong.Controllers;
 /// <summary>Cây vị trí nhiều cấp của một kho: thêm, sửa, khóa (xóa mềm), xóa cứng. Xem được cả Thủ kho; sửa đổi chỉ Quản trị viên, Quản lý kho.</summary>
 [Area("HeThong")]
 [Authorize(Roles = VaiTroTen.QuanTriVien + "," + VaiTroTen.QuanLyKho + "," + VaiTroTen.ThuKho)]
-public class ViTriController(IViTriQuanLy viTri, IKhoQuanLy kho, INguoiDungHienTai hienTai, ILockService khoaO) : Controller
+public class ViTriController(
+    IViTriQuanLy viTri,
+    IKhoQuanLy kho,
+    INguoiDungHienTai hienTai,
+    ILockService khoaO,
+    IViTriTrucQuanService trucQuan) : Controller
 {
     [HttpGet]
-    public async Task<IActionResult> Index(int? maKho, CancellationToken ct)
+    public async Task<IActionResult> Index(int? maKho, int? maBTThu, int? soLuongThu, string? cheDo, CancellationToken ct)
     {
         var dsKho = await kho.LayDanhSach(ct);
         var chonKho = dsKho.FirstOrDefault(k => k.MaKho == maKho) ?? dsKho.FirstOrDefault();
         if (chonKho is null)
         {
-            ViewData["Title"] = "Vị trí";
+            ViewData["Title"] = "Sơ đồ vị trí kho";
             return View("ChuaCoKho");
         }
 
-        var kq = await viTri.LayCay(chonKho.MaKho, ct);
-        ViewData["Title"] = "Vị trí";
+        var slThu = maBTThu.HasValue ? Math.Max(1, soLuongThu ?? 10) : (int?)null;
+        var vm = await trucQuan.XayDung(chonKho.MaKho, chonKho.TenKho, maBTThu, slThu, cheDo, ct);
+        ViewData["Title"] = "Sơ đồ vị trí kho";
         ViewData["DanhSachKho"] = new SelectList(dsKho, "MaKho", "TenKho", chonKho.MaKho);
         ViewData["TenKho"] = chonKho.TenKho;
         ViewData["MaKho"] = chonKho.MaKho;
-        return View(kq.GiaTri ?? Array.Empty<ViTriCayDto>());
+        return View(vm);
     }
 
     [Authorize(Roles = VaiTroTen.QuanTriVien + "," + VaiTroTen.QuanLyKho)]

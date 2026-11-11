@@ -16,8 +16,8 @@ public static class QuyTacG2
 {
     public const double TrongSoGan = 0.5, TrongSoCungHang = 0.3, TrongSoLapDay = 0.2;
 
-    /// <summary>Một ô lưu trữ dùng được: thể tích và khối lượng còn nhận thêm (đã trừ hàng đang có và hàng chờ xếp), điểm gần cửa nhận, điểm cạnh hàng cùng loại (0 đến 1).</summary>
-    public sealed record OUngVien(int MaViTri, string TenViTri, decimal TheTichCon, decimal KhoiCon, double Gan, double CungHang);
+    /// <summary>Một ô lưu trữ dùng được: thể tích và khối lượng còn nhận thêm (đã trừ hàng đang có và hàng chờ xếp), điểm gần cửa nhận, điểm cạnh hàng cùng loại (0 đến 1) và nhãn kích thước lòng ô.</summary>
+    public sealed record OUngVien(int MaViTri, string TenViTri, decimal TheTichCon, decimal KhoiCon, double Gan, double CungHang, string? KichThuocO = null);
 
     /// <summary>Phần hàng xếp vào một ô và độ lấp đầy của ô sau khi xếp (0 đến 1).</summary>
     public sealed record PhanXep(OUngVien O, int SoLuong, double LapDay)
@@ -173,25 +173,27 @@ public sealed class GoiYG2Service(KhoDbContext db, ICapacityService sucChua, IGo
             var canXep = d.SLDat!.Value - daLap.GetValueOrDefault(d.MaCTN);
             var ten = (bt.TenSP + " " + bt.ThuocTinh).Trim();
 
+            var ktHang = $"{Canh(bt.Dai)}×{Canh(bt.Rong)}×{Canh(bt.Cao)} cm";
             var ungVien = new List<QuyTacG2.OUngVien>();
             foreach (var o in oXep)
             {
-                // Hỏi ICapacityService (đã tính hàng đang có và hàng chờ xếp) để lấy thể tích, khối lượng còn lại của ô.
+                // Hỏi ICapacityService (đã kiểm tra lọt lòng 3D, hàng đang có và hàng chờ xếp) để lấy thể tích, khối lượng còn lại của ô.
                 var sc = await sucChua.KiemTra(o.MaViTri, d.MaBT, 1, ct);
                 if ((sc.SoLuongToiDaThem ?? 0) <= 0) continue;
                 var cungHang = trongO.Where(x => x.MaViTri == o.MaViTri)
                     .Select(x => x.MaBT == d.MaBT ? 1.0 : x.MaSP == bt.MaSP ? 0.7 : x.MaDM == bt.MaDM ? 0.4 : 0.0)
                     .DefaultIfEmpty(0.0).Max();
-                ungVien.Add(new QuyTacG2.OUngVien(o.MaViTri, o.TenViTri, sc.TheTichConLaiCm3, sc.KhoiLuongConLaiKg, Gan(o), cungHang));
+                var ktO = o.Dai is not null ? $"{Canh(o.Dai.Value)}×{Canh(o.Rong ?? 0)}×{Canh(o.Cao ?? 0)} cm" : null;
+                ungVien.Add(new QuyTacG2.OUngVien(o.MaViTri, o.TenViTri, sc.TheTichConLaiCm3, sc.KhoiLuongConLaiKg, Gan(o), cungHang, ktO));
             }
 
             var phan = QuyTacG2.PhanBo(canXep, theTich1, bt.KhoiLuong, ungVien, daDung, lenhCu.Where(s => s.MaCTN == d.MaCTN).Select(s => s.SoLuong).ToList());
-            if (phan is null) { khongXep.Add($"{ten} (cần xếp {canXep}): các ô lưu trữ không đủ chỗ hoặc không chia được"); continue; }
+            if (phan is null) { khongXep.Add($"{ten} (cần xếp {canXep}): các ô lưu trữ không vừa kích thước 3D hoặc không đủ chỗ"); continue; }
             foreach (var x in phan)
             {
                 var (theTichDung, khoiDung) = daDung.GetValueOrDefault(x.O.MaViTri);
                 daDung[x.O.MaViTri] = (theTichDung + x.SoLuong * theTich1, khoiDung + x.SoLuong * bt.KhoiLuong);
-                chiTiet.Add(new ChiTietGoiYDto(d.MaBT, x.SoLuong, LyDo(x, ten), d.MaLo, x.O.MaViTri));
+                chiTiet.Add(new ChiTietGoiYDto(d.MaBT, x.SoLuong, TaoLyDoGoiY(x, ten, ktHang), d.MaLo, x.O.MaViTri));
             }
         }
 
@@ -206,9 +208,17 @@ public sealed class GoiYG2Service(KhoDbContext db, ICapacityService sucChua, IGo
 
     private static string So(double v) => v.ToString("0.00", CultureInfo.InvariantCulture).Replace('.', ',');
 
-    private static string LyDo(QuyTacG2.PhanXep x, string ten) =>
-        $"Điểm S = {So(x.Diem)}: gần khu tiếp nhận ({So(x.O.Gan)}), cạnh hàng cùng loại ({So(x.O.CungHang)}), độ lấp đầy phù hợp ({So(x.LapDay)}). " +
-        $"Xếp {x.SoLuong} {ten} vào ô {x.O.TenViTri}; trước khi xếp ô còn {Math.Round(x.O.TheTichCon)} cm³ và {Math.Round(x.O.KhoiCon, 2)} kg, không vượt thể tích và khối lượng.";
+    private static string Canh(decimal v) => v.ToString("0.##", CultureInfo.InvariantCulture).Replace('.', ',');
+
+    public static string TaoLyDoGoiY(QuyTacG2.PhanXep x, string ten, string? kichThuocBT = null)
+    {
+        var moTaKt = kichThuocBT is not null && x.O.KichThuocO is not null
+            ? $" Kích thước hàng ({kichThuocBT}) vừa lòng ô ({x.O.KichThuocO})."
+            : "";
+        return $"Điểm S = {So(x.Diem)} (Heuristic đa tiêu chí): gần khu tiếp nhận ({So(x.O.Gan)}), cạnh hàng cùng loại ({So(x.O.CungHang)}), độ lấp đầy phù hợp ({So(x.LapDay)})." +
+               moTaKt +
+               $" Xếp {x.SoLuong} {ten} vào ô {x.O.TenViTri}; trước khi xếp ô còn {Math.Round(x.O.TheTichCon)} cm³ và {Math.Round(x.O.KhoiCon, 2)} kg, không vượt thể tích và khối lượng.";
+    }
 }
 
 /// <summary>

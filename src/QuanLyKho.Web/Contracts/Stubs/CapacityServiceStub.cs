@@ -42,6 +42,20 @@ public sealed class CapacityServiceStub(IStockService stock, ILockService khoa) 
 
         var theTichCon = tong - theTichDaDung;
         var khoiCon = khoiToiDa - khoiDaDung;
+
+        if (o.Dai is not null && o.Rong is not null && o.Cao is not null)
+        {
+            Span<decimal> hang = [bt.Dai, bt.Rong, bt.Cao];
+            Span<decimal> longO = [o.Dai.Value, o.Rong.Value, o.Cao.Value];
+            hang.Sort();
+            longO.Sort();
+            if (hang[0] > longO[0] || hang[1] > longO[1] || hang[2] > longO[2])
+            {
+                var lyDoKt = $"Kích thước hàng ({bt.Dai:0.##}×{bt.Rong:0.##}×{bt.Cao:0.##} cm) vượt lòng ô '{o.TenViTri}' ({o.Dai:0.##}×{o.Rong:0.##}×{o.Cao:0.##} cm), không đặt vừa.";
+                return Tu(false, 0, theTichCon, khoiCon, lyDoKt, MaLoiDichVu.VuotSucChua);
+            }
+        }
+
         var theTichMotDonVi = SeedDataSet.TheTichBienThe(bt);
 
         var toiDaTheoThe = theTichMotDonVi > 0 ? (int)Math.Floor(Math.Max(theTichCon, 0) / theTichMotDonVi) : int.MaxValue;

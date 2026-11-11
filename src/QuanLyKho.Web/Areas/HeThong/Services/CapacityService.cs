@@ -68,6 +68,6 @@ public sealed class CapacityService(KhoDbContext db, INguonHangChoXep choXep) : 
             }
         }
 
-        return QuyTacSucChua.Tinh(o, bt.TheTichCm3, bt.KhoiLuong, soLuong, theTichDaDung, khoiDaDung);
+        return QuyTacSucChua.Tinh(o, bt.Dai, bt.Rong, bt.Cao, bt.KhoiLuong, soLuong, theTichDaDung, khoiDaDung);
     }
 }

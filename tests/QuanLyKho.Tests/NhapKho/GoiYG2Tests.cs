@@ -114,4 +114,15 @@ public class GoiYG2Tests
         Assert.Equal(1.0, LapDay(10, 100, 100, TheTich1, Khoi1), 9);
         Assert.Equal(1.0, LapDay(5, 0, 0, TheTich1, Khoi1), 9);       // ô không còn chỗ thì coi như đầy
     }
+
+    [Fact]
+    public void MoTaLyDo_NeuRoKichThuoc3ChieuVaPhuongPhapHeuristic()
+    {
+        var o = new OUngVien(3, "Ô A1-01", 200_000m, 100m, 0.5, 1.0, "100×60×50 cm");
+        var phan = new PhanXep(o, 10, 0.55);
+        var lyDo = GoiYG2Service.TaoLyDoGoiY(phan, "Áo thun Size M", "30×25×3 cm");
+        Assert.Contains("Điểm S =", lyDo);
+        Assert.Contains("30×25×3 cm", lyDo);
+        Assert.Contains("100×60×50 cm", lyDo);
+    }
 }

@@ -5,7 +5,7 @@ namespace QuanLyKho.Web.SeedData;
 /// <para>Đây là nguồn duy nhất: bản giả trong Contracts đọc từ đây, và seeder nạp vào SQL Server (xem README, mục "Nạp dữ liệu mẫu") cũng đọc từ đây.
 /// Giữ nguyên mã (MaKho, MaViTri...) để các nhóm cùng nói về một bộ dữ liệu khi demo ghép.</para>
 /// <para>Số liệu được chọn để demo được các tình huống của Bảng 1.7: ghi vượt tồn bị từ chối, ô nhỏ hết chỗ,
-/// hai lô cùng biến thể khác hạn dùng (chọn lô hết hạn trước), kho quầy sắp hết hàng (gợi ý G3, G4).</para>
+/// hai lô cùng biến thể khác hạn dùng (chọn lô hết hạn trước), kho quầy sắp hết hàng.</para>
 /// </summary>
 public static class SeedDataSet
 {
@@ -104,7 +104,7 @@ public static class SeedDataSet
         new(4, 4, 36, 0),     // kem lô hết hạn muộn, Kho 1 ô A1-02
         new(5, 6, 60, 0),     // tai nghe, Kho 1 ô A2-01 (ô nhỏ: còn nhận thêm tối đa 20 cái vì giới hạn khối lượng)
         new(1, 10, 15, 0),    // áo M, Kho 2 ô A1-01
-        new(5, 11, 5, 0),     // tai nghe, Kho 2 ô A1-02 (sắp hết: dùng demo G3, G4)
+        new(5, 11, 5, 0),     // tai nghe, Kho 2 ô A1-02 (sắp hết hàng)
     };
 
     public static ViTriSeed? TimViTri(int maViTri) => ViTri.FirstOrDefault(v => v.MaViTri == maViTri);

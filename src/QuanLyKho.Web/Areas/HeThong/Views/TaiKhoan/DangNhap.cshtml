@@ -1,26 +1,46 @@
 @model DangNhapViewModel
 @using QuanLyKho.Web.Areas.HeThong.Models
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Env
 
-<header class="trang-dau">
-    <h1>Đăng nhập</h1>
-    <p class="mota">Dùng tài khoản do quản trị viên cấp để vào hệ thống quản lý kho.</p>
-</header>
+<div class="khung-dang-nhap-ngoai">
+    <section class="the-dang-nhap" aria-labelledby="tieuDeDangNhap">
+        <header class="the-dang-nhap-dau">
+            <span class="thuong-hieu-bieu-tuong thuong-hieu-lon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9.5L12 4l9 5.5v9.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z" />
+                    <path d="M9 20V12h6v8" />
+                </svg>
+            </span>
+            <div>
+                <h1 id="tieuDeDangNhap" class="h4 mb-1 fw-bold">Đăng nhập hệ thống</h1>
+                <p class="text-muted small mb-0">Quản lý kho thông minh · Phân quyền theo vai trò</p>
+            </div>
+        </header>
 
-<form method="post" asp-area="HeThong" asp-controller="TaiKhoan" asp-action="DangNhap" class="khung-dang-nhap" novalidate>
-    <input type="hidden" asp-for="ReturnUrl" />
+        <form method="post" asp-area="HeThong" asp-controller="TaiKhoan" asp-action="DangNhap" class="khung-dang-nhap" novalidate>
+            <input type="hidden" asp-for="ReturnUrl" />
 
-    @if (!ViewData.ModelState.IsValid)
-    {
-        <div class="alert alert-danger" role="alert" asp-validation-summary="All"></div>
-    }
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div class="alert alert-danger py-2 small" role="alert" asp-validation-summary="All"></div>
+            }
 
-    <div class="mb-3">
-        <label asp-for="TenDangNhap" class="form-label"></label>
-        <input asp-for="TenDangNhap" class="form-control" autocomplete="username" autocapitalize="none" spellcheck="false" autofocus />
-    </div>
-    <div class="mb-3">
-        <label asp-for="MatKhau" class="form-label"></label>
-        <input asp-for="MatKhau" class="form-control" autocomplete="current-password" />
-    </div>
-    <button type="submit" class="btn btn-primary">Đăng nhập</button>
-</form>
+            <div class="mb-3">
+                <label asp-for="TenDangNhap" class="form-label fw-semibold"></label>
+                <input asp-for="TenDangNhap" class="form-control" placeholder="Ví dụ: quanlykho" autocomplete="username" autocapitalize="none" spellcheck="false" autofocus />
+            </div>
+            <div class="mb-3">
+                <label asp-for="MatKhau" class="form-label fw-semibold"></label>
+                <input asp-for="MatKhau" class="form-control" placeholder="Nhập mật khẩu" autocomplete="current-password" />
+            </div>
+            <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">Đăng nhập vào bàn làm việc</button>
+        </form>
+
+        @if (Env.IsDevelopment())
+        {
+            <footer class="the-dang-nhap-chan small text-muted">
+                Tài khoản mẫu (Development): <code>quantri</code> · <code>quanlykho</code> · <code>thukho</code> · <code>nhanvienbh</code>
+            </footer>
+        }
+    </section>
+</div>

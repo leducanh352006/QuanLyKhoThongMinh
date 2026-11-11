@@ -27,6 +27,15 @@
 @if (TempData["ThongBao"] is string tb) { <div class="alert alert-success" role="status">@tb</div> }
 @if (TempData["Loi"] is string loi) { <div class="alert alert-danger" role="alert">@loi</div> }
 
+@if (!hoanTat && Model.ChiTiet.Any(x => x.MaLo != null && (x.SLDat ?? 0) > 0))
+{
+    @* Gợi ý G2 (T1-3): AI đề xuất ô cho các dòng chưa lập lệnh; kết quả hiện ở khung duyệt phía dưới, không tự lập lệnh. *@
+    <form method="post" asp-action="TaoGoiY" asp-route-id="@Model.MaPN" class="mb-3">
+        <button type="submit" class="btn btn-outline-primary">Gợi ý ô sắp xếp (G2)</button>
+        <span class="text-body-secondary">AI chỉ đề xuất, thủ kho duyệt rồi mới có lệnh xếp; vẫn lập lệnh tay được.</span>
+    </form>
+}
+
 @foreach (var d in Model.ChiTiet.OrderBy(x => x.MaCTN))
 {
     var cacLenh = lenh[d.MaCTN].ToList();
@@ -127,6 +136,9 @@
         }
     </section>
 }
+
+@* Khung duyệt gợi ý G2 (T1-3, khung chung của T4-8): đặt ngoài mọi thẻ form vì component có form duyệt riêng. *@
+@await Component.InvokeAsync("DuyetGoiY", new { loai = LoaiGoiY.G2, maPN = Model.MaPN })
 
 <div class="d-flex flex-wrap gap-2">
     <a class="btn btn-outline-secondary" asp-action="Index">Danh sách chờ sắp xếp</a>

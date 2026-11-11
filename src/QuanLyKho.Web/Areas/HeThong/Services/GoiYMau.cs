@@ -36,8 +36,6 @@ public sealed class GoiYHandlerMau(LoaiGoiY loai, ThaoTacMauStore noiGhi, IHostE
         {
             LoaiGoiY.G1 => $"Điền lệnh lấy hàng cho phiếu xuất #{goiY.ThamChieu.MaPX}: {goiY.ChiTiet.Count} dòng (lô, ô), tổng {tong}; thủ kho quét mã khi lấy.",
             LoaiGoiY.G2 => $"Tạo lệnh xếp hàng cho phiếu nhập #{goiY.ThamChieu.MaPN}: {goiY.ChiTiet.Count} dòng, tổng {tong}; thủ kho quét mã ô khi xếp.",
-            LoaiGoiY.G3 => $"Tạo đơn nhập bổ sung (mẫu): {goiY.ChiTiet.Count} dòng, tổng {tong}.",
-            LoaiGoiY.G4 => $"Tạo phiếu chuyển và lệnh lấy hàng ở kho đi (mẫu): {goiY.ChiTiet.Count} dòng, tổng {tong}.",
             _ => "Thao tác mẫu.",
         };
         noiGhi.Ghi(new ThaoTacMau(goiY.MaGoiY, goiY.Loai, moTa, goiY.ChiTiet, maNguoiDuyet, gio.GetUtcNow().UtcDateTime));
@@ -46,7 +44,7 @@ public sealed class GoiYHandlerMau(LoaiGoiY loai, ThaoTacMauStore noiGhi, IHostE
 }
 
 /// <summary>
-/// Bản gợi ý giả để các nhóm thử khung (chỉ Development): tạo G1, G3, G4 (và G2 nếu có phiếu nhập) từ dữ liệu mẫu chung, đi qua đường lui
+/// Bản gợi ý giả để các nhóm thử khung (chỉ Development): tạo G1 (và G2 nếu có phiếu nhập) từ dữ liệu mẫu chung, đi qua đường lui
 /// <see cref="GoiYAnToan"/> như AI thật. <see cref="TaoMauAiLoi"/> giả lập AI lỗi để thấy luồng làm tay vẫn chạy.
 /// </summary>
 public sealed class GoiYMauService(IGoiYService goiY, KhoDbContext? db = null)
@@ -61,14 +59,6 @@ public sealed class GoiYMauService(IGoiYService goiY, KhoDbContext? db = null)
             (LoaiGoiY.G1, new ThamChieuGoiY(MaPX: 1), new[]
             {
                 new ChiTietGoiYDto(3, 10, "Hết hạn trước lấy trước: lô LO-2609-001 hạn 31/03/2027, sớm hơn lô LO-2610-003 (30/09/2027); ô A1-01 còn 24, lấy đủ một lần.", MaLo: loKem, MaViTri: 3),
-            }),
-            (LoaiGoiY.G3, new ThamChieuGoiY(), new[]
-            {
-                new ChiTietGoiYDto(4, 42, "Kho quầy còn A = 5; d = 1,5/ngày, L = 1, m = 10 nên R = 11,5 ≥ A. Nhập d × (L + 30) − A = 41,5, làm tròn 42.", MaKhoDich: 2),
-            }),
-            (LoaiGoiY.G4, new ThamChieuGoiY(), new[]
-            {
-                new ChiTietGoiYDto(4, 7, "d = 1,5/ngày. Kho tổng A = 60, đủ bán 40 ngày > T = 30, dư 60 − 1,5 × 30 = 15. Kho quầy A = 5, đủ bán 3,3 ngày < L + N = 8, cần bù 1,5 × 8 − 5 = 7. Chuyển min(15, 7) = 7.", MaKhoNguon: 1, MaKhoDich: 2),
             }),
         };
         if (maPN is int pn)

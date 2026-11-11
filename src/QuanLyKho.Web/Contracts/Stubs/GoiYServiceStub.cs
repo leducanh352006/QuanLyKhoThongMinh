@@ -102,7 +102,6 @@ public sealed class GoiYServiceStub(GoiYStubStore store, IEnumerable<IGoiYHandle
     {
         LoaiGoiY.G1 when t.MaPX is null || t.MaPN is not null || t.MaPC is not null => "G1 phải gắn đúng một phiếu xuất (MaPX).",
         LoaiGoiY.G2 when t.MaPN is null || t.MaPX is not null || t.MaPC is not null => "G2 phải gắn đúng một phiếu nhập (MaPN).",
-        LoaiGoiY.G3 or LoaiGoiY.G4 when t.MaPX is not null || t.MaPN is not null || t.MaPC is not null => $"{loai} chưa có phiếu khi tạo; phiếu được điền sau khi duyệt.",
         _ => null,
     };
 

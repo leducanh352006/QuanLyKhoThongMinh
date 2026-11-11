@@ -31,6 +31,9 @@ public static class NhapKhoModule
 
         // T1-4: lệnh sắp xếp Chờ xác nhận đã chiếm chỗ trong ô, tính vào sức chứa (ICapacityService của T4-5). Đăng ký sau HeThong nên thay bản mặc định "không có hàng chờ".
         services.AddScoped<INguonHangChoXep, HangChoXepTuSapXep>();
+
+        // T1-3: bộ xử lý gợi ý G2 cho khung gợi ý AI dùng chung; duyệt gợi ý thì lập lệnh sắp xếp qua SapXepService.LapLenh.
+        services.AddScoped<IGoiYHandler, HandlerG2>();
         return services;
     }
 }

@@ -17,14 +17,14 @@
     <div class="d-flex flex-wrap align-items-center gap-2">
         <div class="che-do-xem" role="tablist" aria-label="Chế độ hiển thị vị trí">
             <a class="che-do-nut @(!xemCay ? "dang-chon" : "")"
-               id="tabSoDo"
+               id="tabSoDo" role="tab" aria-selected="@(!xemCay ? "true" : "false")" aria-controls="khungSoDo"
                asp-action="Index" asp-route-maKho="@maKho" asp-route-maBTThu="@Model.BienTheDangThu?.MaBT" asp-route-soLuongThu="@Model.SoLuongDangThu" asp-route-cheDo="sodo"
                data-che-do="sodo">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
                 <span>Sơ đồ trực quan</span>
             </a>
             <a class="che-do-nut @(xemCay ? "dang-chon" : "")"
-               id="tabCay"
+               id="tabCay" role="tab" aria-selected="@(xemCay ? "true" : "false")" aria-controls="khungCay"
                asp-action="Index" asp-route-maKho="@maKho" asp-route-maBTThu="@Model.BienTheDangThu?.MaBT" asp-route-soLuongThu="@Model.SoLuongDangThu" asp-route-cheDo="cay"
                data-che-do="cay">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
@@ -52,7 +52,7 @@
     <div class="row g-3 align-items-end">
         <div class="col-12 col-md-3">
             <form method="get" asp-action="Index">
-                <input type="hidden" name="cheDo" value="@Model.CheDoXem" />
+                <input type="hidden" id="inputCheDoKho" name="cheDo" value="@Model.CheDoXem" />
                 @if (Model.BienTheDangThu is not null)
                 {
                     <input type="hidden" name="maBTThu" value="@Model.BienTheDangThu.MaBT" />
@@ -73,7 +73,7 @@
                     <label for="chonBTThu" class="form-label fw-semibold mb-1">
                         Kiểm tra nhanh hàng vừa ô (Dài × Rộng × Cao &amp; Tải trọng)
                     </label>
-                    <select id="chonBTThu" name="maBTThu" class="form-select">
+                    <select id="chonBTThu" name="maBTThu" class="form-select" required>
                         <option value="">-- Chọn biến thể hàng hóa để ướm thử lên sơ đồ --</option>
                         @foreach (var bt in Model.DanhSachBienThe)
                         {
@@ -123,7 +123,7 @@
     <div class="the-kpi">
         <span class="kpi-nhan">Tổng ô lưu trữ</span>
         <strong class="kpi-so so-bang">@Model.TongOLuuTru</strong>
-        <span class="kpi-phu">Ô chứa hàng khả dụng</span>
+        <span class="kpi-phu">Tổng số ô cấp lưu trữ</span>
     </div>
     <div class="the-kpi">
         <span class="kpi-nhan">Ô trống (0%)</span>
@@ -141,9 +141,9 @@
         <span class="kpi-phu">Theo thể tích hoặc tải trọng</span>
     </div>
     <div class="the-kpi">
-        <span class="kpi-nhan">Khóa KK / Tiếp nhận</span>
+        <span class="kpi-nhan">Khóa / Ngừng / Tiếp nhận</span>
         <strong class="kpi-so so-bang">@Model.OKhoaHoacNgung / @Model.KhuTiepNhan.Count</strong>
-        <span class="kpi-phu">Ô khóa kiểm kê &amp; cửa nhập</span>
+        <span class="kpi-phu">Ô tạm dừng &amp; cửa nhận</span>
     </div>
 </section>
 
@@ -157,7 +157,7 @@
 else
 {
     <!-- CHẾ ĐỘ 1: SƠ ĐỒ TRỰC QUAN -->
-    <div id="khungSoDo" class="@(xemCay ? "d-none" : "")">
+    <div id="khungSoDo" role="tabpanel" aria-labelledby="tabSoDo" class="@(xemCay ? "d-none" : "")">
         @if (Model.KhuTiepNhan.Count > 0)
         {
             <section class="mb-4" aria-label="Khu tiếp nhận hàng nhập">
@@ -368,7 +368,8 @@ else
                                                                 else if (o.Nut.DangHoatDong)
                                                                 {
                                                                     <form method="post" asp-action="KhoaKiemKe" asp-route-id="@o.Nut.MaViTri" asp-route-maKho="@maKho" class="d-inline"
-                                                                          onsubmit="return confirm('Khóa ô \'@o.Nut.TenViTri\' để kiểm kê?');">
+                                                                          data-confirm="Khóa ô '@o.Nut.TenViTri' để kiểm kê?"
+                                                                          onsubmit="return confirm(this.dataset.confirm);">
                                                                         <button type="submit" class="nut-nho nut-nho-vang">Khóa KK</button>
                                                                     </form>
                                                                 }
@@ -389,7 +390,7 @@ else
     </div>
 
     <!-- CHẾ ĐỘ 2: CÂY PHÂN CẤP CHI TIẾT (GIỮ ĐẦY ĐỦ THAO TÁC QUẢN TRỊ 7 CẤP) -->
-    <div id="khungCay" class="khung-the @(xemCay ? "" : "d-none")">
+    <div id="khungCay" role="tabpanel" aria-labelledby="tabCay" class="khung-the @(xemCay ? "" : "d-none")">
         <div class="mb-2 pb-2 border-bottom d-flex justify-content-between align-items-center">
             <strong class="small text-uppercase text-muted">Cây phân cấp đầy đủ (Tòa → Tầng → Phòng → Dãy → Hàng → Kệ → Ô)</strong>
             <span class="small text-muted">Hỗ trợ thêm/sửa/khóa mềm/xóa từng nút ở mọi cấp</span>
@@ -410,6 +411,7 @@ else
             const tabCay = document.getElementById("tabCay");
             const khungSoDo = document.getElementById("khungSoDo");
             const khungCay = document.getElementById("khungCay");
+            const inputCheDoKho = document.getElementById("inputCheDoKho");
             if (!tabSoDo || !tabCay || !khungSoDo || !khungCay) return;
 
             function batCheDo(cheDo, e) {
@@ -419,6 +421,9 @@ else
                 khungCay.classList.toggle("d-none", !laCay);
                 tabSoDo.classList.toggle("dang-chon", !laCay);
                 tabCay.classList.toggle("dang-chon", laCay);
+                tabSoDo.setAttribute("aria-selected", String(!laCay));
+                tabCay.setAttribute("aria-selected", String(laCay));
+                if (inputCheDoKho) inputCheDoKho.value = cheDo;
                 const url = new URL(window.location.href);
                 url.searchParams.set("cheDo", cheDo);
                 window.history.replaceState({}, "", url);

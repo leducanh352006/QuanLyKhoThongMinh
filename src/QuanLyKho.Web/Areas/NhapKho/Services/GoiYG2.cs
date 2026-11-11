@@ -164,6 +164,7 @@ public sealed class GoiYG2Service(KhoDbContext db, ICapacityService sucChua, IGo
                              select new { b.MaBT, b.MaSP, s.MaDM, s.TenSP, b.ThuocTinh, b.Dai, b.Rong, b.Cao, b.KhoiLuong }).ToDictionaryAsync(x => x.MaBT, ct);
 
         var daDung = new Dictionary<int, (decimal TheTich, decimal Khoi)>();
+        var sucChuaCache = new Dictionary<(int MaViTri, int MaBT), KetQuaSucChua>();
         var chiTiet = new List<ChiTietGoiYDto>();
         var khongXep = new List<string>();
         foreach (var d in dong)
@@ -177,8 +178,12 @@ public sealed class GoiYG2Service(KhoDbContext db, ICapacityService sucChua, IGo
             var ungVien = new List<QuyTacG2.OUngVien>();
             foreach (var o in oXep)
             {
-                // Hỏi ICapacityService (đã kiểm tra lọt lòng 3D, hàng đang có và hàng chờ xếp) để lấy thể tích, khối lượng còn lại của ô.
-                var sc = await sucChua.KiemTra(o.MaViTri, d.MaBT, 1, ct);
+                // Hỏi ICapacityService (đã kiểm tra lọt lòng 3D, hàng đang có và hàng chờ xếp) để lấy thể tích, khối lượng còn lại của ô; lưu đệm theo cặp (Ô, Biến thể).
+                if (!sucChuaCache.TryGetValue((o.MaViTri, d.MaBT), out var sc))
+                {
+                    sc = await sucChua.KiemTra(o.MaViTri, d.MaBT, 1, ct);
+                    sucChuaCache[(o.MaViTri, d.MaBT)] = sc;
+                }
                 if ((sc.SoLuongToiDaThem ?? 0) <= 0) continue;
                 var cungHang = trongO.Where(x => x.MaViTri == o.MaViTri)
                     .Select(x => x.MaBT == d.MaBT ? 1.0 : x.MaSP == bt.MaSP ? 0.7 : x.MaDM == bt.MaDM ? 0.4 : 0.0)
@@ -192,8 +197,9 @@ public sealed class GoiYG2Service(KhoDbContext db, ICapacityService sucChua, IGo
             foreach (var x in phan)
             {
                 var (theTichDung, khoiDung) = daDung.GetValueOrDefault(x.O.MaViTri);
+                var lyDo = TaoLyDoGoiY(x, ten, ktHang, x.O.TheTichCon - theTichDung, x.O.KhoiCon - khoiDung);
                 daDung[x.O.MaViTri] = (theTichDung + x.SoLuong * theTich1, khoiDung + x.SoLuong * bt.KhoiLuong);
-                chiTiet.Add(new ChiTietGoiYDto(d.MaBT, x.SoLuong, TaoLyDoGoiY(x, ten, ktHang), d.MaLo, x.O.MaViTri));
+                chiTiet.Add(new ChiTietGoiYDto(d.MaBT, x.SoLuong, lyDo, d.MaLo, x.O.MaViTri));
             }
         }
 
@@ -210,14 +216,21 @@ public sealed class GoiYG2Service(KhoDbContext db, ICapacityService sucChua, IGo
 
     private static string Canh(decimal v) => v.ToString("0.##", CultureInfo.InvariantCulture).Replace('.', ',');
 
-    public static string TaoLyDoGoiY(QuyTacG2.PhanXep x, string ten, string? kichThuocBT = null)
+    public static string TaoLyDoGoiY(
+        QuyTacG2.PhanXep x,
+        string ten,
+        string? kichThuocBT = null,
+        decimal? theTichConThuc = null,
+        decimal? khoiConThuc = null)
     {
+        var theTich = theTichConThuc ?? x.O.TheTichCon;
+        var khoi = khoiConThuc ?? x.O.KhoiCon;
         var moTaKt = kichThuocBT is not null && x.O.KichThuocO is not null
             ? $" Kích thước hàng ({kichThuocBT}) vừa lòng ô ({x.O.KichThuocO})."
             : "";
         return $"Điểm S = {So(x.Diem)} (Heuristic đa tiêu chí): gần khu tiếp nhận ({So(x.O.Gan)}), cạnh hàng cùng loại ({So(x.O.CungHang)}), độ lấp đầy phù hợp ({So(x.LapDay)})." +
                moTaKt +
-               $" Xếp {x.SoLuong} {ten} vào ô {x.O.TenViTri}; trước khi xếp ô còn {Math.Round(x.O.TheTichCon)} cm³ và {Math.Round(x.O.KhoiCon, 2)} kg, không vượt thể tích và khối lượng.";
+               $" Xếp {x.SoLuong} {ten} vào ô {x.O.TenViTri}; trước khi xếp ô còn {Math.Round(theTich)} cm³ và {Math.Round(khoi, 2)} kg, không vượt thể tích và khối lượng.";
     }
 }
 
@@ -251,7 +264,8 @@ public sealed class HandlerG2(IStockService ton, ICapacityService sucChua, IAudi
         {
             if (c.MaViTri is not int maO)
                 return KetQua<ThamChieuGoiY>.Loi($"Mỗi dòng gợi ý G2 phải có ô (biến thể #{c.MaBT}).", MaLoiDichVu.DuLieuKhongHopLe);
-            var d = p.ChiTiet.OrderBy(x => x.MaCTN).FirstOrDefault(x => x.MaBT == c.MaBT && conLai[x.MaCTN] >= c.SoLuong);
+            var d = p.ChiTiet.OrderBy(x => x.MaCTN)
+                .FirstOrDefault(x => x.MaBT == c.MaBT && (c.MaLo is null || x.MaLo == c.MaLo) && conLai[x.MaCTN] >= c.SoLuong);
             if (d is null)
                 return KetQua<ThamChieuGoiY>.Loi($"Gợi ý có dòng biến thể #{c.MaBT} số lượng {c.SoLuong} không khớp hàng đạt còn chưa xếp của phiếu; phiếu có thể đã đổi sau khi tạo gợi ý.", MaLoiDichVu.DuLieuKhongHopLe);
 

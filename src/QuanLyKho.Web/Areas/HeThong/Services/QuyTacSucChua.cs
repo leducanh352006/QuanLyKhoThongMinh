@@ -37,8 +37,8 @@ public static class QuyTacSucChua
         ViTri o, decimal daiBT, decimal rongBT, decimal caoBT, decimal khoiLuongMotDonVi, int soLuong,
         decimal theTichDaDung, decimal khoiLuongDaDung)
     {
-        if (daiBT <= 0 || rongBT <= 0 || caoBT <= 0)
-            return Loi(0, 0, "Kích thước biến thể (Dài, Rộng, Cao) phải lớn hơn 0.", MaLoiDichVu.DuLieuKhongHopLe);
+        if (daiBT <= 0 || rongBT <= 0 || caoBT <= 0 || khoiLuongMotDonVi <= 0)
+            return Loi(0, 0, "Kích thước (Dài, Rộng, Cao) và khối lượng biến thể phải lớn hơn 0.", MaLoiDichVu.DuLieuKhongHopLe);
         if (soLuong <= 0)
             return Loi(0, 0, "Số lượng phải lớn hơn 0.", MaLoiDichVu.DuLieuKhongHopLe);
         if (!o.LaO)

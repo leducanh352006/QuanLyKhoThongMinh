@@ -185,11 +185,30 @@ public sealed class SapXepService(KhoDbContext db, IStockService ton, ICapacityS
 /// Nguồn hàng chờ xếp thật cho <see cref="ICapacityService"/> (T4-5): lệnh Chờ xác nhận đã chiếm chỗ trong ô nhưng chưa vào TonKho,
 /// nên tính vào Vđ, Kđ khi kiểm tra sức chứa. Đăng ký trong NhapKhoModule thay bản mặc định "không có hàng chờ".
 /// </summary>
-public sealed class HangChoXepTuSapXep(KhoDbContext db) : INguonHangChoXep
+public sealed class HangChoXepTuSapXep(KhoDbContext? db = null) : INguonHangChoXep
 {
     public async Task<IReadOnlyList<DongChoXep>> LayTheoO(int maViTri, CancellationToken ct = default) =>
-        await (from s in db.SapXep.AsNoTracking()
-               where s.MaViTri == maViTri && s.TrangThai == SapXep.ChoXacNhan
-               join c in db.ChiTietPhieuNhap.AsNoTracking() on s.MaCTN equals c.MaCTN
-               select new DongChoXep(c.MaBT, s.SoLuong)).ToListAsync(ct);
+        db is null
+            ? Array.Empty<DongChoXep>()
+            : await (from s in db.SapXep.AsNoTracking()
+                     where s.MaViTri == maViTri && s.TrangThai == SapXep.ChoXacNhan
+                     join c in db.ChiTietPhieuNhap.AsNoTracking() on s.MaCTN equals c.MaCTN
+                     select new DongChoXep(c.MaBT, s.SoLuong)).ToListAsync(ct);
+
+    public async Task<IReadOnlyDictionary<int, IReadOnlyList<DongChoXep>>> LayTheoNhieuO(
+        IReadOnlyCollection<int> maViTris, CancellationToken ct = default)
+    {
+        if (db is null || maViTris.Count == 0)
+            return new Dictionary<int, IReadOnlyList<DongChoXep>>();
+
+        var rows = await (from s in db.SapXep.AsNoTracking()
+                          where maViTris.Contains(s.MaViTri) && s.TrangThai == SapXep.ChoXacNhan
+                          join c in db.ChiTietPhieuNhap.AsNoTracking() on s.MaCTN equals c.MaCTN
+                          select new { s.MaViTri, c.MaBT, s.SoLuong }).ToListAsync(ct);
+
+        return rows.GroupBy(x => x.MaViTri)
+            .ToDictionary(
+                g => g.Key,
+                g => (IReadOnlyList<DongChoXep>)g.Select(x => new DongChoXep(x.MaBT, x.SoLuong)).ToList());
+    }
 }

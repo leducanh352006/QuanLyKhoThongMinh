@@ -38,7 +38,7 @@
     --bs-btn-active-border-color: var(--k-chinh-dam);
 }
 
-:focus-visible { outline: 3px solid var(--k-nhan); outline-offset: 2px; }
+:focus-visible { outline: 3px solid #b45309; outline-offset: 2px; }
 
 body { background: var(--k-nen); color: var(--k-chu); line-height: 1.5; }
 

@@ -15,13 +15,29 @@ public sealed record DongChoXep(int MaBT, int SoLuong);
 public interface INguonHangChoXep
 {
     Task<IReadOnlyList<DongChoXep>> LayTheoO(int maViTri, CancellationToken ct = default);
+
+    async Task<IReadOnlyDictionary<int, IReadOnlyList<DongChoXep>>> LayTheoNhieuO(
+        IReadOnlyCollection<int> maViTris, CancellationToken ct = default)
+    {
+        var kq = new Dictionary<int, IReadOnlyList<DongChoXep>>();
+        foreach (var ma in maViTris)
+            kq[ma] = await LayTheoO(ma, ct);
+        return kq;
+    }
 }
 
 /// <summary>Bản mặc định: chưa có hàng chờ xếp nào (giả định cho tới khi Nhóm 2 cung cấp nguồn thật).</summary>
 public sealed class KhongCoHangChoXep : INguonHangChoXep
 {
+    private static readonly IReadOnlyDictionary<int, IReadOnlyList<DongChoXep>> RongNhieuO =
+        new Dictionary<int, IReadOnlyList<DongChoXep>>();
+
     public Task<IReadOnlyList<DongChoXep>> LayTheoO(int maViTri, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<DongChoXep>>(Array.Empty<DongChoXep>());
+
+    public Task<IReadOnlyDictionary<int, IReadOnlyList<DongChoXep>>> LayTheoNhieuO(
+        IReadOnlyCollection<int> maViTris, CancellationToken ct = default) =>
+        Task.FromResult(RongNhieuO);
 }
 
 /// <summary>

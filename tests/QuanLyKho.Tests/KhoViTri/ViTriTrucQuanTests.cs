@@ -1,24 +1,27 @@
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using QuanLyKho.Web.Areas.HeThong;
 using QuanLyKho.Web.Areas.HeThong.Services;
+using QuanLyKho.Web.Areas.NhapKho;
 using QuanLyKho.Web.Contracts.Stubs;
+using QuanLyKho.Web.Infrastructure;
 
 namespace QuanLyKho.Tests.KhoViTri;
 
 public class ViTriTrucQuanTests
 {
-    private static (ViTriTrucQuanService Svc, MoiTruongKhoThu MoiTruong, LockServiceStub Khoa) Tao()
+    private static (ViTriTrucQuanService Svc, MoiTruongKhoThu MoiTruong) Tao()
     {
         var mt = new MoiTruongKhoThu();
         var ton = new StockServiceStub();
-        var khoa = new LockServiceStub();
-        var cap = new CapacityServiceStub(ton, khoa);
-        var svc = new ViTriTrucQuanService(mt.ViTri, ton, cap, new KhongCoHangChoXep(), db: null);
-        return (svc, mt, khoa);
+        var svc = new ViTriTrucQuanService(mt.ViTri, ton, new KhongCoHangChoXep(), db: null);
+        return (svc, mt);
     }
 
     [Fact]
     public async Task XayDung_Kho1Mau_ThongKeDungKhuTiepNhan_PhanTramLapDay_VaTonGiu()
     {
-        var (svc, _, _) = Tao();
+        var (svc, _) = Tao();
 
         var vm = await svc.XayDung(1, "Kho tổng", maBTThu: null, soLuongThu: null);
 
@@ -46,7 +49,7 @@ public class ViTriTrucQuanTests
     [Fact]
     public async Task XayDung_KiemTraNhanhVuaO_PhanBietDuCho_ThieuTai_VaQuaKho3D()
     {
-        var (svc, mt, _) = Tao();
+        var (svc, mt) = Tao();
 
         // 1. Thử 25 tai nghe (BT 4: 15x12x6 cm, 0,25 kg): A1-01 & A1-02 đủ chỗ, A2-01 chỉ còn nhận +20 do tải trọng.
         var thuTaiNghe = await svc.XayDung(1, "Kho tổng", maBTThu: 4, soLuongThu: 25);
@@ -71,7 +74,7 @@ public class ViTriTrucQuanTests
     [Fact]
     public async Task XayDung_OBoCapTrucTiepDuoiDay_KhongBiBoSotTrenSoDo()
     {
-        var (svc, mt, _) = Tao();
+        var (svc, mt) = Tao();
         await mt.ViTri.Them(new ViTriMoi("Ô Bỏ Cấp", 1, 1, "Ô", "Lưu trữ", "O-BOCAP", 80, 50, 40, 50), MoiTruongKhoThu.MaNguoiThucHien);
 
         var vm = await svc.XayDung(1, "Kho tổng", null, null);
@@ -80,4 +83,24 @@ public class ViTriTrucQuanTests
             vm.KhuLuuTru.SelectMany(k => k.DanhSachKe).SelectMany(r => r.DanhSachO),
             o => o.Nut.TenViTri == "Ô Bỏ Cấp");
     }
+
+    [Fact]
+    public async Task DI_CheDoKhongCoCSDL_GiaiQuyetDuocViTriTrucQuanService_SauKhiDangKyNhapKho()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
+        services.AddKhoInfrastructure();
+        services.AddContractStubs();
+        services.AddHeThong();
+        services.AddNhapKho();
+
+        await using var sp = services.BuildServiceProvider();
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider.GetRequiredService<IViTriTrucQuanService>();
+
+        var vm = await svc.XayDung(1, "Kho tổng", maBTThu: 1, soLuongThu: 5);
+        Assert.Equal(3, vm.TongOLuuTru);
+        Assert.NotNull(vm.BienTheDangThu);
+    }
 }
+

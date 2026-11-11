@@ -120,9 +120,11 @@ public class GoiYG2Tests
     {
         var o = new OUngVien(3, "Ô A1-01", 200_000m, 100m, 0.5, 1.0, "100×60×50 cm");
         var phan = new PhanXep(o, 10, 0.55);
-        var lyDo = GoiYG2Service.TaoLyDoGoiY(phan, "Áo thun Size M", "30×25×3 cm");
+        var lyDo = GoiYG2Service.TaoLyDoGoiY(phan, "Áo thun Size M", "30×25×3 cm", 150_000m, 75m);
         Assert.Contains("Điểm S =", lyDo);
         Assert.Contains("30×25×3 cm", lyDo);
         Assert.Contains("100×60×50 cm", lyDo);
+        Assert.Contains("150000 cm³", lyDo);
+        Assert.Contains("75 kg", lyDo);
     }
 }

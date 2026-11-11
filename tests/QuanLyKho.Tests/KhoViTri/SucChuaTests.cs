@@ -157,6 +157,10 @@ public class SucChuaTests
         var kq = QuyTacSucChua.Tinh(O(), 0m, 10m, 10m, 1m, 1, 0, 0);
         Assert.False(kq.Du);
         Assert.Equal(MaLoiDichVu.DuLieuKhongHopLe, kq.MaLoi);
+
+        var kqKhoi = QuyTacSucChua.Tinh(O(), 10m, 10m, 10m, 0m, 1, 0, 0);
+        Assert.False(kqKhoi.Du);
+        Assert.Equal(MaLoiDichVu.DuLieuKhongHopLe, kqKhoi.MaLoi);
     }
 
     [Fact]

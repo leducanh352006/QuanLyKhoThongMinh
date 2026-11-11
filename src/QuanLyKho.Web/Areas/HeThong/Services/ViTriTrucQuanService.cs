@@ -114,12 +114,9 @@ public interface IViTriTrucQuanService
 public sealed class ViTriTrucQuanService(
     IViTriQuanLy viTriQuanLy,
     IStockService stock,
-    ICapacityService capacity,
     INguonHangChoXep choXep,
     KhoDbContext? db = null) : IViTriTrucQuanService
 {
-    private readonly ICapacityService _ = capacity;
-
     public async Task<ViTriTrangViewModel> XayDung(
         int maKho,
         string tenKho,
@@ -222,13 +219,10 @@ public sealed class ViTriTrucQuanService(
                 select new { b.MaBT, s.TenSP, b.ThuocTinh, b.Dai, b.Rong, b.Cao, b.KhoiLuong })
                 .ToListAsync(ct);
 
-            if (rows.Count > 0)
-            {
-                return rows.Select(r => new BienTheThuDto(
-                    r.MaBT,
-                    string.IsNullOrWhiteSpace(r.ThuocTinh) ? r.TenSP : $"{r.TenSP} — {r.ThuocTinh}",
-                    r.Dai, r.Rong, r.Cao, r.KhoiLuong)).ToList();
-            }
+            return rows.Select(r => new BienTheThuDto(
+                r.MaBT,
+                string.IsNullOrWhiteSpace(r.ThuocTinh) ? r.TenSP : $"{r.TenSP} — {r.ThuocTinh}",
+                r.Dai, r.Rong, r.Cao, r.KhoiLuong)).ToList();
         }
 
         var spSeed = SeedDataSet.SanPham.ToDictionary(s => s.MaSP, s => s.TenSP);
@@ -249,19 +243,54 @@ public sealed class ViTriTrucQuanService(
         if (dsO.Count == 0) return kq;
 
         var maOs = dsO.Select(o => o.MaViTri).ToList();
-        var loSangBT = new Dictionary<int, int>();
+        var choTheoO = await choXep.LayTheoNhieuO(maOs, ct);
 
         if (db is not null)
         {
-            loSangBT = await db.LoHang.AsNoTracking()
-                .ToDictionaryAsync(l => l.MaLo, l => l.MaBT, ct);
-        }
-        else
-        {
-            foreach (var l in SeedDataSet.LoHang)
-                loSangBT[l.MaLo] = l.MaBT;
+            var tonRows = await (
+                from t in db.TonKho.AsNoTracking()
+                where maOs.Contains(t.MaViTri) && (t.SoLuongTon > 0 || t.SoLuongGiu > 0)
+                join l in db.LoHang.AsNoTracking() on t.MaLo equals l.MaLo
+                select new { t.MaViTri, l.MaBT, t.SoLuongTon, t.SoLuongGiu })
+                .ToListAsync(ct);
+
+            var tonTheoO = tonRows.ToLookup(x => x.MaViTri);
+            foreach (var o in dsO)
+            {
+                int ton = 0, giu = 0, slCho = 0;
+                decimal vol = 0m, kg = 0m;
+
+                foreach (var d in tonTheoO[o.MaViTri])
+                {
+                    ton += d.SoLuongTon;
+                    giu += d.SoLuongGiu;
+                    if (theoMaBT.TryGetValue(d.MaBT, out var bt))
+                    {
+                        vol += d.SoLuongTon * bt.Dai * bt.Rong * bt.Cao;
+                        kg += d.SoLuongTon * bt.KhoiLuong;
+                    }
+                }
+
+                if (choTheoO.TryGetValue(o.MaViTri, out var dongChos))
+                {
+                    foreach (var c in dongChos)
+                    {
+                        slCho += c.SoLuong;
+                        if (theoMaBT.TryGetValue(c.MaBT, out var bt))
+                        {
+                            vol += c.SoLuong * bt.Dai * bt.Rong * bt.Cao;
+                            kg += c.SoLuong * bt.KhoiLuong;
+                        }
+                    }
+                }
+
+                kq[o.MaViTri] = new SuDungO(ton, giu, slCho, vol, kg);
+            }
+
+            return kq;
         }
 
+        var loSangBT = SeedDataSet.LoHang.ToDictionary(l => l.MaLo, l => l.MaBT);
         foreach (var o in dsO)
         {
             int ton = 0, giu = 0, slCho = 0;
@@ -279,14 +308,16 @@ public sealed class ViTriTrucQuanService(
                 }
             }
 
-            var dongChos = await choXep.LayTheoO(o.MaViTri, ct);
-            foreach (var c in dongChos)
+            if (choTheoO.TryGetValue(o.MaViTri, out var dongChos))
             {
-                slCho += c.SoLuong;
-                if (theoMaBT.TryGetValue(c.MaBT, out var bt))
+                foreach (var c in dongChos)
                 {
-                    vol += c.SoLuong * bt.Dai * bt.Rong * bt.Cao;
-                    kg += c.SoLuong * bt.KhoiLuong;
+                    slCho += c.SoLuong;
+                    if (theoMaBT.TryGetValue(c.MaBT, out var bt))
+                    {
+                        vol += c.SoLuong * bt.Dai * bt.Rong * bt.Cao;
+                        kg += c.SoLuong * bt.KhoiLuong;
+                    }
                 }
             }
 
@@ -395,6 +426,7 @@ public sealed class ViTriTrucQuanService(
     private static int TinhPhanTram(decimal daDung, decimal tong, bool coHang)
     {
         if (tong <= 0m || daDung <= 0m) return 0;
+        if (daDung >= tong) return 100;
         var pct = (int)Math.Round(daDung * 100m / tong, MidpointRounding.AwayFromZero);
         if (pct == 0 && coHang) return 1;
         return Math.Min(100, pct);
@@ -478,3 +510,4 @@ public sealed class ViTriTrucQuanService(
         }
     }
 }
+

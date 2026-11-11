@@ -1,5 +1,6 @@
 @model DangNhapViewModel
 @using QuanLyKho.Web.Areas.HeThong.Models
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Env
 
 <div class="khung-dang-nhap-ngoai">
     <section class="the-dang-nhap" aria-labelledby="tieuDeDangNhap">
@@ -35,8 +36,11 @@
             <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">Đăng nhập vào bàn làm việc</button>
         </form>
 
-        <footer class="the-dang-nhap-chan small text-muted">
-            Vai trò hỗ trợ: <code>quantri</code> · <code>quanlykho</code> · <code>thukho</code> · <code>nhanvienbh</code>
-        </footer>
+        @if (Env.IsDevelopment())
+        {
+            <footer class="the-dang-nhap-chan small text-muted">
+                Tài khoản mẫu (Development): <code>quantri</code> · <code>quanlykho</code> · <code>thukho</code> · <code>nhanvienbh</code>
+            </footer>
+        }
     </section>
 </div>

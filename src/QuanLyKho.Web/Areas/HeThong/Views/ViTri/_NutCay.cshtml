@@ -25,6 +25,10 @@
             {
                 @* Đường dẫn đầy đủ: tiêu chí hoàn thành việc T4-3, hiện ngay trên cây cho mỗi ô, không chỉ ở trang Sửa. *@
                 <span class="nut-cay-duong-dan">@Model.DuongDanDayDu</span>
+                @if (duocSua)
+                {
+                    <a asp-controller="LichSuTon" asp-action="Index" asp-route-MaViTri="@Model.MaViTri" class="nut-cay-lien-ket">Lịch sử tồn</a>
+                }
             }
             @if (!Model.DangHoatDong)
             {
@@ -55,7 +59,8 @@
                     else
                     {
                         <form method="post" asp-controller="ViTri" asp-action="KhoaKiemKe" asp-route-id="@Model.MaViTri" asp-route-maKho="@Model.MaKho" class="d-inline"
-                              onsubmit="return confirm('Khóa ô \'@Model.TenViTri\' để kiểm kê? Ô sẽ bị loại khỏi nhập, xuất, chuyển.');">
+                              data-confirm="Khóa ô '@Model.TenViTri' để kiểm kê? Ô sẽ bị loại khỏi nhập, xuất, chuyển."
+                              onsubmit="return confirm(this.dataset.confirm);">
                             <button type="submit" class="btn btn-sm btn-outline-warning">Khóa kiểm kê</button>
                         </form>
                     }
@@ -63,7 +68,8 @@
                 @if (Model.DangHoatDong)
                 {
                     <form method="post" asp-controller="ViTri" asp-action="Khoa" asp-route-id="@Model.MaViTri" asp-route-maKho="@Model.MaKho" class="d-inline"
-                          onsubmit="return confirm('Khóa (xóa mềm) \'@Model.TenViTri\'?');">
+                          data-confirm="Khóa (xóa mềm) '@Model.TenViTri'?"
+                          onsubmit="return confirm(this.dataset.confirm);">
                         <button type="submit" class="btn btn-sm btn-outline-danger">Khóa</button>
                     </form>
                 }
@@ -75,7 +81,8 @@
                     @if (Model.Con.Count == 0)
                     {
                         <form method="post" asp-controller="ViTri" asp-action="Xoa" asp-route-id="@Model.MaViTri" asp-route-maKho="@Model.MaKho" class="d-inline"
-                              onsubmit="return confirm('Xóa hẳn \'@Model.TenViTri\'? Chỉ xóa được khi chưa có tồn kho.');">
+                              data-confirm="Xóa hẳn '@Model.TenViTri'? Chỉ xóa được khi chưa có tồn kho."
+                              onsubmit="return confirm(this.dataset.confirm);">
                             <button type="submit" class="btn btn-sm btn-outline-danger">Xóa</button>
                         </form>
                     }

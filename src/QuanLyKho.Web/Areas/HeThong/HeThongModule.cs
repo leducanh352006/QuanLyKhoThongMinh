@@ -63,6 +63,19 @@ public static class HeThongModule
         });
         services.AddScoped<IDbSeeder, TonKhoSeeder>();   // T4-4: thay bản giả StockServiceStub, TonKho/BienDongTon qua EF Core
 
+        // T4-6: lịch sử biến động tồn. Chỉ đọc sổ cái mà IStockService (T4-4) ghi; cùng dịch vụ phục vụ màn hình và ILichSuTonService.
+        services.AddScoped<ILichSuTonStore>(sp =>
+        {
+            var db = sp.GetService<KhoDbContext>();
+            if (db is not null) return new EfLichSuTonStore(db);
+
+            var moiTruong = sp.GetService<IHostEnvironment>();
+            if (moiTruong is null || moiTruong.IsDevelopment()) return new BoNhoLichSuTonStore(sp.GetRequiredService<StockServiceStub>());
+            throw new InvalidOperationException("Chưa cấu hình ConnectionStrings:KhoDb nên không có nơi đọc lịch sử tồn. Xem README, mục \"Chạy lần đầu\".");
+        });
+        services.AddScoped<ILichSuTonQuanLy, LichSuTonService>();
+        services.AddScoped<ILichSuTonService>(sp => (LichSuTonService)sp.GetRequiredService<ILichSuTonQuanLy>());
+
         // ---- Nghiệp vụ ----
         services.AddScoped<ITaiKhoanService, TaiKhoanService>();
         services.AddScoped<IPhanQuyenQuanLy, PhanQuyenService>();
@@ -70,6 +83,7 @@ public static class HeThongModule
         services.AddScoped<INguoiDungQuanLy, NguoiDungQuanLyService>();
         services.AddScoped<IKhoQuanLy, KhoService>();
         services.AddScoped<IViTriQuanLy, ViTriService>();
+        services.AddScoped<IViTriTrucQuanService, ViTriTrucQuanService>();
         services.AddScoped<ILockService, LockService>();   // T4-5: thay bản giả LockServiceStub, khóa/mở ô qua ViTri.DangKhoa
 
         // T4-7: nhật ký thao tác và tệp đính kèm. Bản thật của IAuditService thay AuditServiceStub; chưa có CSDL thì (chỉ Development) dùng bản trong bộ nhớ.

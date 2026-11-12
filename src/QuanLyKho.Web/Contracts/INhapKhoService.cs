@@ -1,6 +1,6 @@
 namespace QuanLyKho.Web.Contracts;
 
-/// <summary>Hàm dùng chung do Nhóm 2 (TV1) sở hữu, cho nhóm 4 (phiếu Thừa) và nhóm 5 (phiếu nháp từ G3) gọi (Bảng 1.6 dòng 10 và 11).</summary>
+/// <summary>Hàm dùng chung do Nhóm 2 (TV1) sở hữu, cho nhóm 4 (phiếu Thừa) và nhóm 5 (phiếu nháp, vốn dành cho G3 đã bỏ) gọi (Bảng 1.6 dòng 10 và 11).</summary>
 public interface INhapKhoService
 {
     /// <summary>
@@ -10,7 +10,7 @@ public interface INhapKhoService
     Task<KetQua<PhieuRef>> TaoPhieuNhapThua(int maKho, int maPK, IReadOnlyList<DongPhieu> dong, int maNguoiLap, CancellationToken ct = default);
 
     /// <summary>
-    /// Tạo phiếu nhập ở trạng thái Nháp (tên phương thức giữ đúng theo issue #41: "nhập nháp"), dùng cho gợi ý G3.
+    /// Tạo phiếu nhập ở trạng thái Nháp (tên phương thức giữ đúng theo issue #41: "nhập nháp"), vốn dành cho gợi ý G3 (đã bỏ), hiện chưa có nơi gọi.
     /// Chưa có nhà cung cấp; quản lý kho chọn khi duyệt, rồi phiếu vẫn phải qua bước kiểm tra.
     /// </summary>
     Task<KetQua<PhieuRef>> TaoPhieuNhapNhap(int maKho, IReadOnlyList<DongPhieu> dong, int maNguoiLap, int? maGoiY = null, CancellationToken ct = default);

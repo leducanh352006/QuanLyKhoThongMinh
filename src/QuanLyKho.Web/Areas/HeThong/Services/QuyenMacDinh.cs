@@ -7,7 +7,7 @@ namespace QuanLyKho.Web.Areas.HeThong.Services;
 /// Ma trận quyền MẶC ĐỊNH (nạp lúc seed, chỉ thêm dòng còn thiếu, không đè dữ liệu đã chỉnh), suy ra từ Bảng 2.2 của báo cáo.
 /// Quản trị viên có thể gán lại trên màn hình Phân quyền (Bảng 2.2, ghi chú dưới bảng).
 /// <para>GIẢ ĐỊNH (cần nhóm xác nhận): Bảng 2.2 chỉ mô tả nhiệm vụ bằng lời nên các ô dưới đây là cách quy đổi sang năm cờ.
-/// Thủ kho có CoDuyet trên NK vì duyệt gợi ý G2 (xếp hàng) thuộc phiếu nhập; Quản lý kho có CoDuyet trên XK, CK, KK vì duyệt phiếu xuất cùng G1, G4 và phát sinh kiểm kê.
+/// Thủ kho có CoDuyet trên NK vì duyệt gợi ý G2 (xếp hàng) thuộc phiếu nhập; Quản lý kho có CoDuyet trên XK, CK, KK vì duyệt phiếu xuất cùng G1 và phát sinh kiểm kê.
 /// Nhân viên bán hàng chỉ xem và tạo phiếu xuất.</para>
 /// </summary>
 public static class QuyenMacDinh

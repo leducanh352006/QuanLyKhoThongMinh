@@ -7,7 +7,7 @@ using QuanLyKho.Web.Areas.XuatKho.Models;
 namespace QuanLyKho.Web.Areas.HeThong.Models;
 
 /// <summary>
-/// Bảng GoiYAI (việc T4-8): mỗi gợi ý của AI và quyết định của người dùng. LoaiGoiY là G1 đến G4, TrangThai theo Bảng 2.16
+/// Bảng GoiYAI (việc T4-8): mỗi gợi ý của AI và quyết định của người dùng. LoaiGoiY là G1 hoặc G2, TrangThai theo Bảng 2.16
 /// (Chờ duyệt, Đã duyệt, Đã sửa và duyệt, Từ chối). MaPX, MaPN, MaPC cùng một lúc chỉ có tối đa một giá trị, theo loại (xem CHECK).
 /// MaPX có khóa ngoại tới PhieuXuat. MaPC chưa có khóa ngoại vì bảng PhieuChuyen chưa có trên main; thêm khi nhóm sở hữu có bảng thật.
 /// </summary>
@@ -65,18 +65,16 @@ public sealed class GoiYAIConfiguration : IEntityTypeConfiguration<GoiYAI>
     {
         b.ToTable("GoiYAI", t =>
         {
-            t.HasCheckConstraint("CK_GoiYAI_LoaiGoiY", "[LoaiGoiY] IN ('G1', 'G2', 'G3', 'G4')");
+            t.HasCheckConstraint("CK_GoiYAI_LoaiGoiY", "[LoaiGoiY] IN ('G1', 'G2')");
             t.HasCheckConstraint("CK_GoiYAI_TrangThai", "[TrangThai] IN (N'Chờ duyệt', N'Đã duyệt', N'Đã sửa và duyệt', N'Từ chối')");
             // Chưa xử lý thì chưa có người duyệt; đã xử lý thì phải có cả người duyệt lẫn thời điểm.
             t.HasCheckConstraint("CK_GoiYAI_NguoiDuyet",
                 "([TrangThai] = N'Chờ duyệt' AND [MaNguoiDuyet] IS NULL AND [ThoiGianDuyet] IS NULL) " +
                 "OR ([TrangThai] <> N'Chờ duyệt' AND [MaNguoiDuyet] IS NOT NULL AND [ThoiGianDuyet] IS NOT NULL)");
-            // G1 gắn đúng một phiếu xuất, G2 đúng một phiếu nhập, G3 chỉ được gắn phiếu nhập, G4 chỉ phiếu chuyển (điền sau khi duyệt).
+            // G1 gắn đúng một phiếu xuất, G2 đúng một phiếu nhập.
             t.HasCheckConstraint("CK_GoiYAI_ThamChieu",
                 "([LoaiGoiY] = 'G1' AND [MaPX] IS NOT NULL AND [MaPN] IS NULL AND [MaPC] IS NULL) " +
-                "OR ([LoaiGoiY] = 'G2' AND [MaPN] IS NOT NULL AND [MaPX] IS NULL AND [MaPC] IS NULL) " +
-                "OR ([LoaiGoiY] = 'G3' AND [MaPX] IS NULL AND [MaPC] IS NULL) " +
-                "OR ([LoaiGoiY] = 'G4' AND [MaPX] IS NULL AND [MaPN] IS NULL)");
+                "OR ([LoaiGoiY] = 'G2' AND [MaPN] IS NOT NULL AND [MaPX] IS NULL AND [MaPC] IS NULL)");
         });
         b.HasKey(x => x.MaGoiY);
         b.Property(x => x.MaGoiY).ValueGeneratedOnAdd();

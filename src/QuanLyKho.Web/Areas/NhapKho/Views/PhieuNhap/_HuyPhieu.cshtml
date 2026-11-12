@@ -1,0 +1,22 @@
+@using QuanLyKho.Web.Areas.NhapKho.Models
+@using QuanLyKho.Web.Areas.NhapKho.Services
+@model PhieuNhap
+@* Khung hủy phiếu (việc T1-7). Chỉ hiện với phiếu còn hủy được; máy chủ vẫn kiểm tra lại điều kiện (chưa có dòng nào xếp vào ô) và quyền Xóa khi bấm. *@
+<section class="mt-4" aria-labelledby="tieuDeHuy">
+    <h2 class="h5" id="tieuDeHuy">Hủy phiếu</h2>
+    <p class="text-body-secondary">
+        Hủy được khi chưa có dòng nào được sắp xếp vào ô.
+        @(Model.TrangThai == PhieuNhap.DaKiemTra ? "Phiếu đã tiếp nhận hàng nên hàng ở khu tiếp nhận sẽ được hoàn tác khỏi tồn, và các lệnh sắp xếp đang chờ sẽ bị hủy theo. " : "")
+        Hủy xong không khôi phục được. Lý do được ghi vào nhật ký; có biên bản hoặc ảnh thì đính kèm ở mục Đính kèm bên dưới.
+    </p>
+    <form method="post" asp-action="Huy" asp-route-id="@Model.MaPN" class="row g-2 align-items-end"
+          onsubmit="return confirm('Hủy phiếu @(Model.SoPhieu)? Không khôi phục được.');">
+        <div class="col-12 col-md-6">
+            <label class="form-label" for="lyDoHuy">Lý do hủy</label>
+            <input class="form-control" id="lyDoHuy" name="lyDo" required maxlength="@PhieuNhapService.LyDoToiDa" />
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-outline-danger">Hủy phiếu</button>
+        </div>
+    </form>
+</section>

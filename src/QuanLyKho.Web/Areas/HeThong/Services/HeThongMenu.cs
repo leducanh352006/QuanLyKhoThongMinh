@@ -16,6 +16,7 @@ public sealed class HeThongMenu : IMenuNguon
         new MenuMuc("Kho", "Danh sách kho: thêm, sửa, ngừng hoạt động.", "HeThong", "Kho", "Index", new[] { VaiTroTen.QuanTriVien, VaiTroTen.QuanLyKho }),
         new MenuMuc("Vị trí", "Cây vị trí nhiều cấp tới từng ô, kích thước và sức chứa.", "HeThong", "ViTri", "Index", new[] { VaiTroTen.QuanTriVien, VaiTroTen.QuanLyKho, VaiTroTen.ThuKho }),
         new MenuMuc("Nhật ký", "Tra cứu ai làm gì, lúc nào; lọc theo người, thao tác, chứng từ và thời gian.", "HeThong", "NhatKy", "Index", new[] { VaiTroTen.QuanTriVien }),
-        new MenuMuc("Gợi ý AI", "Duyệt, sửa rồi duyệt hoặc từ chối các gợi ý G1 đến G4; hệ thống tự tạo thao tác sau khi duyệt.", "HeThong", "GoiY", "Index", new[] { VaiTroTen.QuanTriVien, VaiTroTen.QuanLyKho, VaiTroTen.ThuKho }),
+        new MenuMuc("Lịch sử tồn", "Sổ cái biến động tồn theo lô và ô, lọc theo loại và thời gian; đối chiếu sổ cái với tồn kho.", "HeThong", "LichSuTon", "Index", new[] { VaiTroTen.QuanTriVien, VaiTroTen.QuanLyKho }),
+        new MenuMuc("Gợi ý AI", "Duyệt, sửa rồi duyệt hoặc từ chối các gợi ý G1, G2; hệ thống tự tạo thao tác sau khi duyệt.", "HeThong", "GoiY", "Index", new[] { VaiTroTen.QuanTriVien, VaiTroTen.QuanLyKho, VaiTroTen.ThuKho }),
     });
 }

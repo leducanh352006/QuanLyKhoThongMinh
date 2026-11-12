@@ -80,7 +80,16 @@ else
                         <td class="text-nowrap">@Ngay(d.ThoiGianUtc)</td>
                         <td>@d.NguoiThucHien</td>
                         <td>@d.HanhDong</td>
-                        <td>@(d.LoaiCT is null ? "—" : $"{d.LoaiCT} #{d.MaCT}")</td>
+                        <td>
+                            @if (d.LoaiCT is null)
+                            {
+                                @:—
+                            }
+                            else
+                            {
+                                <a asp-controller="LichSuTon" asp-action="Index" asp-route-LoaiCT="@d.LoaiCT" asp-route-MaCT="@d.MaCT" title="Xem biến động tồn của chứng từ này">@d.LoaiCT #@d.MaCT</a>
+                            }
+                        </td>
                         <td>@d.ChiTiet</td>
                     </tr>
                 }

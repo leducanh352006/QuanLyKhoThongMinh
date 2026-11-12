@@ -1,0 +1,39 @@
+@using QuanLyKho.Web.Areas.XuatKho.Models
+@model List<PhieuXuat>
+@{
+    ViewData["Title"] = "Đối chiếu hàng đã lấy";
+}
+
+<header class="trang-dau">
+    <h1>Đối chiếu hàng đã lấy</h1>
+    <p class="mota">Phiếu Đang lấy hàng đã quét mã xong hết — so số thực lấy với yêu cầu trên phiếu trước khi xác nhận xuất.</p>
+</header>
+
+@if (TempData["ThongBao"] is string tb) { <div class="alert alert-success" role="status">@tb</div> }
+@if (TempData["Loi"] is string loi) { <div class="alert alert-danger" role="alert">@loi</div> }
+
+@if (Model.Count == 0)
+{
+    <p class="khung-trong">Không có phiếu nào sẵn sàng đối chiếu (chưa lấy xong hoặc chưa có phiếu Đang lấy hàng).</p>
+}
+else
+{
+    <div class="bang-cuon">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr><th scope="col">Số phiếu</th><th scope="col">Loại</th><th scope="col">Kho</th><th scope="col"><span class="visually-hidden">Thao tác</span></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model)
+                {
+                    <tr>
+                        <td>@p.SoPhieu</td>
+                        <td>@p.LoaiPhieu</td>
+                        <td>@(p.Kho?.TenKho)</td>
+                        <td class="text-end"><a class="btn btn-sm btn-primary" asp-action="Xem" asp-route-id="@p.MaPX">Đối chiếu</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

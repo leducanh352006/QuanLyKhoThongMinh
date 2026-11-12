@@ -1,0 +1,162 @@
+@using QuanLyKho.Web.Areas.HangHoa.Models
+@model TaoPhieuKiemTrang
+@{
+    ViewData["Title"] = "Tạo phiếu kiểm";
+    var f = Model.Form;
+    var dm = Model.DanhMuc;
+    var phamVi = f.PhamViMaBT ?? new List<int>();
+    var thamGia = f.ThamGia ?? new List<ThamGiaVm?>();
+}
+
+<header class="trang-dau trang-dau-hang">
+    <div>
+        <h1>Tạo phiếu kiểm</h1>
+        <p class="mota">
+            Bấm tạo là bắt đầu kiểm ngay: hệ thống khóa các ô thuộc phạm vi rồi chụp số hệ thống. Kiểm Toàn bộ khóa mọi ô lưu trữ của kho;
+            kiểm Một phần chỉ khóa các ô đang chứa mặt hàng đã chọn. Ô còn hàng giữ chỗ cho phiếu xuất chưa hoàn tất thì chưa khóa được.
+        </p>
+    </div>
+    <a class="btn btn-outline-secondary" asp-action="Index">Quay lại danh sách</a>
+</header>
+
+@if (ViewData["Loi"] is string loi) { <div class="alert alert-danger" role="alert">@loi</div> }
+
+<form method="post" asp-action="Tao" id="formPhieu" class="khung-form" style="max-width:60rem" novalidate>
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            <label class="form-label" for="MaKho">Kho kiểm kê</label>
+            <select class="form-select" id="MaKho" name="MaKho" required>
+                <option value="0">-- Chọn kho --</option>
+                @foreach (var k in dm.Kho)
+                {
+                    <option value="@k.Key" selected="@(f.MaKho == k.Key)">@k.Value</option>
+                }
+            </select>
+            <div class="form-text"><a href="#" id="lienKetSoDo" hidden>Xem sơ đồ vị trí của kho này</a></div>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label" for="LoaiKiemKe">Loại kiểm kê</label>
+            <select class="form-select" id="LoaiKiemKe" name="LoaiKiemKe">
+                @foreach (var loai in new[] { PhieuKiem.ToanBo, PhieuKiem.MotPhan })
+                {
+                    <option value="@loai" selected="@(f.LoaiKiemKe == loai)">@loai</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label" for="ThamChieu">Tham chiếu (không bắt buộc)</label>
+            <input class="form-control" id="ThamChieu" name="ThamChieu" maxlength="100" value="@f.ThamChieu" />
+        </div>
+        <div class="col-12">
+            <label class="form-label" for="DienGiai">Diễn giải (không bắt buộc)</label>
+            <textarea class="form-control" id="DienGiai" name="DienGiai" rows="2" maxlength="500">@f.DienGiai</textarea>
+        </div>
+    </div>
+
+    <fieldset class="mb-3" id="oPhamVi">
+        <legend class="h5">Phạm vi mặt hàng (bắt buộc khi kiểm Một phần)</legend>
+        @if (dm.BienThe.Count == 0)
+        {
+            <p class="text-body-secondary mb-0">Chưa có mặt hàng nào trong danh mục.</p>
+        }
+        else
+        {
+            <div class="bang-cuon" style="max-height:16rem; overflow-y:auto">
+                @foreach (var b in dm.BienThe)
+                {
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="PhamViMaBT" value="@b.Key" id="bt@(b.Key)" checked="@phamVi.Contains(b.Key)" />
+                        <label class="form-check-label" for="bt@(b.Key)">@b.Value</label>
+                    </div>
+                }
+            </div>
+        }
+    </fieldset>
+
+    <h2 class="h5">Người tham gia kiểm</h2>
+    <p class="text-body-secondary">Ít nhất một người, là nhân viên đang hoạt động trong danh mục.</p>
+    <div class="bang-cuon">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">Người kiểm</th>
+                    <th scope="col">Ghi chú</th>
+                    <th scope="col" style="width:6rem"><span class="visually-hidden">Thao tác</span></th>
+                </tr>
+            </thead>
+            <tbody id="dongThamGia">
+                @for (var i = 0; i < thamGia.Count; i++)
+                {
+                    var t = thamGia[i] ?? new ThamGiaVm();
+                    <tr>
+                        <td>
+                            <select class="form-select" data-ten="MaND" name="ThamGia[@i].MaND" aria-label="Người kiểm">
+                                <option value="0">-- Chọn người --</option>
+                                @foreach (var n in dm.NguoiDung)
+                                {
+                                    <option value="@n.Key" selected="@(t.MaND == n.Key)">@n.Value</option>
+                                }
+                            </select>
+                        </td>
+                        <td><input class="form-control" data-ten="GhiChu" name="ThamGia[@i].GhiChu" value="@t.GhiChu" maxlength="255" aria-label="Ghi chú" /></td>
+                        <td><button type="button" class="btn btn-outline-secondary btn-sm" data-xoa>Xóa</button></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 mt-3">
+        <button type="button" class="btn btn-outline-primary" id="themDong">Thêm người tham gia</button>
+        <button type="submit" class="btn btn-primary">Tạo phiếu và bắt đầu kiểm</button>
+        <a class="btn btn-outline-secondary" asp-action="Index">Hủy</a>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        // Thêm, xóa dòng người tham gia rồi đánh số lại tên ô: ThamGia[0].MaND, ThamGia[0].GhiChu, ThamGia[1].MaND...
+        const bang = document.getElementById('dongThamGia');
+        function danhSo() {
+            bang.querySelectorAll('tr').forEach((tr, i) =>
+                tr.querySelectorAll('[data-ten]').forEach(o => o.name = `ThamGia[${i}].${o.dataset.ten}`));
+        }
+        document.getElementById('themDong').addEventListener('click', () => {
+            const dongMau = bang.rows[0];
+            if (!dongMau) return;   // máy chủ luôn phát ít nhất một dòng; phòng khi bị sửa DOM
+            const dongMoi = dongMau.cloneNode(true);
+            dongMoi.querySelectorAll('select, input').forEach(o => o.value = o.tagName === 'SELECT' ? '0' : '');
+            bang.appendChild(dongMoi);
+            danhSo();
+        });
+        bang.addEventListener('click', e => {
+            if (e.target.matches('[data-xoa]') && bang.rows.length > 1) { e.target.closest('tr').remove(); danhSo(); }
+        });
+
+        // Chỉ hiện phạm vi mặt hàng cho loại Một phần.
+        const loaiKiemKe = document.getElementById('LoaiKiemKe');
+        const oPhamVi = document.getElementById('oPhamVi');
+        function capNhatPhamVi() {
+            const laMotPhan = loaiKiemKe.value === '@PhieuKiem.MotPhan';
+            oPhamVi.hidden = !laMotPhan;
+            if (!laMotPhan) oPhamVi.querySelectorAll('input[type=checkbox]').forEach(c => c.checked = false);
+        }
+        loaiKiemKe.addEventListener('change', capNhatPhamVi);
+        capNhatPhamVi();
+
+        // Có kho thì gắn liên kết tới sơ đồ vị trí trực quan của kho đó.
+        const maKho = document.getElementById('MaKho');
+        const lienKetSoDo = document.getElementById('lienKetSoDo');
+        function capNhatSoDo() {
+            const coKho = Number(maKho.value) > 0;
+            lienKetSoDo.hidden = !coKho;
+            if (coKho) lienKetSoDo.href = '/HeThong/ViTri?maKho=' + encodeURIComponent(maKho.value);
+        }
+        maKho.addEventListener('change', capNhatSoDo);
+        capNhatSoDo();
+
+        // Khóa nút tạo sau khi bấm để bấm đúp không tạo hai phiếu.
+        document.getElementById('formPhieu').addEventListener('submit', e => setTimeout(() => e.submitter && (e.submitter.disabled = true)));
+        danhSo();
+    </script>
+}

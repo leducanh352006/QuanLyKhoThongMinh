@@ -205,8 +205,8 @@ namespace QuanLyKho.Web.Migrations
 
                     b.Property<string>("LoaiKiemKe")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<int>("MaKho")
                         .HasColumnType("int");
@@ -247,7 +247,7 @@ namespace QuanLyKho.Web.Migrations
                         {
                             t.HasCheckConstraint("CK_PhieuKiem_LoaiKiemKe", "[LoaiKiemKe] IN (N'Toàn bộ', N'Một phần')");
 
-                            t.HasCheckConstraint("CK_PhieuKiem_TrangThai", "[TrangThai] IN (N'Đang kiểm', N'Hoàn tất')");
+                            t.HasCheckConstraint("CK_PhieuKiem_TrangThai", "[TrangThai] IN (N'Đang kiểm', N'Chờ duyệt', N'Đã xử lý')");
                         });
                 });
 

@@ -12,7 +12,7 @@ using QuanLyKho.Web.Data;
 namespace QuanLyKho.Web.Migrations
 {
     [DbContext(typeof(KhoDbContext))]
-    [Migration("20261102144339_TaoPhieuKiem")]
+    [Migration("20261112141328_TaoPhieuKiem")]
     partial class TaoPhieuKiem
     {
         /// <inheritdoc />
@@ -208,8 +208,8 @@ namespace QuanLyKho.Web.Migrations
 
                     b.Property<string>("LoaiKiemKe")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<int>("MaKho")
                         .HasColumnType("int");
@@ -250,7 +250,7 @@ namespace QuanLyKho.Web.Migrations
                         {
                             t.HasCheckConstraint("CK_PhieuKiem_LoaiKiemKe", "[LoaiKiemKe] IN (N'Toàn bộ', N'Một phần')");
 
-                            t.HasCheckConstraint("CK_PhieuKiem_TrangThai", "[TrangThai] IN (N'Đang kiểm', N'Hoàn tất')");
+                            t.HasCheckConstraint("CK_PhieuKiem_TrangThai", "[TrangThai] IN (N'Đang kiểm', N'Chờ duyệt', N'Đã xử lý')");
                         });
                 });
 
@@ -466,11 +466,11 @@ namespace QuanLyKho.Web.Migrations
 
                     b.ToTable("GoiYAI", null, t =>
                         {
-                            t.HasCheckConstraint("CK_GoiYAI_LoaiGoiY", "[LoaiGoiY] IN ('G1', 'G2', 'G3', 'G4')");
+                            t.HasCheckConstraint("CK_GoiYAI_LoaiGoiY", "[LoaiGoiY] IN ('G1', 'G2')");
 
                             t.HasCheckConstraint("CK_GoiYAI_NguoiDuyet", "([TrangThai] = N'Chờ duyệt' AND [MaNguoiDuyet] IS NULL AND [ThoiGianDuyet] IS NULL) OR ([TrangThai] <> N'Chờ duyệt' AND [MaNguoiDuyet] IS NOT NULL AND [ThoiGianDuyet] IS NOT NULL)");
 
-                            t.HasCheckConstraint("CK_GoiYAI_ThamChieu", "([LoaiGoiY] = 'G1' AND [MaPX] IS NOT NULL AND [MaPN] IS NULL AND [MaPC] IS NULL) OR ([LoaiGoiY] = 'G2' AND [MaPN] IS NOT NULL AND [MaPX] IS NULL AND [MaPC] IS NULL) OR ([LoaiGoiY] = 'G3' AND [MaPX] IS NULL AND [MaPC] IS NULL) OR ([LoaiGoiY] = 'G4' AND [MaPX] IS NULL AND [MaPN] IS NULL)");
+                            t.HasCheckConstraint("CK_GoiYAI_ThamChieu", "([LoaiGoiY] = 'G1' AND [MaPX] IS NOT NULL AND [MaPN] IS NULL AND [MaPC] IS NULL) OR ([LoaiGoiY] = 'G2' AND [MaPN] IS NOT NULL AND [MaPX] IS NULL AND [MaPC] IS NULL)");
 
                             t.HasCheckConstraint("CK_GoiYAI_TrangThai", "[TrangThai] IN (N'Chờ duyệt', N'Đã duyệt', N'Đã sửa và duyệt', N'Từ chối')");
                         });

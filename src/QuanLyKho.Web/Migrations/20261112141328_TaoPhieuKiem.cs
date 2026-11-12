@@ -19,9 +19,9 @@ namespace QuanLyKho.Web.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     SoPhieu = table.Column<string>(type: "varchar(20)", nullable: false),
                     MaKho = table.Column<int>(type: "int", nullable: false),
-                    LoaiKiemKe = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    ThamChieu = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    LoaiKiemKe = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
                     DienGiai = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    ThamChieu = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     ThoiGianBatDau = table.Column<DateTime>(type: "datetime2(0)", nullable: false, defaultValueSql: "SYSUTCDATETIME()"),
                     MaNguoiLap = table.Column<int>(type: "int", nullable: false),
                     TrangThai = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false, defaultValue: "Đang kiểm")
@@ -30,7 +30,7 @@ namespace QuanLyKho.Web.Migrations
                 {
                     table.PrimaryKey("PK_PhieuKiem", x => x.MaPK);
                     table.CheckConstraint("CK_PhieuKiem_LoaiKiemKe", "[LoaiKiemKe] IN (N'Toàn bộ', N'Một phần')");
-                    table.CheckConstraint("CK_PhieuKiem_TrangThai", "[TrangThai] IN (N'Đang kiểm', N'Hoàn tất')");
+                    table.CheckConstraint("CK_PhieuKiem_TrangThai", "[TrangThai] IN (N'Đang kiểm', N'Chờ duyệt', N'Đã xử lý')");
                     table.ForeignKey(
                         name: "FK_PhieuKiem_Kho_MaKho",
                         column: x => x.MaKho,

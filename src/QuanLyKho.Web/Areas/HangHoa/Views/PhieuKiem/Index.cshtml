@@ -1,45 +1,72 @@
 @using QuanLyKho.Web.Areas.HangHoa.Models
-@model List<PhieuKiem>
+@using QuanLyKho.Web.Areas.HangHoa.Services
+@model IReadOnlyList<PhieuKiemDong>
 @{
     ViewData["Title"] = "Phiếu kiểm";
+    var chuaCoCsdl = ViewData["ChuaCoCsdl"] as string;
 }
 
-<header class="trang-dau d-flex flex-wrap justify-content-between align-items-end gap-2">
+<header class="trang-dau trang-dau-hang">
     <div>
         <h1>Phiếu kiểm</h1>
-        <p class="mota">Tạo phiếu là bắt đầu kiểm ngay: ô liên quan bị khóa và tồn hệ thống được chụp lại. Hiện 200 phiếu mới nhất.</p>
+        <p class="mota">Tạo phiếu là bắt đầu kiểm ngay: các ô thuộc phạm vi bị khóa rồi số hệ thống được chụp lại. Hiện @PhieuKiemService.ToiDa phiếu mới nhất.</p>
     </div>
-    <a class="btn btn-primary" asp-action="Tao">Tạo phiếu kiểm</a>
+    @if (chuaCoCsdl is null)
+    {
+        <a class="btn btn-primary" asp-action="Tao">Tạo phiếu kiểm</a>
+    }
 </header>
 
-@if (Model.Count == 0)
+@if (TempData["ThongBao"] is string tb) { <div class="alert alert-success" role="status">@tb</div> }
+@if (TempData["Loi"] is string loi) { <div class="alert alert-danger" role="alert">@loi</div> }
+
+@if (chuaCoCsdl is not null)
 {
-    <p class="khung-trong">Chưa có phiếu kiểm nào. Bấm "Tạo phiếu kiểm" để lập phiếu đầu tiên.</p>
+    <div class="khung-trong">
+        <h2>Chưa kết nối cơ sở dữ liệu</h2>
+        <p>@chuaCoCsdl</p>
+    </div>
+}
+else if (Model.Count == 0)
+{
+    <div class="khung-trong">
+        <h2>Chưa có phiếu kiểm nào</h2>
+        <p>Bấm "Tạo phiếu kiểm" để lập phiếu đầu tiên.</p>
+    </div>
 }
 else
 {
-    <div class="bang-cuon">
-        <table class="table table-sm align-middle">
-            <thead>
-                <tr>
-                    <th scope="col">Số phiếu</th><th scope="col">Loại</th><th scope="col">Thời gian bắt đầu</th><th scope="col">Kho</th>
-                    <th scope="col" class="text-end">Số dòng</th><th scope="col" class="text-end">Người tham gia</th><th scope="col">Trạng thái</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var p in Model)
-                {
+    <div class="khung-the">
+        <div class="bang-cuon">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
                     <tr>
-                        <td><a asp-action="Xem" asp-route-id="@p.MaPK">@p.SoPhieu</a></td>
-                        <td>@p.LoaiKiemKe</td>
-                        <td>@p.ThoiGianBatDau.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
-                        <td>@(p.Kho?.TenKho)</td>
-                        <td class="text-end">@p.ChiTiet.Count</td>
-                        <td class="text-end">@p.ThamGia.Count</td>
-                        <td><span class="nhan @(p.TrangThai == PhieuKiem.HoanTat ? "nhan-tot" : "nhan-chu-y")">@p.TrangThai</span></td>
+                        <th scope="col">Số phiếu</th>
+                        <th scope="col">Kho kiểm</th>
+                        <th scope="col">Loại kiểm</th>
+                        <th scope="col">Thời gian bắt đầu</th>
+                        <th scope="col">Người lập</th>
+                        <th scope="col" class="text-end">Số dòng</th>
+                        <th scope="col" class="text-end">Người tham gia</th>
+                        <th scope="col">Trạng thái</th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach (var p in Model)
+                    {
+                        <tr>
+                            <td><a asp-action="Xem" asp-route-id="@p.MaPK">@p.SoPhieu</a></td>
+                            <td><a href="/HeThong/ViTri?maKho=@p.MaKho" title="Mở sơ đồ vị trí của kho">@p.TenKho</a></td>
+                            <td>@p.LoaiKiemKe</td>
+                            <td class="so-bang">@p.ThoiGianBatDau.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@p.NguoiLap</td>
+                            <td class="text-end so-bang">@p.SoDong</td>
+                            <td class="text-end so-bang">@p.SoNguoi</td>
+                            <td><span class="nhan @PhieuKiemHienThi.LopNhan(p.TrangThai)">@p.TrangThai</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     </div>
 }

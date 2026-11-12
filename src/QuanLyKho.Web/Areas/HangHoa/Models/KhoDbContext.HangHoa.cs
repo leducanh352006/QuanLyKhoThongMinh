@@ -15,4 +15,12 @@ public partial class KhoDbContext
     public DbSet<BienThe> BienThe => Set<BienThe>();
 
     public DbSet<LoHang> LoHang => Set<LoHang>();
+
+    // ---- Kiểm kê (việc T3-4) ----
+
+    public DbSet<PhieuKiem> PhieuKiem => Set<PhieuKiem>();
+
+    public DbSet<ChiTietPhieuKiem> ChiTietPhieuKiem => Set<ChiTietPhieuKiem>();
+
+    public DbSet<ThamGiaKiem> ThamGiaKiem => Set<ThamGiaKiem>();
 }

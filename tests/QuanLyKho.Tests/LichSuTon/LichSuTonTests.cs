@@ -17,7 +17,7 @@ namespace QuanLyKho.Tests;
 
 /// <summary>
 /// Kiểm thử việc T4-6 (Lịch sử biến động tồn): lọc theo lô, ô, loại chứng từ, thời gian; đối chiếu sổ cái (dùng lại T4-4);
-/// lịch sử xuất theo ngày cho G3, G4. Phần SQL Server chạy trong một giao dịch rồi hoàn tác, không để lại dữ liệu.
+/// lịch sử xuất theo ngày. Phần SQL Server chạy trong một giao dịch rồi hoàn tác, không để lại dữ liệu.
 /// </summary>
 public class LichSuTonTests
 {
@@ -211,7 +211,7 @@ public class LichSuTonTests
         public Task<IReadOnlyList<TonKhoDto>> LayTonTheoViTri(int maViTri, CancellationToken ct = default) => throw new NotSupportedException();
     }
 
-    // ---- Lịch sử xuất theo ngày cho G3, G4 ----
+    // ---- Lịch sử xuất theo ngày ----
 
     private static readonly TimeZoneInfo GioVietNam = TimeZoneInfo.CreateCustomTimeZone("UTC+7", TimeSpan.FromHours(7), "UTC+7", "UTC+7");
 

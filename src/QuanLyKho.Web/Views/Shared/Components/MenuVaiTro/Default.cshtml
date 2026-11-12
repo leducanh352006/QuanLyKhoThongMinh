@@ -1,10 +1,16 @@
 @model MenuViewModel
 
-<nav aria-label="Các khu vực chức năng">
+<nav aria-label="Các khu vực chức năng" class="menu-dieu-huong">
     <ul class="menu-danh-sach">
         <li>
             <a class="menu-muc@(Model.DangODauTrang ? " dang-chon" : "")" asp-area="" asp-controller="Home" asp-action="Index"
-               aria-current="@(Model.DangODauTrang ? "page" : null)">Trang chủ</a>
+               aria-current="@(Model.DangODauTrang ? "page" : null)">
+                <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" />
+                    <rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" />
+                </svg>
+                <span>Trang chủ</span>
+            </a>
         </li>
     </ul>
 
@@ -15,7 +21,27 @@
 
     @foreach (var nhom in Model.Nhom)
     {
-        <h2 class="menu-nhom">@nhom.Ten</h2>
+        <h2 class="menu-nhom">
+            @switch (nhom.Ten)
+            {
+                case "Hệ thống":
+                    <svg class="menu-nhom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.77 1.02 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    break;
+                case "Nhập kho":
+                    <svg class="menu-nhom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                    break;
+                case "Xuất kho":
+                    <svg class="menu-nhom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 15V3m0 0L8 7m4-4l4 4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                    break;
+                case "Hàng hóa":
+                    <svg class="menu-nhom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3.3 7.3L12 12l8.7-4.7M12 22V12"/></svg>
+                    break;
+                default:
+                    <svg class="menu-nhom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 10l-4-4 4-4M3 6h14a4 4 0 0 1 4 4v1M17 14l4 4-4 4M21 18H7a4 4 0 0 1-4-4v-1"/></svg>
+                    break;
+            }
+            <span>@nhom.Ten</span>
+        </h2>
         <ul class="menu-danh-sach">
             @foreach (var muc in nhom.Muc)
             {
@@ -23,7 +49,9 @@
                     && string.Equals(muc.Controller, Model.ControllerHienTai, StringComparison.OrdinalIgnoreCase);
                 <li>
                     <a class="menu-muc@(dangChon ? " dang-chon" : "")" asp-area="@muc.Area" asp-controller="@muc.Controller" asp-action="@muc.Action"
-                       aria-current="@(dangChon ? "page" : null)">@muc.Ten</a>
+                       aria-current="@(dangChon ? "page" : null)">
+                        <span>@muc.Ten</span>
+                    </a>
                 </li>
             }
         </ul>

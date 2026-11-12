@@ -6,8 +6,8 @@ public enum LoaiChungTu { NK, XK, CK, KK }
 /// <summary>Loại biến động ghi vào sổ cái BienDongTon (Bảng 2.16).</summary>
 public enum LoaiBienDong { NhanHang, SapXep, XuatKho, ChuyenDi, NhanChuyen, DoiO, HoanTac }
 
-/// <summary>Bốn bài toán gợi ý AI (Bảng 1.3): G1 lấy hàng, G2 xếp hàng, G3 nhập bổ sung, G4 luân chuyển kho.</summary>
-public enum LoaiGoiY { G1, G2, G3, G4 }
+/// <summary>Hai bài toán gợi ý AI còn lại: G1 lấy hàng, G2 xếp hàng (G3 nhập bổ sung và G4 luân chuyển kho đã bỏ khỏi phạm vi).</summary>
+public enum LoaiGoiY { G1, G2 }
 
 /// <summary>Trạng thái duyệt của một gợi ý (mục 1.2.4).</summary>
 public enum TrangThaiGoiY { ChoDuyet, DaDuyet, DaSuaVaDuyet, TuChoi }
@@ -54,7 +54,7 @@ public static class GiaTriCsdl
         _ => throw new ArgumentOutOfRangeException(nameof(v), v, null),
     };
 
-    /// <summary>Chiều ngược của ToCsdl(LoaiGoiY): "G1" đến "G4".</summary>
+    /// <summary>Chiều ngược của ToCsdl(LoaiGoiY): "G1" hoặc "G2".</summary>
     public static LoaiGoiY ParseLoaiGoiY(string v) => Enum.TryParse<LoaiGoiY>(v, out var l) && Enum.IsDefined(l)
         ? l : throw new ArgumentOutOfRangeException(nameof(v), v, null);
 

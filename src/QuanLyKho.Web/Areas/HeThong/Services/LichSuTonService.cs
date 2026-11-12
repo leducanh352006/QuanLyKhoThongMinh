@@ -149,7 +149,7 @@ public interface ILichSuTonQuanLy
 
 /// <summary>
 /// Việc T4-6: lịch sử biến động tồn. Đọc sổ cái BienDongTon mà <see cref="IStockService"/> (T4-4) ghi; không bao giờ ghi hay sửa sổ cái.
-/// Đồng thời cung cấp <see cref="ILichSuTonService"/> cho G3, G4.
+/// Đồng thời cung cấp <see cref="ILichSuTonService"/> (hiện chưa có nơi dùng sau khi bỏ G3, G4).
 /// </summary>
 public sealed class LichSuTonService(ILichSuTonStore store, IStockService stock, IHeThongStore nguoiDung, TimeProvider gio)
     : ILichSuTonQuanLy, ILichSuTonService

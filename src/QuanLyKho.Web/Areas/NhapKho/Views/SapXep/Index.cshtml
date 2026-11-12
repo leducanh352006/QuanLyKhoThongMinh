@@ -6,9 +6,14 @@
     ViewData["Title"] = "Sắp xếp vào ô";
 }
 
-<header class="trang-dau">
-    <h1>Sắp xếp vào ô</h1>
-    <p class="mota">Phiếu đã kiểm tra, hàng đạt còn nằm ở khu tiếp nhận. Hàng chỉ tính vào tồn khả dụng sau khi thủ kho quét mã ô và mã lô để xác nhận.</p>
+<header class="trang-dau trang-dau-hang">
+    <div>
+        <h1>Sắp xếp vào ô</h1>
+        <p class="mota">Phiếu đã kiểm tra, hàng đạt còn nằm ở khu tiếp nhận. Hàng chỉ tính vào tồn khả dụng sau khi thủ kho quét mã ô và mã lô để xác nhận.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-secondary" asp-area="HeThong" asp-controller="ViTri" asp-action="Index">Sơ đồ vị trí và kiểm 3D</a>
+    </div>
 </header>
 
 @if (Model.Count == 0)
@@ -35,10 +40,10 @@ else
                     <tr>
                         <td><a asp-action="Xep" asp-route-id="@p.MaPN">@p.SoPhieu</a></td>
                         <td>@(p.Kho?.TenKho)</td>
-                        <td class="text-end">@dat</td>
-                        <td class="text-end">@daXep</td>
-                        <td class="text-end">@dangCho</td>
-                        <td class="text-end">@(dat - daXep - dangCho)</td>
+                        <td class="text-end so-bang">@dat</td>
+                        <td class="text-end so-bang">@daXep</td>
+                        <td class="text-end so-bang">@dangCho</td>
+                        <td class="text-end so-bang">@(dat - daXep - dangCho)</td>
                     </tr>
                 }
             </tbody>

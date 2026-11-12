@@ -5,8 +5,11 @@ using QuanLyKho.Web.Data;
 
 namespace QuanLyKho.Web.Areas.XuatKho.Services;
 
-/// <summary>Một dòng hiển thị ở màn xác nhận xuất: mặt hàng và số lượng thực xuất (bằng đúng tổng LayHang.SLThucLay, đã khớp ở T2-5).</summary>
-public sealed record DongXacNhanXuat(int MaBT, string TenHang, int SoLuong);
+/// <summary>
+/// Một dòng hiển thị ở màn xác nhận xuất: đúng theo từng (lô, ô) sẽ bị ghi giảm tồn thật khi xác nhận (XacNhan gộp và ghi giảm
+/// theo đúng các cặp lô/ô này), để thủ kho thấy rõ sẽ trừ ở mã lô nào và ô nào trước khi bấm xác nhận không thể hoàn tác.
+/// </summary>
+public sealed record DongXacNhanXuat(int MaBT, string TenHang, string MaVachLo, DateOnly? HanDung, string TenViTri, int SoLuong);
 
 /// <summary>
 /// Xác nhận xuất (việc T2-6, issue #15, Bảng 2.4 dòng 6, mục 2.4.2): bước cuối của luồng xuất kho, sau khi đã đối chiếu khớp
@@ -28,7 +31,21 @@ public sealed class XacNhanXuatService(KhoDbContext db, IStockService ton, IAudi
         var ten = await db.BienThe.AsNoTracking().Where(b => p.ChiTiet.Select(c => c.MaBT).Contains(b.MaBT))
             .Join(db.SanPham.AsNoTracking(), b => b.MaSP, s => s.MaSP, (b, s) => new { b.MaBT, Ten = s.TenSP + " (" + b.ThuocTinh + ")" })
             .ToDictionaryAsync(x => x.MaBT, x => x.Ten, ct);
-        var dong = p.ChiTiet.Select(c => new DongXacNhanXuat(c.MaBT, ten.GetValueOrDefault(c.MaBT, $"biến thể #{c.MaBT}"), c.SoLuong)).ToList();
+
+        // Chi tiết đúng theo từng (lô, ô) sẽ bị ghi giảm khi xác nhận (xem XacNhan): mã lô, hạn dùng và ô lấy hàng, không chỉ
+        // tổng số lượng theo mặt hàng.
+        var raw = await (
+            from l in db.LayHang.AsNoTracking()
+            join c in db.ChiTietPhieuXuat.AsNoTracking() on l.MaCTX equals c.MaCTX
+            join lo in db.LoHang.AsNoTracking() on l.MaLo equals lo.MaLo
+            join o in db.ViTri.AsNoTracking() on l.MaViTri equals o.MaViTri
+            where c.MaPX == maPX && l.SLThucLay > 0
+            select new { c.MaBT, lo.MaVachLo, lo.HanDung, o.TenViTri, SoLuong = l.SLThucLay!.Value }
+        ).ToListAsync(ct);
+
+        var dong = raw.OrderBy(x => x.MaBT).ThenBy(x => x.MaVachLo).ThenBy(x => x.TenViTri)
+            .Select(x => new DongXacNhanXuat(x.MaBT, ten.GetValueOrDefault(x.MaBT, $"biến thể #{x.MaBT}"), x.MaVachLo, x.HanDung, x.TenViTri, x.SoLuong))
+            .ToList();
         return KetQua<IReadOnlyList<DongXacNhanXuat>>.Ok(dong);
     }
 
@@ -47,11 +64,22 @@ public sealed class XacNhanXuatService(KhoDbContext db, IStockService ton, IAudi
             select l
         ).ToListAsync(ct);
 
-        await using var giaoDichMoi = db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync(ct) : null;
+        // Phòng vệ dữ liệu: phiếu Đã đối chiếu nhưng chưa có dòng lấy hàng nào, hoặc còn dòng chưa quét mã xác nhận (SLThucLay
+        // null), thì không được khóa phiếu mà không trừ tồn nào — từ chối ngay, trước khi mở giao dịch.
+        if (layHang.Count == 0 || layHang.Any(l => l.SLThucLay is null))
+            return KetQua.Loi($"Phiếu {p.SoPhieu} chưa có đủ dòng lấy hàng đã quét mã xác nhận, chưa xác nhận xuất được.", MaLoiDichVu.SaiTrangThai);
 
+        // Sắp theo (MaLo, MaViTri) cố định để hai phiếu xuất xác nhận đồng thời trên tập lô/ô giao nhau luôn khóa theo cùng thứ
+        // tự, tránh chờ khóa chéo (deadlock) giữa IStockService.GhiGiam của hai giao dịch.
         var theoLoO = layHang.Where(l => l.SLThucLay is > 0)
             .GroupBy(l => (l.MaLo, l.MaViTri))
-            .Select(g => new DongTon(g.Key.MaLo, g.Key.MaViTri, g.Sum(l => l.SLThucLay!.Value)));
+            .Select(g => new DongTon(g.Key.MaLo, g.Key.MaViTri, g.Sum(l => l.SLThucLay!.Value)))
+            .OrderBy(d => d.MaLo).ThenBy(d => d.MaViTri)
+            .ToList();
+        if (theoLoO.Count == 0)
+            return KetQua.Loi($"Phiếu {p.SoPhieu} chưa có dòng lấy hàng nào có số lượng thực lấy lớn hơn 0, chưa xác nhận xuất được.", MaLoiDichVu.SaiTrangThai);
+
+        await using var giaoDichMoi = db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync(ct) : null;
 
         foreach (var dong in theoLoO)
         {

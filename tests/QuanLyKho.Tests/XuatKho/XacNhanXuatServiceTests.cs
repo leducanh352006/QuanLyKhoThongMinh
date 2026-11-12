@@ -61,9 +61,9 @@ public class XacNhanXuatServiceTests
         MaVachO = "MV-" + Guid.NewGuid().ToString("N")[..12], Dai = 10, Rong = 10, Cao = 10, KhoiLuongToiDa = 100,
     };
 
-    private static async Task<int> LoHangAsync(KhoDbContext db, int maBT)
+    private static async Task<int> LoHangAsync(KhoDbContext db, int maBT, DateOnly? hanDung = null)
     {
-        var lo = new LoHang { MaVachLo = "LO-" + Guid.NewGuid().ToString("N")[..14], MaBT = maBT };
+        var lo = new LoHang { MaVachLo = "LO-" + Guid.NewGuid().ToString("N")[..14], MaBT = maBT, HanDung = hanDung };
         db.LoHang.Add(lo);
         await db.SaveChangesAsync();
         return lo.MaLo;
@@ -184,5 +184,77 @@ public class XacNhanXuatServiceTests
 
         Assert.False(kq.ThanhCong);
         Assert.Equal(PhieuXuat.DangLayHang, (await e.Db.PhieuXuat.AsNoTracking().SingleAsync(x => x.MaPX == e.MaPX)).TrangThai);
+    });
+
+    [CanSqlServerFact]
+    public async Task XacNhan_KhongCoDongLayHangNao_BiTuChoiKhongKhoaPhieu() => await DungAsync(PhieuXuat.DaDoiChieu, async e =>
+    {
+        // Phòng vệ dữ liệu: phiếu Đã đối chiếu nhưng chưa có dòng LayHang nào — không được khóa phiếu mà không trừ tồn.
+        var kq = await e.Service.XacNhan(e.MaPX, MaNguoiXacNhan);
+
+        Assert.False(kq.ThanhCong);
+        Assert.Equal(PhieuXuat.DaDoiChieu, (await e.Db.PhieuXuat.AsNoTracking().SingleAsync(x => x.MaPX == e.MaPX)).TrangThai);
+    });
+
+    [CanSqlServerFact]
+    public async Task XacNhan_ConDongChuaQuetMa_BiTuChoiKhongKhoaPhieu() => await DungAsync(PhieuXuat.DaDoiChieu, async e =>
+    {
+        var o = OLuuTru(e.MaDay, "O-ChuaQuet");
+        e.Db.ViTri.Add(o);
+        await e.Db.SaveChangesAsync();
+        var maLo = await LoHangAsync(e.Db, e.MaBT);
+        await TonAsync(e.Db, maLo, o.MaViTri, soLuongTon: 20, soLuongGiu: 7);
+        e.Db.LayHang.Add(new LayHang { MaCTX = e.MaCTX, MaLo = maLo, MaViTri = o.MaViTri, SLGiu = 7, SLThucLay = null });   // chưa quét
+        await e.Db.SaveChangesAsync();
+
+        var kq = await e.Service.XacNhan(e.MaPX, MaNguoiXacNhan);
+
+        Assert.False(kq.ThanhCong);
+        var p = await e.Db.PhieuXuat.AsNoTracking().SingleAsync(x => x.MaPX == e.MaPX);
+        Assert.Equal(PhieuXuat.DaDoiChieu, p.TrangThai);   // không bị khóa Hoàn tất
+        var ton = await e.Db.TonKho.AsNoTracking().SingleAsync(t => t.MaLo == maLo && t.MaViTri == o.MaViTri);
+        Assert.Equal(20, ton.SoLuongTon);   // chưa ghi giảm gì
+        Assert.Equal(7, ton.SoLuongGiu);
+    });
+
+    [CanSqlServerFact]
+    public async Task Xem_TraVeChiTietTheoLoVaO() => await DungAsync(PhieuXuat.DaDoiChieu, async e =>
+    {
+        var o = OLuuTru(e.MaDay, "O-Xem");
+        e.Db.ViTri.Add(o);
+        await e.Db.SaveChangesAsync();
+        var han = new DateOnly(2027, 1, 1);
+        var maLo = await LoHangAsync(e.Db, e.MaBT, han);
+        await TonAsync(e.Db, maLo, o.MaViTri, soLuongTon: 20, soLuongGiu: 7);
+        e.Db.LayHang.Add(new LayHang { MaCTX = e.MaCTX, MaLo = maLo, MaViTri = o.MaViTri, SLGiu = 7, SLThucLay = 7 });
+        await e.Db.SaveChangesAsync();
+        var lo = await e.Db.LoHang.AsNoTracking().SingleAsync(l => l.MaLo == maLo);
+
+        var kq = await e.Service.Xem(e.MaPX);
+
+        Assert.True(kq.ThanhCong, kq.ThongBao);
+        var dong = Assert.Single(kq.GiaTri!);
+        Assert.Equal(lo.MaVachLo, dong.MaVachLo);
+        Assert.Equal(han, dong.HanDung);
+        Assert.Equal(o.TenViTri, dong.TenViTri);
+        Assert.Equal(7, dong.SoLuong);
+    });
+
+    [CanSqlServerFact]
+    public async Task Xem_ChuaQuetMaHetNen_KhongHienDongNaoChoDongDo() => await DungAsync(PhieuXuat.DaDoiChieu, async e =>
+    {
+        // Xem chỉ hiện các dòng LayHang đã có SLThucLay > 0 (đúng dòng sẽ bị ghi giảm nếu bấm xác nhận), không hiện dòng còn null.
+        var o = OLuuTru(e.MaDay, "O-XemMotPhan");
+        e.Db.ViTri.Add(o);
+        await e.Db.SaveChangesAsync();
+        var maLo = await LoHangAsync(e.Db, e.MaBT);
+        await TonAsync(e.Db, maLo, o.MaViTri, soLuongTon: 20, soLuongGiu: 7);
+        e.Db.LayHang.Add(new LayHang { MaCTX = e.MaCTX, MaLo = maLo, MaViTri = o.MaViTri, SLGiu = 7, SLThucLay = null });
+        await e.Db.SaveChangesAsync();
+
+        var kq = await e.Service.Xem(e.MaPX);
+
+        Assert.True(kq.ThanhCong, kq.ThongBao);
+        Assert.Empty(kq.GiaTri!);
     });
 }

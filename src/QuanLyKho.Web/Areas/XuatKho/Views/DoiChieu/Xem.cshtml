@@ -8,36 +8,46 @@
     ViewData["Title"] = $"Đối chiếu phiếu {p.SoPhieu}";
 }
 
-<header class="trang-dau">
-    <h1>Đối chiếu phiếu @p.SoPhieu</h1>
-    <p class="mota">
-        So số lượng yêu cầu trên phiếu với tổng số đã quét mã xác nhận lấy được (LayHang.SLThucLay).
-        @(coThieu ? "Còn dòng thiếu so với yêu cầu." : "Mọi dòng đã khớp đủ.")
-    </p>
+<header class="trang-dau trang-dau-hang">
+    <div>
+        <h1>Đối chiếu phiếu @p.SoPhieu</h1>
+        <p class="mota">
+            <span class="nhan @(coThieu ? "nhan-chu-y" : "nhan-tot")">@p.TrangThai</span> @p.LoaiPhieu
+            · So số lượng yêu cầu trên phiếu với tổng số đã quét mã xác nhận lấy được (LayHang.SLThucLay).
+            @(coThieu ? "Còn dòng thiếu so với yêu cầu." : "Mọi dòng đã khớp đủ.")
+        </p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-secondary" asp-controller="PhieuXuat" asp-action="Sua" asp-route-id="@p.MaPX">Xem phiếu</a>
+        <a class="btn btn-outline-secondary" asp-area="HeThong" asp-controller="ViTri" asp-action="Index" asp-route-maKho="@p.MaKho">Sơ đồ vị trí kho</a>
+    </div>
 </header>
 
 @if (TempData["ThongBao"] is string tb) { <div class="alert alert-success" role="status">@tb</div> }
 @if (TempData["Loi"] is string loi) { <div class="alert alert-danger" role="alert">@loi</div> }
 
-<div class="bang-cuon">
-    <table class="table table-sm align-middle">
-        <thead>
-            <tr><th scope="col">Hàng</th><th scope="col" class="text-end">Yêu cầu</th><th scope="col" class="text-end">Đã lấy</th><th scope="col" class="text-end">Thiếu</th><th scope="col">Lý do lệch</th></tr>
-        </thead>
-        <tbody>
-            @foreach (var d in dong)
-            {
-                <tr class="@(d.Thieu > 0 ? "table-danger" : "")">
-                    <td>@d.TenHang</td>
-                    <td class="text-end">@d.YeuCau</td>
-                    <td class="text-end">@d.DaLay</td>
-                    <td class="text-end">@(d.Thieu > 0 ? d.Thieu.ToString() : "—")</td>
-                    <td>@(d.LyDoLech ?? "—")</td>
-                </tr>
-            }
-        </tbody>
-    </table>
-</div>
+<section class="khung-the mb-3">
+    <p class="mota mb-2">Kho @(p.Kho?.TenKho) · Đối tượng @(p.DoiTuong ?? "—")</p>
+    <div class="bang-cuon">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr><th scope="col">Hàng</th><th scope="col" class="text-end">Yêu cầu</th><th scope="col" class="text-end">Đã lấy</th><th scope="col" class="text-end">Thiếu</th><th scope="col">Lý do lệch</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var d in dong)
+                {
+                    <tr class="@(d.Thieu > 0 ? "table-danger" : "")">
+                        <td>@d.TenHang</td>
+                        <td class="text-end so-bang">@d.YeuCau</td>
+                        <td class="text-end so-bang">@d.DaLay</td>
+                        <td class="text-end so-bang">@(d.Thieu > 0 ? d.Thieu.ToString() : "—")</td>
+                        <td>@(d.LyDoLech ?? "—")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
 
 @if (p.TrangThai == PhieuXuat.DaDoiChieu)
 {
@@ -46,10 +56,17 @@
         <a class="btn btn-outline-secondary" asp-action="Index">Quay lại danh sách</a>
     </p>
 }
-else
+else if (p.TrangThai == PhieuXuat.DangLayHang)
 {
     <form method="post" asp-action="XacNhan" asp-route-id="@p.MaPX" class="d-flex flex-wrap gap-2 mt-3">
         <button type="submit" class="btn btn-success btn-lg">@(coThieu ? "Đối chiếu (gợi ý lại phần thiếu hoặc xuất một phần)" : "Đối chiếu, chuyển bước xác nhận xuất")</button>
         <a class="btn btn-outline-secondary" asp-action="Index">Quay lại danh sách</a>
     </form>
+}
+else
+{
+    @* Phiếu đã Hoàn tất, Đã hủy... — không còn đối chiếu được (trạng thái đã hiện ở đầu trang). *@
+    <p class="d-flex flex-wrap gap-2 mt-3">
+        <a class="btn btn-outline-secondary" asp-action="Index">Quay lại danh sách</a>
+    </p>
 }

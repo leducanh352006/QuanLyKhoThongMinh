@@ -57,10 +57,11 @@ public class SapXepController(INguoiDungHienTai hienTai, IStockService ton, ICap
         ViewBag.Lenh = await LenhTheoDong(new[] { p });
         ViewBag.O = await Db.ViTri.AsNoTracking().Where(v => v.MaKho == p.MaKho && v.CapViTri == CapViTriGiaTri.O).OrderBy(v => v.MaViTri).ToListAsync();
 
-        // Ô gợi ý của G2 (đang chờ duyệt) cho từng biến thể của phiếu; sau khi duyệt, hệ thống lập lệnh và lệnh hiện ở bảng bên dưới.
+        // Ô gợi ý của G2 (đang chờ duyệt), gom theo (biến thể, lô) để một dòng hàng chia vào nhiều ô thì hiện đủ các ô và dòng cùng biến thể khác lô không lẫn nhau;
+        // sau khi duyệt, hệ thống lập lệnh và lệnh hiện ở bảng bên dưới.
         var goiYG2 = await goiY.DanhSachChoDuyet(LoaiGoiY.G2);
         ViewBag.GoiY = goiYG2.Where(g => g.ThamChieu.MaPN == p.MaPN).SelectMany(g => g.ChiTiet).Where(c => c.MaViTri != null)
-            .GroupBy(c => c.MaBT).ToDictionary(g => g.Key, g => g.First());
+            .ToLookup(c => (c.MaBT, c.MaLo));
         return View(p);
     }
 

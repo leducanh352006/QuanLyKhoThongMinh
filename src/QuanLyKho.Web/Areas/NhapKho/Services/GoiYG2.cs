@@ -264,10 +264,13 @@ public sealed class HandlerG2(IStockService ton, ICapacityService sucChua, IAudi
         {
             if (c.MaViTri is not int maO)
                 return KetQua<ThamChieuGoiY>.Loi($"Mỗi dòng gợi ý G2 phải có ô (biến thể #{c.MaBT}).", MaLoiDichVu.DuLieuKhongHopLe);
+            // Dòng "Sửa rồi duyệt" do người duyệt chỉnh nên không tin MaLo: bắt buộc có lô và khớp cả biến thể lẫn lô của một dòng hàng đạt còn chờ xếp.
+            if (c.MaLo is not int maLo)
+                return KetQua<ThamChieuGoiY>.Loi($"Mỗi dòng gợi ý G2 phải có lô (biến thể #{c.MaBT}).", MaLoiDichVu.DuLieuKhongHopLe);
             var d = p.ChiTiet.OrderBy(x => x.MaCTN)
-                .FirstOrDefault(x => x.MaBT == c.MaBT && (c.MaLo is null || x.MaLo == c.MaLo) && conLai[x.MaCTN] >= c.SoLuong);
+                .FirstOrDefault(x => x.MaBT == c.MaBT && x.MaLo == maLo && conLai[x.MaCTN] >= c.SoLuong);
             if (d is null)
-                return KetQua<ThamChieuGoiY>.Loi($"Gợi ý có dòng biến thể #{c.MaBT} số lượng {c.SoLuong} không khớp hàng đạt còn chưa xếp của phiếu; phiếu có thể đã đổi sau khi tạo gợi ý.", MaLoiDichVu.DuLieuKhongHopLe);
+                return KetQua<ThamChieuGoiY>.Loi($"Biến thể #{c.MaBT}, lô #{maLo}, số lượng {c.SoLuong} không khớp dòng hàng đạt còn chờ xếp nào của phiếu; phiếu có thể đã đổi sau khi tạo gợi ý hoặc lô bị sửa sai.", MaLoiDichVu.DuLieuKhongHopLe);
 
             var kq = await sx.LapLenh(d.MaCTN, maO, c.SoLuong, false, maNguoiDuyet, ct);   // không tự chia: đúng ô đã duyệt hoặc báo lỗi
             if (!kq.ThanhCong) return KetQua<ThamChieuGoiY>.Loi(kq.ThongBao ?? "Không lập được lệnh sắp xếp.", kq.MaLoi);

@@ -139,9 +139,10 @@ public class PhieuKiemTests
 
         // Số hệ thống đúng theo IStockService, không có hàng ở khu Tiếp nhận.
         Assert.Equal(
-            new[] { (MoiTruong.AoThun, MoiTruong.LoAo, MoiTruong.O1, 15), (MoiTruong.TaiNghe, MoiTruong.LoTaiNghe, MoiTruong.O1, 5), (MoiTruong.AoThun, MoiTruong.LoAo, MoiTruong.O2, 8) },
-            p.ChiTiet.Select(d => (d.MaBT, d.MaLo, d.MaViTri, d.SoLuongHeThong)).OrderBy(x => x.MaViTri).ThenBy(x => x.MaLo).ToArray());
-        Assert.DoesNotContain(p.ChiTiet, d => d.MaViTri == MoiTruong.OTiepNhan);
+            new[] { (MoiTruong.LoAo, MoiTruong.O1, 15), (MoiTruong.LoTaiNghe, MoiTruong.O1, 5), (MoiTruong.LoAo, MoiTruong.O2, 8) },
+            p.Dong.Select(d => (d.MaLo, d.MaViTri, d.SLHeThong)).OrderBy(x => x.MaViTri).ThenBy(x => x.MaLo).ToArray());
+        Assert.DoesNotContain(p.Dong, d => d.MaViTri == MoiTruong.OTiepNhan);
+        Assert.All(p.Dong, d => { Assert.Null(d.SLThucTe); Assert.Equal(DongKiem.ChuaKiem, d.TrangThaiXuLy); });
 
         Assert.Equal(new[] { (MoiTruong.NguoiA, (string?)null), (MoiTruong.NguoiB, "Tổ trưởng") }, p.ThamGia.Select(t => (t.MaND, t.GhiChu)).ToArray());
         Assert.Contains(e.NhatKy.Dong, d => d.MaND == MoiTruong.NguoiLap && d.HanhDong == "Tạo phiếu kiểm");
@@ -170,8 +171,8 @@ public class PhieuKiemTests
 
         Assert.True(kq.ThanhCong, kq.ThongBao);
         Assert.Equal(new[] { MoiTruong.O1 }, e.Khoa.DangKhoaO.ToArray());          // tai nghe chỉ có ở ô 1
-        var d = Assert.Single(e.Store.DaLuu[0].ChiTiet);                             // áo thun cùng ô không vào phiếu
-        Assert.Equal((MoiTruong.TaiNghe, MoiTruong.LoTaiNghe, MoiTruong.O1, 5), (d.MaBT, d.MaLo, d.MaViTri, d.SoLuongHeThong));
+        var d = Assert.Single(e.Store.DaLuu[0].Dong);                                // áo thun cùng ô không vào phiếu
+        Assert.Equal((MoiTruong.LoTaiNghe, MoiTruong.O1, 5), (d.MaLo, d.MaViTri, d.SLHeThong));
     }
 
     [Fact]
@@ -184,7 +185,7 @@ public class PhieuKiemTests
         var kq = await e.Service.Tao(FormMotPhan(MoiTruong.TaiNghe), MoiTruong.NguoiLap);
 
         Assert.True(kq.ThanhCong, kq.ThongBao);
-        Assert.Equal(3, Assert.Single(e.Store.DaLuu[0].ChiTiet).SoLuongHeThong);
+        Assert.Equal(3, Assert.Single(e.Store.DaLuu[0].Dong).SLHeThong);
         var lanKhoa = e.NhatKyGoi.IndexOf($"KhoaO:{MoiTruong.O1}");
         Assert.Contains(e.NhatKyGoi.Skip(lanKhoa + 1), x => x == $"LayTon:{MoiTruong.O1}");
     }
@@ -236,7 +237,7 @@ public class PhieuKiemTests
         var kq = await e.Service.Tao(FormHopLe(), MoiTruong.NguoiLap);
 
         Assert.True(kq.ThanhCong, kq.ThongBao);
-        Assert.Empty(Assert.Single(e.Store.DaLuu).ChiTiet);
+        Assert.Empty(Assert.Single(e.Store.DaLuu).Dong);
         Assert.Equal(3, e.Khoa.DangKhoaO.Count);
     }
 
@@ -395,10 +396,8 @@ public class PhieuKiemTests
         var loai = phieu.GetCheckConstraints().Single(c => c.Name == "CK_PhieuKiem_LoaiKiemKe").Sql;
         foreach (var gt in new[] { PhieuKiem.ToanBo, PhieuKiem.MotPhan }) Assert.Contains($"N'{gt}'", loai);
 
-        var chiTiet = moHinh.FindEntityType(typeof(ChiTietPhieuKiem))!;
-        Assert.Equal("ChiTietPhieuKiem", chiTiet.GetTableName());
-        Assert.Equal(new[] { "BienThe", "LoHang", "PhieuKiem", "ViTri" },
-            chiTiet.GetForeignKeys().Select(f => f.PrincipalEntityType.GetTableName()!).OrderBy(x => x).ToArray());
+        // Số hệ thống nằm ở DongKiem (T3-5); bảng ChiTietPhieuKiem của bản đầu đã được thay thế.
+        Assert.DoesNotContain(moHinh.GetEntityTypes(), t => t.GetTableName() == "ChiTietPhieuKiem");
 
         var thamGia = moHinh.FindEntityType(typeof(ThamGiaKiem))!;
         Assert.Equal("ThamGiaKiem", thamGia.GetTableName());

@@ -434,6 +434,13 @@ public class KiemDemTests
         public Task<LoQuet?> TimLo(string maVachLo, CancellationToken ct = default) => Task.FromResult(Lo.GetValueOrDefault(maVachLo));
         public Task<int?> TimBienThe(string maVach, CancellationToken ct = default) => Task.FromResult(BienThe.TryGetValue(maVach, out var m) ? m : (int?)null);
         public Task<DongKiem?> TimDong(int maPK, int maDK, CancellationToken ct = default) => Task.FromResult(Dong.FirstOrDefault(d => d.MaPK == maPK && d.MaDK == maDK));
+        // Các hàm của việc ghi nhận phát sinh (T3-6) không dùng ở bài kiểm thử kiểm đếm; xem PhatSinhTests.
+        public Task<ViTriChon?> TimViTri(int maViTri, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<IReadOnlyList<ViTriChon>> LayOLuuTruHoatDong(int maKho, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<string?> TenBienThe(int maBT, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<KichThuocBienThe?> KichThuoc(int maBT, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<IReadOnlyList<KeyValuePair<int, string>>> LayBienTheChon(CancellationToken ct = default) => throw new NotSupportedException();
+
         public void Them(DongKiem dong) => _choThem.Add(dong);
         public void Xoa(DongKiem dong) => _choXoa.Add(dong);
 

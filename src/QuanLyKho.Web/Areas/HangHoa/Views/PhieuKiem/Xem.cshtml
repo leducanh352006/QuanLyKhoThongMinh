@@ -1,0 +1,115 @@
+@using QuanLyKho.Web.Areas.HangHoa.Models
+@using QuanLyKho.Web.Contracts
+@model PhieuKiemXem
+@{
+    // Tạo phiếu là bắt đầu kiểm ngay nên không có bước sửa: phiếu đã tạo chỉ để xem. Trang này không có thẻ <form> nào,
+    // khung đính kèm ở cuối vì vậy luôn nằm ngoài form.
+    ViewData["Title"] = $"Phiếu kiểm {Model.SoPhieu}";
+}
+
+<header class="trang-dau trang-dau-hang">
+    <div>
+        <h1>Phiếu kiểm @Model.SoPhieu</h1>
+        <p class="mota">
+            <span class="nhan @PhieuKiemHienThi.LopNhan(Model.TrangThai)">@Model.TrangThai</span>
+            Bắt đầu kiểm lúc @Model.ThoiGianBatDau.ToLocalTime().ToString("dd/MM/yyyy HH:mm").
+            @if (Model.TrangThai == PhieuKiem.DangKiem)
+            {
+                <text>Các ô thuộc phạm vi đang bị khóa, không nhập, xuất, chuyển được cho tới khi phiếu hoàn tất.</text>
+            }
+        </p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-primary" href="/HeThong/ViTri?maKho=@Model.MaKho">Sơ đồ vị trí kho (ô đang khóa)</a>
+        <a class="btn btn-outline-secondary" asp-action="Index">Quay lại danh sách</a>
+    </div>
+</header>
+
+@if (TempData["ThongBao"] is string tb) { <div class="alert alert-success" role="status">@tb</div> }
+
+<div class="khung-the mb-4">
+    <dl class="row mb-0">
+        <dt class="col-sm-3">Kho kiểm kê</dt>
+        <dd class="col-sm-9"><a href="/HeThong/ViTri?maKho=@Model.MaKho">@Model.TenKho</a></dd>
+        <dt class="col-sm-3">Loại kiểm kê</dt>
+        <dd class="col-sm-9">@Model.LoaiKiemKe</dd>
+        <dt class="col-sm-3">Người lập</dt>
+        <dd class="col-sm-9">@Model.NguoiLap</dd>
+        <dt class="col-sm-3">Tham chiếu</dt>
+        <dd class="col-sm-9">@(Model.ThamChieu ?? "—")</dd>
+        <dt class="col-sm-3">Diễn giải</dt>
+        <dd class="col-sm-9 mb-0">@(Model.DienGiai ?? "—")</dd>
+    </dl>
+</div>
+
+<h2 class="h5">Người tham gia kiểm</h2>
+<div class="khung-the mb-4">
+    <div class="bang-cuon">
+        <table class="table table-sm align-middle mb-0">
+            <thead>
+                <tr>
+                    <th scope="col">Mã nhân viên</th>
+                    <th scope="col">Họ tên</th>
+                    <th scope="col">Chức danh</th>
+                    <th scope="col">Ghi chú</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var t in Model.ThamGia)
+                {
+                    <tr>
+                        <td class="so-bang">@t.MaND</td>
+                        <td>@t.HoTen</td>
+                        <td>@t.ChucDanh</td>
+                        <td>@(t.GhiChu ?? "—")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<h2 class="h5">Số hệ thống tại thời điểm bắt đầu kiểm</h2>
+@if (Model.ChiTiet.Count == 0)
+{
+    <div class="khung-trong mb-4">
+        <h2>Phạm vi kiểm không có tồn</h2>
+        <p>Lúc bắt đầu kiểm, các ô thuộc phạm vi không có hàng nào theo số hệ thống. Hàng đếm thấy sẽ được ghi nhận là thừa ở bước kiểm đếm.</p>
+    </div>
+}
+else
+{
+    <div class="khung-the mb-4">
+        <div class="bang-cuon">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">Ô</th>
+                        <th scope="col">Mặt hàng</th>
+                        <th scope="col">Lô</th>
+                        <th scope="col" class="text-end">Số hệ thống</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var d in Model.ChiTiet)
+                    {
+                        <tr>
+                            <td>@d.TenO</td>
+                            <td>@d.TenHang</td>
+                            <td>@d.MaVachLo</td>
+                            <td class="text-end so-bang">@d.SoLuongHeThong</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th scope="row" colspan="3">Tổng (@Model.ChiTiet.Count dòng)</th>
+                        <td class="text-end so-bang fw-semibold">@Model.ChiTiet.Sum(d => d.SoLuongHeThong)</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+}
+
+@await Component.InvokeAsync("DinhKem", new { loai = LoaiChungTu.KK, maCT = Model.MaPK })

@@ -8,33 +8,40 @@
     var lo = (Dictionary<int, string>)ViewBag.Lo;
     var lenh = (ILookup<int, SapXep>)ViewBag.Lenh;
     var oTrongKho = (List<ViTri>)ViewBag.O;
-    var goiY = (Dictionary<int, ChiTietGoiYDto>)ViewBag.GoiY;
+    var goiY = (ILookup<(int MaBT, int? MaLo), ChiTietGoiYDto>)ViewBag.GoiY;   // gợi ý G2 đang chờ duyệt theo (biến thể, lô); một dòng chia nhiều ô có nhiều phần
     var tenO = oTrongKho.ToDictionary(v => v.MaViTri, v => v.TenViTri);
     var oXep = oTrongKho.Where(v => v.LoaiViTri == LoaiViTriGiaTri.LuuTru && v.DangHoatDong && !v.DangKhoa).ToList();
     var hoanTat = Model.TrangThai == PhieuNhap.HoanTat;
     ViewData["Title"] = $"Sắp xếp vào ô {Model.SoPhieu}";
 }
 
-<header class="trang-dau">
-    <h1>@ViewData["Title"]</h1>
-    <p class="mota">
-        <span class="nhan @(hoanTat ? "nhan-tot" : "nhan-chu-y")">@Model.TrangThai</span>
-        Lập lệnh xếp hàng đạt vào ô lưu trữ, rồi quét mã ô và mã lô trên từng lệnh để xác nhận. Quét sai ô hoặc sai lô thì không ghi nhận gì.
-        Muốn xếp vào ô khác thì hủy lệnh rồi lập lệnh mới.
-    </p>
+<header class="trang-dau trang-dau-hang">
+    <div>
+        <h1>@ViewData["Title"]</h1>
+        <p class="mota">
+            <span class="nhan @(hoanTat ? "nhan-tot" : "nhan-chu-y")">@Model.TrangThai</span>
+            Lập lệnh xếp hàng đạt vào ô lưu trữ, rồi quét mã ô và mã lô trên từng lệnh để xác nhận. Quét sai ô hoặc sai lô thì không ghi nhận gì.
+            Muốn xếp vào ô khác thì hủy lệnh rồi lập lệnh mới.
+        </p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-secondary" asp-area="HeThong" asp-controller="ViTri" asp-action="Index" asp-route-maKho="@Model.MaKho">Sơ đồ vị trí và kiểm 3D</a>
+    </div>
 </header>
 
 @if (TempData["ThongBao"] is string tb) { <div class="alert alert-success" role="status">@tb</div> }
 @if (TempData["Loi"] is string loi) { <div class="alert alert-danger" role="alert">@loi</div> }
 
-@if (!hoanTat && Model.ChiTiet.Any(x => x.MaLo != null && (x.SLDat ?? 0) > 0))
+@* Khối gợi ý G2 (T1-3) đặt ngay dưới thông báo để kết quả tạo, duyệt và lỗi khi "sửa rồi duyệt" không bị khuất cuối trang.
+   AI chỉ đề xuất, không tự lập lệnh. Nút chỉ hiện khi phiếu chưa có gợi ý chờ duyệt; khung DuyetGoiY có form riêng nên đặt ngoài mọi thẻ form khác. *@
+@if (!hoanTat && goiY.Count == 0 && Model.ChiTiet.Any(x => x.MaLo != null && (x.SLDat ?? 0) > 0))
 {
-    @* Gợi ý G2 (T1-3): AI đề xuất ô cho các dòng chưa lập lệnh; kết quả hiện ở khung duyệt phía dưới, không tự lập lệnh. *@
     <form method="post" asp-action="TaoGoiY" asp-route-id="@Model.MaPN" class="mb-3">
         <button type="submit" class="btn btn-outline-primary">Gợi ý ô sắp xếp (G2)</button>
         <span class="text-body-secondary">AI chỉ đề xuất, thủ kho duyệt rồi mới có lệnh xếp; vẫn lập lệnh tay được.</span>
     </form>
 }
+@await Component.InvokeAsync("DuyetGoiY", new { loai = LoaiGoiY.G2, maPN = Model.MaPN })
 
 @foreach (var d in Model.ChiTiet.OrderBy(x => x.MaCTN))
 {
@@ -45,11 +52,11 @@
     var chuaLap = dat - daXep - dangCho;
     var ten = hang[d.MaBT];
     var maLo = d.MaLo is int ml && lo.TryGetValue(ml, out var maVachLo) ? maVachLo : null;
-    var g = goiY.GetValueOrDefault(d.MaBT);   // gợi ý G2 đang chờ duyệt cho biến thể này, nếu có
-    var oGoiY = g?.MaViTri;
+    var cacGoiY = goiY[(d.MaBT, d.MaLo)].ToList();   // các phần gợi ý G2 đang chờ duyệt cho đúng dòng này (biến thể và lô), nếu có
+    var oGoiY = cacGoiY.FirstOrDefault()?.MaViTri;   // ô đầu tiên làm mặc định cho lập lệnh tay
     var coHang = dat > 0 && maLo is not null;
 
-    <section class="mb-4" aria-labelledby="dong@(d.MaCTN)">
+    <section class="khung-the mb-3" aria-labelledby="dong@(d.MaCTN)">
         <h2 class="h5" id="dong@(d.MaCTN)">@ten @if (maLo is not null) { <span class="text-body-secondary">lô @maLo</span> }</h2>
 
         @if (!coHang)
@@ -76,7 +83,7 @@
                         {
                             <tr>
                                 <td>@tenO.GetValueOrDefault(s.MaViTri, "Ô " + s.MaViTri)</td>
-                                <td class="text-end">@s.SoLuong</td>
+                                <td class="text-end so-bang">@s.SoLuong</td>
                                 <td><span class="nhan @(s.TrangThai == SapXep.DaXacNhan ? "nhan-tot" : "nhan-chu-y")">@s.TrangThai</span></td>
                                 <td>
                                     @if (s.TrangThai == SapXep.ChoXacNhan)
@@ -108,9 +115,17 @@
 
         @if (coHang && chuaLap > 0 && !hoanTat)
         {
-            if (g is not null)
+            if (cacGoiY.Count > 0)
             {
-                <p class="text-body-secondary">Gợi ý G2 đang chờ duyệt: ô @tenO.GetValueOrDefault(oGoiY ?? 0, "khác") (@g.SoLuong). @g.LyDo</p>
+                <div class="text-body-secondary">
+                    <p class="mb-1">Gợi ý G2 đang chờ duyệt cho dòng này (@cacGoiY.Count ô):</p>
+                    <ul class="mb-2">
+                        @foreach (var c in cacGoiY)
+                        {
+                            <li><strong>@tenO.GetValueOrDefault(c.MaViTri ?? 0, "Ô khác")</strong> (<span class="so-bang">@c.SoLuong</span>): @c.LyDo</li>
+                        }
+                    </ul>
+                </div>
             }
             <form method="post" asp-action="LapLenh" asp-route-id="@Model.MaPN" class="row g-2 align-items-end">
                 <input type="hidden" name="maCTN" value="@d.MaCTN" />
@@ -136,9 +151,6 @@
         }
     </section>
 }
-
-@* Khung duyệt gợi ý G2 (T1-3, khung chung của T4-8): đặt ngoài mọi thẻ form vì component có form duyệt riêng. *@
-@await Component.InvokeAsync("DuyetGoiY", new { loai = LoaiGoiY.G2, maPN = Model.MaPN })
 
 <div class="d-flex flex-wrap gap-2">
     <a class="btn btn-outline-secondary" asp-action="Index">Danh sách chờ sắp xếp</a>

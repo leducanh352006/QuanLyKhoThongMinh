@@ -20,7 +20,7 @@ public partial class KhoDbContext
 
     public DbSet<PhieuKiem> PhieuKiem => Set<PhieuKiem>();
 
-    public DbSet<ChiTietPhieuKiem> ChiTietPhieuKiem => Set<ChiTietPhieuKiem>();
+    public DbSet<DongKiem> DongKiem => Set<DongKiem>();
 
     public DbSet<ThamGiaKiem> ThamGiaKiem => Set<ThamGiaKiem>();
 }

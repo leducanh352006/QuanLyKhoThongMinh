@@ -83,7 +83,7 @@ public sealed class PhieuKiemService(
             {
                 MaKho = vm.MaKho, LoaiKiemKe = vm.LoaiKiemKe!, ThamChieu = vm.ThamChieu, DienGiai = vm.DienGiai,
                 ThoiGianBatDau = DateTime.UtcNow, MaNguoiLap = maND, TrangThai = PhieuKiem.DangKiem,
-                ChiTiet = dong.Select(d => new ChiTietPhieuKiem { MaBT = d.MaBT, MaLo = d.MaLo, MaViTri = d.MaViTri, SoLuongHeThong = d.SoLuong }).ToList(),
+                Dong = dong.Select(d => new DongKiem { MaLo = d.MaLo, MaViTri = d.MaViTri, SLHeThong = d.SoLuong }).ToList(),
                 ThamGia = vm.ThamGia!.Select(t => new ThamGiaKiem { MaND = t!.MaND, GhiChu = t.GhiChu }).ToList(),
             };
             await store.Luu(phieu, ct);
@@ -99,7 +99,7 @@ public sealed class PhieuKiemService(
         try
         {
             await audit.Ghi(maND, "Tạo phiếu kiểm", LoaiChungTu.KK, phieu.MaPK,
-                $"{phieu.SoPhieu}: {phieu.LoaiKiemKe}, khóa {daKhoa.Count} ô, {phieu.ChiTiet.Count} dòng số hệ thống", ct);
+                $"{phieu.SoPhieu}: {phieu.LoaiKiemKe}, khóa {daKhoa.Count} ô, {phieu.Dong.Count} dòng số hệ thống", ct);
         }
         catch (Exception ex)
         {

@@ -1,0 +1,160 @@
+@using QuanLyKho.Web.Areas.HangHoa.Models
+@using QuanLyKho.Web.Areas.HangHoa.Services
+@model KiemDemTrang
+@{
+    var p = Model.Phieu;
+    ViewData["Title"] = $"Kiểm đếm {p.SoPhieu}";
+    var cacTab = new[] { TabKiemDem.TatCa, TabKiemDem.Khop, TabKiemDem.Thua, TabKiemDem.Thieu, TabKiemDem.ChuaKiem };
+    var dongCuaTab = Model.DongCuaTab.ToList();
+    var daDem = Model.Dong.Count - Model.Dem(TabKiemDem.ChuaKiem);
+}
+
+<header class="trang-dau trang-dau-hang">
+    <div>
+        <h1>Kiểm đếm @p.SoPhieu</h1>
+        <p class="mota">
+            <span class="nhan @PhieuKiemHienThi.LopNhan(p.TrangThai)">@p.TrangThai</span>
+            @p.TenKho, kiểm @p.LoaiKiemKe.ToLowerInvariant(). Đã đếm <span class="so-bang">@daDem / @Model.Dong.Count</span> dòng.
+            Quét mã ô, quét mã lô rồi nhập số lượng thực tế; chênh lệch = thực tế trừ số hệ thống chụp lúc bắt đầu kiểm.
+        </p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-primary" href="/HeThong/ViTri?maKho=@p.MaKho">Sơ đồ vị trí kho (ô đang khóa)</a>
+        <a class="btn btn-outline-secondary" asp-controller="PhieuKiem" asp-action="Xem" asp-route-id="@p.MaPK">Xem phiếu</a>
+    </div>
+</header>
+
+@if (TempData["ThongBao"] is string tb) { <div class="alert alert-success" role="status">@tb</div> }
+@if (TempData["Loi"] is string loi) { <div class="alert alert-danger" role="alert">@loi</div> }
+
+@if (p.DangKiem)
+{
+    <form method="post" asp-action="GhiNhan" asp-route-id="@p.MaPK" asp-route-tab="@Model.Tab" id="formDem" class="khung-form mb-4" style="max-width:60rem" novalidate autocomplete="off">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label" for="MaVachO">Mã ô</label>
+                <input class="form-control" id="MaVachO" name="MaVachO" value="@Model.Form.MaVachO" maxlength="50" placeholder="Quét mã ô" required />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="MaHang">Mã lô hoặc mã vạch hàng</label>
+                <input class="form-control" id="MaHang" name="MaHang" value="@Model.Form.MaHang" maxlength="50" placeholder="Quét mã lô" required />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label" for="SLThucTe">Số lượng thực tế</label>
+                <input class="form-control so-bang" id="SLThucTe" name="SLThucTe" type="number" min="0" max="@KiemDemService.SoLuongToiDa" step="1" inputmode="numeric" required />
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100">Ghi số đếm</button>
+            </div>
+            <div class="col-12">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="NgoaiSo" name="NgoaiSo" value="true" />
+                    <label class="form-check-label" for="NgoaiSo">Hàng ngoài sổ tại ô này (số hệ thống không có lô này ở ô vừa quét)</label>
+                </div>
+            </div>
+        </div>
+    </form>
+}
+else
+{
+    <div class="alert alert-secondary" role="status">Phiếu đang ở trạng thái @p.TrangThai nên chỉ xem được kết quả đếm.</div>
+}
+
+<ul class="nav nav-tabs mb-3" aria-label="Lọc dòng kiểm theo kết quả đếm">
+    @foreach (var t in cacTab)
+    {
+        <li class="nav-item">
+            <a class="nav-link @(Model.Tab == t ? "active" : "")" aria-current="@(Model.Tab == t ? "page" : null)"
+               asp-action="Index" asp-route-id="@p.MaPK" asp-route-tab="@t">
+                @KiemDemHienThi.Ten(t) <span class="so-bang text-body-secondary">(@Model.Dem(t))</span>
+            </a>
+        </li>
+    }
+</ul>
+
+@if (dongCuaTab.Count == 0)
+{
+    <div class="khung-trong">
+        <h2>Không có dòng nào ở tab @KiemDemHienThi.Ten(Model.Tab)</h2>
+        <p>@(Model.Dong.Count == 0 ? "Phạm vi kiểm không có tồn theo số hệ thống. Hàng đếm thấy hãy ghi là hàng ngoài sổ." : "Chọn tab khác để xem các dòng còn lại.")</p>
+    </div>
+}
+else
+{
+    <div class="khung-the">
+        <div class="bang-cuon">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">Ô</th>
+                        <th scope="col">Mặt hàng</th>
+                        <th scope="col">Lô</th>
+                        <th scope="col" class="text-end">Hệ thống</th>
+                        <th scope="col" class="text-end">Thực tế</th>
+                        <th scope="col" class="text-end">Chênh lệch</th>
+                        <th scope="col">Kết quả</th>
+                        <th scope="col">Xử lý</th>
+                        <th scope="col">Người đếm</th>
+                        <th scope="col"><span class="visually-hidden">Thao tác</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var d in dongCuaTab)
+                    {
+                        <tr>
+                            <td>@d.TenO<br /><small class="text-body-secondary">@d.MaVachO</small></td>
+                            <td>@d.TenHang</td>
+                            <td>@d.MaVachLo</td>
+                            <td class="text-end so-bang">@d.SLHeThong</td>
+                            <td class="text-end so-bang">@(d.SLThucTe?.ToString() ?? "—")</td>
+                            <td class="text-end so-bang fw-semibold">@(d.ChenhLech is int c ? (c > 0 ? "+" + c : c.ToString()) : "—")</td>
+                            <td><span class="nhan @KiemDemHienThi.LopNhan(d.Tab)">@KiemDemHienThi.Ten(d.Tab)</span></td>
+                            <td>
+                                <span class="nhan @KiemDemHienThi.LopNhanTrangThai(d.TrangThaiXuLy)">@d.TrangThaiXuLy</span>
+                                @if (d.LoaiPhatSinh is not null) { <br /><small class="text-body-secondary">@d.LoaiPhatSinh</small> }
+                            </td>
+                            <td>@(d.NguoiDem ?? "—")</td>
+                            <td class="text-end text-nowrap">
+                                @if (p.DangKiem && !d.DaChot)
+                                {
+                                    <button type="button" class="btn btn-sm btn-outline-primary" data-dem data-o="@d.MaVachO" data-lo="@d.MaVachLo">Đếm</button>
+                                    @if (d.SLThucTe is not null)
+                                    {
+                                        <form method="post" asp-action="BoDem" asp-route-id="@p.MaPK" asp-route-maDK="@d.MaDK" asp-route-tab="@Model.Tab" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary">Bỏ số đếm</button>
+                                        </form>
+                                    }
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        // Máy quét gõ mã rồi gửi Enter: Enter ở ô mã thì nhảy sang ô kế tiếp thay vì gửi form khi chưa nhập số lượng.
+        const formDem = document.getElementById('formDem');
+        if (formDem) {
+            const oMaO = document.getElementById('MaVachO'), oMaHang = document.getElementById('MaHang'), oSL = document.getElementById('SLThucTe');
+            const chuyen = (tu, den) => tu.addEventListener('keydown', e => {
+                if (e.key === 'Enter' && tu.value.trim() !== '') { e.preventDefault(); den.focus(); den.select(); }
+            });
+            chuyen(oMaO, oMaHang);
+            chuyen(oMaHang, oSL);
+            // Đặt con trỏ vào ô còn trống đầu tiên.
+            (oMaO.value.trim() === '' ? oMaO : oMaHang.value.trim() === '' ? oMaHang : oSL).focus();
+            // Nút "Đếm" ở từng dòng điền sẵn mã ô và mã lô, chỉ còn nhập số lượng.
+            document.querySelectorAll('[data-dem]').forEach(nut => nut.addEventListener('click', () => {
+                oMaO.value = nut.dataset.o || '';
+                oMaHang.value = nut.dataset.lo || '';
+                formDem.scrollIntoView({ block: 'nearest' });
+                oSL.focus();
+            }));
+            formDem.addEventListener('submit', e => setTimeout(() => e.submitter && (e.submitter.disabled = true)));
+        }
+    </script>
+}

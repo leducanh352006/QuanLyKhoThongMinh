@@ -62,7 +62,10 @@ else
                             <td>@p.NguoiLap</td>
                             <td class="text-end so-bang">@p.SoDong</td>
                             <td class="text-end so-bang">@p.SoNguoi</td>
-                            <td><span class="nhan @PhieuKiemHienThi.LopNhan(p.TrangThai)">@p.TrangThai</span></td>
+                            <td>
+                                <span class="nhan @PhieuKiemHienThi.LopNhan(p.TrangThai)">@p.TrangThai</span>
+                                @if (p.TrangThai == PhieuKiem.DangKiem) { <a asp-controller="KiemDem" asp-action="Index" asp-route-id="@p.MaPK" class="ms-2">Kiểm đếm</a> }
+                            </td>
                         </tr>
                     }
                 </tbody>

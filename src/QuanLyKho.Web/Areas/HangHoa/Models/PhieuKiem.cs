@@ -6,7 +6,7 @@ namespace QuanLyKho.Web.Areas.HangHoa.Models;
 
 /// <summary>
 /// Phiếu kiểm kê (việc T3-4, Bảng A.7). Tạo xong là bắt đầu kiểm ngay (ThoiGianBatDau = lúc tạo): các ô thuộc phạm vi bị khóa qua
-/// ILockService rồi tồn hệ thống được chụp vào <see cref="ChiTietPhieuKiem.SoLuongHeThong"/> tại đúng thời điểm đó.
+/// ILockService rồi tồn hệ thống được chụp vào <see cref="DongKiem.SLHeThong"/> tại đúng thời điểm đó.
 /// Vòng đời (Bảng 2.9): Đang kiểm → Chờ duyệt → Đã xử lý. Việc này chỉ tạo phiếu ở trạng thái Đang kiểm; kiểm đếm, ghi nhận và
 /// duyệt phát sinh, hoàn tất phiếu là việc của các bước sau (T3-5 đến T3-8).
 /// </summary>
@@ -41,23 +41,10 @@ public class PhieuKiem
 
     public Kho? Kho { get; set; }
 
-    public List<ChiTietPhieuKiem> ChiTiet { get; set; } = new();
+    /// <summary>Dòng kiểm đếm theo ô và lô; SLHeThong chụp lúc tạo phiếu (việc T3-5).</summary>
+    public List<DongKiem> Dong { get; set; } = new();
 
     public List<ThamGiaKiem> ThamGia { get; set; } = new();
-}
-
-/// <summary>
-/// Một dòng phạm vi kiểm (một lô tại một ô) kèm tồn hệ thống chụp lúc bắt đầu kiểm.
-/// Số đếm thực tế, người đếm và phân loại phát sinh là việc của bước kiểm đếm (T3-5), chưa có ở đây.
-/// </summary>
-public class ChiTietPhieuKiem
-{
-    public int MaCTK { get; set; }
-    public int MaPK { get; set; }
-    public int MaBT { get; set; }
-    public int MaLo { get; set; }
-    public int MaViTri { get; set; }
-    public int SoLuongHeThong { get; set; }
 }
 
 /// <summary>Người tham gia kiểm của một phiếu (Bảng A.7); khóa chính ghép (MaPK, MaND).</summary>
@@ -92,20 +79,8 @@ public class PhieuKiemConfig : IEntityTypeConfiguration<PhieuKiem>
         b.HasIndex(x => new { x.MaKho, x.ThoiGianBatDau });
         b.HasOne(x => x.Kho).WithMany().HasForeignKey(x => x.MaKho).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<NguoiDung>().WithMany().HasForeignKey(x => x.MaNguoiLap).OnDelete(DeleteBehavior.Restrict);
-        b.HasMany(x => x.ChiTiet).WithOne().HasForeignKey(d => d.MaPK).OnDelete(DeleteBehavior.Restrict);
+        b.HasMany(x => x.Dong).WithOne().HasForeignKey(d => d.MaPK).OnDelete(DeleteBehavior.Restrict);
         b.HasMany(x => x.ThamGia).WithOne().HasForeignKey(d => d.MaPK).OnDelete(DeleteBehavior.Restrict);
-    }
-}
-
-public class ChiTietPhieuKiemConfig : IEntityTypeConfiguration<ChiTietPhieuKiem>
-{
-    public void Configure(EntityTypeBuilder<ChiTietPhieuKiem> b)
-    {
-        b.ToTable("ChiTietPhieuKiem", t => t.HasCheckConstraint("CK_ChiTietPhieuKiem_SoLuongHeThong", "[SoLuongHeThong] >= 0"));
-        b.HasKey(x => x.MaCTK);
-        b.HasOne<BienThe>().WithMany().HasForeignKey(x => x.MaBT).OnDelete(DeleteBehavior.Restrict);
-        b.HasOne<LoHang>().WithMany().HasForeignKey(x => x.MaLo).OnDelete(DeleteBehavior.Restrict);
-        b.HasOne<ViTri>().WithMany().HasForeignKey(x => x.MaViTri).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

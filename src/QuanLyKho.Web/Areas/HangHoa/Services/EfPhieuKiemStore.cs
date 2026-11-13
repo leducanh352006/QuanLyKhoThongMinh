@@ -46,7 +46,7 @@ public sealed class EfPhieuKiemStore(KhoDbContext db) : IPhieuKiemStore
             if (giaoDich is not null) await giaoDich.RollbackAsync(CancellationToken.None);
             // Gỡ phiếu hỏng khỏi bộ theo dõi: ILockService dùng chung KhoDbContext, nếu để lại thì lần SaveChanges kế tiếp
             // (mở lại ô) sẽ cố ghi lại phiếu này và lỗi tiếp.
-            foreach (var d in phieu.ChiTiet) db.Entry(d).State = EntityState.Detached;
+            foreach (var d in phieu.Dong) db.Entry(d).State = EntityState.Detached;
             foreach (var t in phieu.ThamGia) db.Entry(t).State = EntityState.Detached;
             db.Entry(phieu).State = EntityState.Detached;
             throw;
@@ -60,7 +60,7 @@ public sealed class EfPhieuKiemStore(KhoDbContext db) : IPhieuKiemStore
             join n in db.NguoiDung on p.MaNguoiLap equals n.MaND
             orderby p.MaPK descending
             select new PhieuKiemDong(p.MaPK, p.SoPhieu, p.LoaiKiemKe, p.ThoiGianBatDau, p.MaKho, k.TenKho, n.HoTen,
-                p.ChiTiet.Count, p.ThamGia.Count, p.TrangThai)
+                p.Dong.Count, p.ThamGia.Count, p.TrangThai)
         ).Take(toiDa).ToListAsync(ct);
 
     public async Task<PhieuKiemXem?> Xem(int maPK, CancellationToken ct = default)
@@ -84,14 +84,14 @@ public sealed class EfPhieuKiemStore(KhoDbContext db) : IPhieuKiemStore
         ).ToListAsync(ct);
 
         var chiTiet = await (
-            from d in db.ChiTietPhieuKiem.AsNoTracking()
-            join b in db.BienThe on d.MaBT equals b.MaBT
-            join s in db.SanPham on b.MaSP equals s.MaSP
+            from d in db.DongKiem.AsNoTracking()
             join l in db.LoHang on d.MaLo equals l.MaLo
+            join b in db.BienThe on l.MaBT equals b.MaBT
+            join s in db.SanPham on b.MaSP equals s.MaSP
             join v in db.ViTri on d.MaViTri equals v.MaViTri
-            where d.MaPK == maPK
+            where d.MaPK == maPK && d.SLHeThong > 0
             orderby v.TenViTri, s.TenSP, l.MaVachLo
-            select new DongHeThongXem(s.TenSP + " (" + b.ThuocTinh + ")", l.MaVachLo, v.TenViTri, d.SoLuongHeThong)
+            select new DongHeThongXem(s.TenSP + " (" + b.ThuocTinh + ")", l.MaVachLo, v.TenViTri, d.SLHeThong)
         ).ToListAsync(ct);
 
         var x0 = p.Phieu;

@@ -20,6 +20,7 @@
     </div>
     <div class="d-flex flex-wrap gap-2">
         <a class="btn btn-outline-primary" href="/HeThong/ViTri?maKho=@p.MaKho">Sơ đồ vị trí kho (ô đang khóa)</a>
+        <a class="btn btn-primary" asp-controller="PhatSinh" asp-action="Index" asp-route-id="@p.MaPK">Ghi nhận phát sinh</a>
         <a class="btn btn-outline-secondary" asp-controller="PhieuKiem" asp-action="Xem" asp-route-id="@p.MaPK">Xem phiếu</a>
     </div>
 </header>
@@ -133,6 +134,9 @@ else
         </div>
     </div>
 }
+
+@* Đính kèm (biên bản kiểm đếm...) đặt ngoài mọi thẻ <form>, tránh form lồng nhau. *@
+@await Component.InvokeAsync("DinhKem", new { loai = QuanLyKho.Web.Contracts.LoaiChungTu.KK, maCT = p.MaPK })
 
 @section Scripts {
     <script>

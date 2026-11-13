@@ -1,3 +1,5 @@
+using QuanLyKho.Web.Areas.HangHoa.Services;
+
 namespace QuanLyKho.Web.Areas.HangHoa.Models;
 
 /// <summary>Dữ liệu một lần ghi số đếm (việc T3-5): quét mã ô, quét mã lô hoặc mã vạch hàng, nhập số lượng thực tế.</summary>
@@ -27,8 +29,15 @@ public sealed record PhieuKiemTomTat(int MaPK, string SoPhieu, int MaKho, string
 /// <summary>Một dòng kiểm đếm để hiển thị, kèm tên ô, mã lô, tên hàng thay cho mã số nội bộ.</summary>
 public sealed record DongKiemXem(
     int MaDK, int MaViTri, string TenO, string? MaVachO, int MaLo, string MaVachLo, int MaBT, string TenHang, string MaVachHang,
-    int SLHeThong, int? SLThucTe, string TrangThaiXuLy, string? LoaiPhatSinh, string? NguoiDem)
+    int SLHeThong, int? SLThucTe, string TrangThaiXuLy, string? LoaiPhatSinh, string? NguoiDem,
+    string? NguyenNhan = null, int? MaViTriDung = null, string? TenODung = null, int? MaBTDung = null, string? TenHangDung = null)
 {
+    /// <summary>Dòng đã đếm mà số đếm khác số hệ thống (phải ghi nhận phát sinh ở việc T3-6).</summary>
+    public bool LaDongLech => ChenhLech is int c && c != 0;
+
+    /// <summary>Dòng lệch đã phân loại đủ thông tin; cùng quy tắc với <see cref="DongKiem.DaPhanLoai"/>.</summary>
+    public bool DaPhanLoai => LaDongLech && DongKiem.DuThongTinPhatSinh(LoaiPhatSinh, NguyenNhan, MaViTriDung, MaBTDung);
+
     /// <summary>Chênh lệch = tồn thực tế trừ tồn kho; null khi chưa kiểm.</summary>
     public int? ChenhLech => SLThucTe - SLHeThong;
 
@@ -41,6 +50,47 @@ public sealed record DongKiemXem(
     };
 
     public bool DaChot => TrangThaiXuLy is DongKiem.DaDuyet or DongKiem.TuChoi;
+}
+
+/// <summary>Dữ liệu một lần phân loại phát sinh của một dòng lệch (việc T3-6).</summary>
+public class PhanLoaiVm
+{
+    public int MaDK { get; set; }
+
+    public string? LoaiPhatSinh { get; set; }
+
+    public string? NguyenNhan { get; set; }
+
+    /// <summary>Ô đúng, chỉ khi LoaiPhatSinh = Sai vị trí.</summary>
+    public int? MaViTriDung { get; set; }
+
+    /// <summary>Biến thể đúng, chỉ khi LoaiPhatSinh = Sai mã hàng.</summary>
+    public int? MaBTDung { get; set; }
+}
+
+/// <summary>Bộ lọc dòng lệch trên màn hình ghi nhận phát sinh.</summary>
+public enum LocPhatSinh { TatCa, ChuaPhanLoai, DaPhanLoai }
+
+/// <summary>Dữ liệu màn hình ghi nhận phát sinh: các dòng lệch, số liệu phân loại và danh mục để chọn ô đúng, mã hàng đúng.</summary>
+public sealed record PhatSinhTrang(
+    PhieuKiemTomTat Phieu, IReadOnlyList<DongKiemXem> DongLech, LocPhatSinh Loc, PhanLoaiVm Form,
+    IReadOnlyList<ViTriChon> OLuuTru, IReadOnlyList<KeyValuePair<int, string>> BienThe)
+{
+    public int SoDongLech => DongLech.Count;
+
+    public int SoDaPhanLoai => DongLech.Count(d => d.DaPhanLoai);
+
+    public int SoChuaPhanLoai => SoDongLech - SoDaPhanLoai;
+
+    /// <summary>Mọi dòng lệch đã phân loại (hoặc không có dòng lệch): đủ điều kiện để sang bước duyệt (T3-7).</summary>
+    public bool SanSangDuyet => SoChuaPhanLoai == 0;
+
+    public IEnumerable<DongKiemXem> DongCuaLoc => Loc switch
+    {
+        LocPhatSinh.ChuaPhanLoai => DongLech.Where(d => !d.DaPhanLoai),
+        LocPhatSinh.DaPhanLoai => DongLech.Where(d => d.DaPhanLoai),
+        _ => DongLech,
+    };
 }
 
 /// <summary>Dữ liệu màn hình kiểm đếm: phiếu, mọi dòng và tab đang xem.</summary>

@@ -66,12 +66,37 @@ public class DongKiem
     /// <summary>Dòng đã được quản lý kho duyệt hoặc từ chối thì không đếm lại được.</summary>
     public bool DaChot => TrangThaiXuLy is DaDuyet or TuChoi;
 
+    /// <summary>Bốn loại phát sinh (Bảng A.7), theo thứ tự hiện trên màn hình ghi nhận.</summary>
+    public static readonly IReadOnlyList<string> TatCaLoaiPhatSinh = new[] { ThieuHoacThua, HuHongHoacHetHan, SaiViTri, SaiMaHang };
+
+    /// <summary>Độ dài tối đa của <see cref="NguyenNhan"/> (cột nvarchar(255)).</summary>
+    public const int NguyenNhanToiDa = 255;
+
+    /// <summary>Dòng đã đếm mà số đếm khác số hệ thống.</summary>
+    public bool LaDongLech => SLThucTe is int s && s != SLHeThong;
+
     /// <summary>
-    /// Ghi số đếm và tự xếp trạng thái: khớp thì Khớp; lệch thì Chờ duyệt với loại phát sinh mặc định "Thiếu hoặc thừa"
-    /// (bước ghi nhận phát sinh T3-6 phân loại lại nếu là hư hỏng, sai vị trí, sai mã hàng). Đếm lại mà vẫn lệch thì giữ phân loại đã ghi.
+    /// Dòng lệch đã được phân loại phát sinh đầy đủ (việc T3-6): có loại hợp lệ, có nguyên nhân, và đủ ô đúng (Sai vị trí) hoặc mã hàng đúng
+    /// (Sai mã hàng). Loại mặc định "Thiếu hoặc thừa" do bước đếm tự gán chưa có nguyên nhân nên chưa tính là đã phân loại.
+    /// Dòng khớp và dòng chưa đếm không cần phân loại nên trả false.
+    /// </summary>
+    public bool DaPhanLoai => LaDongLech && DuThongTinPhatSinh(LoaiPhatSinh, NguyenNhan, MaViTriDung, MaBTDung);
+
+    /// <summary>Loại hợp lệ + nguyên nhân không rỗng + thông tin đi kèm của loại (ô đúng cho Sai vị trí, mã hàng đúng cho Sai mã hàng).</summary>
+    public static bool DuThongTinPhatSinh(string? loai, string? nguyenNhan, int? maViTriDung, int? maBTDung)
+        => loai is not null && TatCaLoaiPhatSinh.Contains(loai)
+           && !string.IsNullOrWhiteSpace(nguyenNhan)
+           && (loai != SaiViTri || maViTriDung is > 0)
+           && (loai != SaiMaHang || maBTDung is > 0);
+
+    /// <summary>
+    /// Ghi số đếm và tự xếp trạng thái: khớp thì Khớp; lệch thì Chờ duyệt với loại phát sinh mặc định "Thiếu hoặc thừa" nhưng chưa có
+    /// nguyên nhân, nên còn phải phân loại ở bước ghi nhận phát sinh (T3-6). Đếm lại ra cùng số thì giữ phân loại đã ghi; ra số khác thì
+    /// xóa phân loại, vì chiều lệch và số lượng cần chuyển/kiểm sức chứa đã đổi.
     /// </summary>
     public void GhiSoDem(int slThucTe, int maNguoiDem)
     {
+        var doiSo = SLThucTe != slThucTe;
         SLThucTe = slThucTe;
         MaNguoiDem = maNguoiDem;
         if (slThucTe == SLHeThong)
@@ -82,8 +107,21 @@ public class DongKiem
         else
         {
             TrangThaiXuLy = ChoDuyet;
-            LoaiPhatSinh ??= ThieuHoacThua;
+            if (doiSo || LoaiPhatSinh is null)
+            {
+                LoaiPhatSinh = ThieuHoacThua;
+                NguyenNhan = null; MaViTriDung = null; MaBTDung = null;
+            }
         }
+    }
+
+    /// <summary>Ghi phân loại phát sinh của dòng lệch; chỉ giữ ô đúng cho Sai vị trí và mã hàng đúng cho Sai mã hàng (ràng buộc CHECK của A.7).</summary>
+    public void PhanLoai(string loaiPhatSinh, string nguyenNhan, int? maViTriDung, int? maBTDung)
+    {
+        LoaiPhatSinh = loaiPhatSinh;
+        NguyenNhan = nguyenNhan;
+        MaViTriDung = loaiPhatSinh == SaiViTri ? maViTriDung : null;
+        MaBTDung = loaiPhatSinh == SaiMaHang ? maBTDung : null;
     }
 
     /// <summary>Bỏ số đếm: dòng về Chưa kiểm.</summary>
@@ -125,6 +163,8 @@ public class DongKiemConfig : IEntityTypeConfiguration<DongKiem>
         b.Property(x => x.ThoiGianDuyet).HasColumnType("datetime2(0)");
         b.Ignore(x => x.ChenhLech);
         b.Ignore(x => x.DaChot);
+        b.Ignore(x => x.LaDongLech);
+        b.Ignore(x => x.DaPhanLoai);
         b.HasOne<ViTri>().WithMany().HasForeignKey(x => x.MaViTri).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<LoHang>().WithMany().HasForeignKey(x => x.MaLo).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<ViTri>().WithMany().HasForeignKey(x => x.MaViTriDung).OnDelete(DeleteBehavior.Restrict);

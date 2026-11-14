@@ -1,0 +1,241 @@
+@using QuanLyKho.Web.Areas.HangHoa.Models
+@using QuanLyKho.Web.Contracts
+@model PhatSinhTrang
+@{
+    var p = Model.Phieu;
+    var f = Model.Form;
+    ViewData["Title"] = $"Ghi nhận phát sinh {p.SoPhieu}";
+    var cacLoc = new[]
+    {
+        (LocPhatSinh.TatCa, "Tất cả dòng lệch", Model.SoDongLech),
+        (LocPhatSinh.ChuaPhanLoai, "Chưa phân loại", Model.SoChuaPhanLoai),
+        (LocPhatSinh.DaPhanLoai, "Đã phân loại", Model.SoDaPhanLoai),
+    };
+    var dongHienThi = Model.DongCuaLoc.ToList();
+}
+
+<header class="trang-dau trang-dau-hang">
+    <div>
+        <h1>Ghi nhận phát sinh @p.SoPhieu</h1>
+        <p class="mota">
+            <span class="nhan @PhieuKiemHienThi.LopNhan(p.TrangThai)">@p.TrangThai</span>
+            @p.TenKho, kiểm @p.LoaiKiemKe.ToLowerInvariant(). Mỗi dòng lệch phải được phân loại (thiếu hoặc thừa, hư hỏng hoặc hết hạn,
+            sai vị trí, sai mã hàng) kèm nguyên nhân thì mới sang được bước duyệt.
+        </p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-primary" href="/HeThong/ViTri?maKho=@p.MaKho">Sơ đồ vị trí kho (ô đang khóa)</a>
+        <a class="btn btn-outline-secondary" asp-controller="KiemDem" asp-action="Index" asp-route-id="@p.MaPK">Kiểm đếm</a>
+        <a class="btn btn-outline-secondary" asp-controller="PhieuKiem" asp-action="Xem" asp-route-id="@p.MaPK">Xem phiếu</a>
+    </div>
+</header>
+
+@if (TempData["ThongBao"] is string tb) { <div class="alert alert-success" role="status">@tb</div> }
+@if ((TempData["Loi"] ?? ViewData["Loi"]) is string loi) { <div class="alert alert-danger" role="alert">@loi</div> }
+
+@if (Model.SoDongLech == 0)
+{
+    <div class="khung-trong">
+        <h2>Chưa có dòng lệch nào</h2>
+        <p>Các dòng đã đếm đều khớp số hệ thống, hoặc chưa đếm dòng nào. Dòng lệch sẽ hiện ở đây sau khi đếm ở màn hình Kiểm đếm.</p>
+    </div>
+}
+else
+{
+    @if (Model.SanSangDuyet)
+    {
+        <div class="alert alert-success" role="status">
+            <span class="nhan nhan-tot">Đã phân loại hết</span> Cả @Model.SoDongLech dòng lệch đã được phân loại, phiếu đủ điều kiện sang bước duyệt.
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-warning" role="status">
+            <span class="nhan nhan-chu-y">Chưa duyệt được</span> Còn <strong class="so-bang">@Model.SoChuaPhanLoai</strong> / <span class="so-bang">@Model.SoDongLech</span> dòng lệch chưa phân loại.
+        </div>
+    }
+
+    @if (p.DangKiem)
+    {
+        <form method="post" asp-action="PhanLoai" asp-route-id="@p.MaPK" asp-route-loc="@Model.Loc" id="formPhanLoai" class="khung-form mb-4" style="max-width:60rem" novalidate autocomplete="off">
+            <input type="hidden" name="MaDK" id="MaDK" value="@f.MaDK" />
+            <p class="mb-3" id="dongDangChon" role="status">Chọn một dòng lệch ở bảng bên dưới (nút "Phân loại") để ghi nhận phát sinh.</p>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label" for="LoaiPhatSinh">Loại phát sinh</label>
+                    <select class="form-select" id="LoaiPhatSinh" name="LoaiPhatSinh" required>
+                        <option value="">-- Chọn loại --</option>
+                        @foreach (var loai in DongKiem.TatCaLoaiPhatSinh)
+                        {
+                            <option value="@loai" selected="@(f.LoaiPhatSinh == loai)">@loai</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4" id="nhomODung" hidden>
+                    <label class="form-label" for="MaViTriDung">Ô đúng (hàng thực tế đang nằm ở)</label>
+                    <select class="form-select" id="MaViTriDung" name="MaViTriDung">
+                        <option value="">-- Chọn ô --</option>
+                        @foreach (var o in Model.OLuuTru)
+                        {
+                            <option value="@o.MaViTri" selected="@(f.MaViTriDung == o.MaViTri)">@o.TenViTri</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4" id="nhomBTDung" hidden>
+                    <label class="form-label" for="MaBTDung">Mã hàng đúng</label>
+                    <select class="form-select" id="MaBTDung" name="MaBTDung">
+                        <option value="">-- Chọn mặt hàng --</option>
+                        @foreach (var b in Model.BienThe)
+                        {
+                            <option value="@b.Key" selected="@(f.MaBTDung == b.Key)">@b.Value</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="NguyenNhan">Nguyên nhân chênh lệch</label>
+                    <textarea class="form-control" id="NguyenNhan" name="NguyenNhan" rows="2" maxlength="@DongKiem.NguyenNhanToiDa" required>@f.NguyenNhan</textarea>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary" id="nutGhi">Ghi nhận phát sinh</button>
+                </div>
+            </div>
+        </form>
+    }
+    else
+    {
+        <div class="alert alert-secondary" role="status">Phiếu đang ở trạng thái @p.TrangThai nên chỉ xem được kết quả phân loại.</div>
+    }
+
+    <ul class="nav nav-tabs mb-3" aria-label="Lọc dòng lệch theo tình trạng phân loại">
+        @foreach (var (loc, ten, so) in cacLoc)
+        {
+            <li class="nav-item">
+                <a class="nav-link @(Model.Loc == loc ? "active" : "")" aria-current="@(Model.Loc == loc ? "page" : null)"
+                   asp-action="Index" asp-route-id="@p.MaPK" asp-route-loc="@loc">
+                    @ten <span class="so-bang text-body-secondary">(@so)</span>
+                </a>
+            </li>
+        }
+    </ul>
+
+    @if (dongHienThi.Count == 0)
+    {
+        <div class="khung-trong">
+            <h2>Không có dòng nào ở mục này</h2>
+            <p>Chọn mục khác để xem các dòng lệch còn lại.</p>
+        </div>
+    }
+    else
+    {
+        <div class="khung-the">
+            <div class="bang-cuon">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">Ô</th>
+                            <th scope="col">Mặt hàng</th>
+                            <th scope="col">Lô</th>
+                            <th scope="col" class="text-end">Hệ thống</th>
+                            <th scope="col" class="text-end">Thực tế</th>
+                            <th scope="col" class="text-end">Chênh lệch</th>
+                            <th scope="col">Loại phát sinh</th>
+                            <th scope="col">Nguyên nhân</th>
+                            <th scope="col">Phân loại</th>
+                            <th scope="col"><span class="visually-hidden">Thao tác</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var d in dongHienThi)
+                        {
+                            var chenh = d.ChenhLech!.Value;
+                            <tr>
+                                <td>@d.TenO</td>
+                                <td>@d.TenHang</td>
+                                <td>@d.MaVachLo</td>
+                                <td class="text-end so-bang">@d.SLHeThong</td>
+                                <td class="text-end so-bang">@d.SLThucTe</td>
+                                <td class="text-end so-bang fw-semibold">
+                                    <span class="nhan @KiemDemHienThi.LopNhan(d.Tab)">@KiemDemHienThi.Ten(d.Tab)</span>
+                                    @(chenh > 0 ? "+" + chenh : chenh.ToString())
+                                </td>
+                                <td>
+                                    @if (d.DaPhanLoai)
+                                    {
+                                        @d.LoaiPhatSinh
+                                        @if (d.LoaiPhatSinh == DongKiem.SaiViTri) { <br /><small class="text-body-secondary">đúng ở @(d.TenODung ?? "ô #" + d.MaViTriDung)</small> }
+                                        @if (d.LoaiPhatSinh == DongKiem.SaiMaHang) { <br /><small class="text-body-secondary">đúng là @(d.TenHangDung ?? "#" + d.MaBTDung)</small> }
+                                    }
+                                    else { <span class="text-body-secondary">—</span> }
+                                </td>
+                                <td>@(d.DaPhanLoai ? d.NguyenNhan : "—")</td>
+                                <td>
+                                    @if (d.DaPhanLoai) { <span class="nhan nhan-tot">Đã phân loại</span> }
+                                    else { <span class="nhan nhan-chu-y">Chưa phân loại</span> }
+                                </td>
+                                <td class="text-end text-nowrap">
+                                    @if (p.DangKiem && !d.DaChot)
+                                    {
+                                        <button type="button" class="btn btn-sm @(d.DaPhanLoai ? "btn-outline-secondary" : "btn-primary")" data-chon
+                                                data-ma-dk="@d.MaDK" data-vitri="@d.MaViTri" data-o="@d.TenO" data-hang="@d.TenHang" data-lo="@d.MaVachLo" data-chenh="@chenh"
+                                                data-loai="@(d.DaPhanLoai ? d.LoaiPhatSinh : "")" data-nguyen-nhan="@(d.DaPhanLoai ? d.NguyenNhan : "")"
+                                                data-o-dung="@(d.DaPhanLoai ? d.MaViTriDung : null)" data-bt-dung="@(d.DaPhanLoai ? d.MaBTDung : null)">
+                                            @(d.DaPhanLoai ? "Sửa" : "Phân loại")
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+}
+
+@await Component.InvokeAsync("DinhKem", new { loai = LoaiChungTu.KK, maCT = p.MaPK })
+
+@section Scripts {
+    <script>
+        const form = document.getElementById('formPhanLoai');
+        if (form) {
+            const oMaDK = document.getElementById('MaDK'), oLoai = document.getElementById('LoaiPhatSinh'), oNguyenNhan = document.getElementById('NguyenNhan');
+            const oODung = document.getElementById('MaViTriDung'), oBTDung = document.getElementById('MaBTDung');
+            const nhomODung = document.getElementById('nhomODung'), nhomBTDung = document.getElementById('nhomBTDung');
+            const thongTin = document.getElementById('dongDangChon');
+            let chenh = 0, viTriHienTai = 0;
+
+            // Hiện đúng ô phụ theo loại, và khóa các lựa chọn không hợp lệ: hư hỏng/hết hạn và sai vị trí chỉ cho dòng thiếu; ô đúng khác ô hiện tại.
+            function capNhat() {
+                nhomODung.hidden = oLoai.value !== '@DongKiem.SaiViTri';
+                nhomBTDung.hidden = oLoai.value !== '@DongKiem.SaiMaHang';
+                [...oLoai.options].forEach(o => o.disabled = chenh > 0 && (o.value === '@DongKiem.HuHongHoacHetHan' || o.value === '@DongKiem.SaiViTri'));
+                [...oODung.options].forEach(o => o.disabled = Number(o.value) === viTriHienTai && viTriHienTai !== 0);
+            }
+            function chon(nut, giuGiaTri) {
+                oMaDK.value = nut.dataset.maDk;
+                chenh = Number(nut.dataset.chenh); viTriHienTai = Number(nut.dataset.vitri);
+                thongTin.innerHTML = '';
+                const dam = document.createElement('strong');
+                dam.textContent = `${nut.dataset.o}, ${nut.dataset.hang}, lô ${nut.dataset.lo}`;
+                thongTin.append('Đang phân loại: ', dam, ` — chênh lệch ${chenh > 0 ? '+' + chenh : chenh}`);
+                if (!giuGiaTri) {
+                    oLoai.value = nut.dataset.loai || '';
+                    oNguyenNhan.value = nut.dataset.nguyenNhan || '';
+                    oODung.value = nut.dataset.oDung || '';
+                    oBTDung.value = nut.dataset.btDung || '';
+                }
+                capNhat();
+                form.scrollIntoView({ block: 'nearest' });
+                (oLoai.value ? oNguyenNhan : oLoai).focus();
+            }
+            document.querySelectorAll('[data-chon]').forEach(nut => nut.addEventListener('click', () => chon(nut, false)));
+            oLoai.addEventListener('change', capNhat);
+            // Sau lỗi máy chủ trả lại form: giữ nguyên giá trị vừa nhập, chỉ nạp lại thông tin dòng đang chọn.
+            if (Number(oMaDK.value) > 0) {
+                const nut = document.querySelector(`[data-chon][data-ma-dk="${oMaDK.value}"]`);
+                if (nut) chon(nut, true); else capNhat();
+            } else capNhat();
+            form.addEventListener('submit', e => setTimeout(() => e.submitter && (e.submitter.disabled = true)));
+        }
+    </script>
+}

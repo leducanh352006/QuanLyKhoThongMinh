@@ -35,6 +35,9 @@ jobs:
           done
 
       - name: Xuất script tạo CSDL (chạy được nhiều lần)
+        env:
+          # DbContext chỉ đăng ký khi có chuỗi kết nối; lệnh xuất script không kết nối CSDL
+          ConnectionStrings__KhoDb: "Server=.;Database=QuanLyKho"
         run: |
           dotnet tool install --global dotnet-ef --version 10.*
           dotnet ef migrations script --idempotent --project src/QuanLyKho.Web -o tmp.sql

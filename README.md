@@ -10,7 +10,7 @@ Trạng thái khi đóng dự án (11/2026): đã xong nhập kho (T1-1 đến T
 
 - `database/QuanLyKho_TaoCSDL.sql`: script tạo đủ 25 bảng từ các migration, chạy được nhiều lần. Tạo database rỗng `QuanLyKho` rồi chạy file này trong SSMS (hoặc `sqlcmd -i`). Cách khác: `dotnet ef database update --project src/QuanLyKho.Web`.
 - GitHub Actions: `CI` build và chạy toàn bộ kiểm thử (kể cả kiểm thử trên SQL Server) ở mỗi pull request; `Release` chạy khi đẩy tag `v*` (ví dụ `git tag v1.0.0 && git push origin v1.0.0`), tạo bản phát hành gồm gói chạy cho Windows, Linux và script CSDL.
-- Chạy bản đã đóng gói: giải nén, đặt biến môi trường `ConnectionStrings__KhoDb` và `Auth__SeedPassword`, rồi chạy `QuanLyKho.Web.exe --urls http://localhost:5000` (cần .NET 10 Runtime).
+- Chạy bản đã đóng gói: giải nén, đặt biến môi trường `ConnectionStrings__KhoDb` và `Auth__SeedPassword`, rồi chạy `QuanLyKho.Web.exe --urls https://localhost:5001` (cần .NET 10 Runtime; ở Production phải dùng HTTPS). Triển khai lên IIS hoặc Azure: xem [docs/TrienKhai.md](docs/TrienKhai.md).
 
 ## Chạy lần đầu
 

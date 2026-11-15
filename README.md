@@ -4,7 +4,13 @@
 
 Công nghệ: ASP.NET Core MVC trên .NET 10, Entity Framework Core, SQL Server, HTML/CSS/JavaScript (báo cáo mục 1.4).
 
-Repo này đang ở mức **khung dự án** (việc T4-1, issue #41): chạy được, chưa có nghiệp vụ. Mỗi thành viên làm việc của mình trong Area riêng.
+Trạng thái khi đóng dự án (11/2026): đã xong nhập kho (T1-1 đến T1-8), xuất kho (T2-1 đến T2-8), hệ thống nền (T4-1 đến T4-8), danh mục hàng hóa và kiểm kê đến bước ghi nhận phát sinh (T3-1 đến T3-6), gợi ý G1 và G2. Chưa làm: duyệt, xử lý phát sinh và hoàn tất phiếu kiểm (T3-7, T3-8), toàn bộ phân hệ điều chuyển (T5-1 đến T5-6). Gợi ý G3, G4 đã bỏ khỏi phạm vi (PR #72).
+
+## Cơ sở dữ liệu và bản phát hành
+
+- `database/QuanLyKho_TaoCSDL.sql`: script tạo đủ 25 bảng từ các migration, chạy được nhiều lần. Tạo database rỗng `QuanLyKho` rồi chạy file này trong SSMS (hoặc `sqlcmd -i`). Cách khác: `dotnet ef database update --project src/QuanLyKho.Web`. Bản chuẩn là tệp `-csdl.sql` trong Releases (sinh từ migration lúc phát hành); bản trong `database/` có thể cũ hơn, tạo lại bằng `dotnet ef migrations script --idempotent --project src/QuanLyKho.Web -o database/QuanLyKho_TaoCSDL.sql`.
+- GitHub Actions: `CI` build và chạy toàn bộ kiểm thử (kể cả kiểm thử trên SQL Server) ở mỗi pull request; `Release` chạy khi đẩy tag `v*` (ví dụ `git tag v1.0.0 && git push origin v1.0.0`), tạo bản phát hành gồm gói chạy cho Windows, Linux và script CSDL.
+- Chạy bản đã đóng gói: giải nén, đặt biến môi trường `ConnectionStrings__KhoDb` và `Auth__SeedPassword`, rồi chạy `QuanLyKho.Web.exe --urls https://localhost:5001` (cần .NET 10 Runtime; ở Production phải dùng HTTPS). Máy không cài .NET SDK sẽ không có chứng chỉ phát triển, cần đặt thêm `Kestrel__Certificates__Default__Path` (tệp `.pfx`) và `Kestrel__Certificates__Default__Password`, hoặc chạy sau IIS. Triển khai lên IIS hoặc Azure: xem [docs/TrienKhai.md](docs/TrienKhai.md).
 
 ## Chạy lần đầu
 
@@ -149,6 +155,8 @@ Mọi màn hình quét mã dùng chung một thành phần (Bảng 1.6 dòng 6):
 ```
 dotnet test
 ```
+
+Chạy thêm 85 bài trên SQL Server thật: đặt biến môi trường `QLK_TEST_DB` (và `KHO_TEST_CONN`) là chuỗi kết nối tới một database đã migrate và seed, rồi chạy `dotnet test -- xUnit.ParallelizeTestCollections=false` (chạy tuần tự để các bài không tranh khóa nhau).
 
 Kiểm thử gồm: dữ liệu mẫu đúng ràng buộc CSDL, bản giả đúng quy tắc tồn kho (kể cả nhiều luồng cùng lấy hàng), sức chứa ô, khóa ô, vòng đời gợi ý AI, menu theo vai trò, và 5 Area tồn tại.
 

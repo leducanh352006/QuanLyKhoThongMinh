@@ -121,7 +121,8 @@ namespace QuanLyKho.Web.Areas.NhapKho.Models
             b.Ignore(x => x.DaKhoa);
             b.Ignore(x => x.HuyDuoc);
             b.HasIndex(x => new { x.MaKho, x.ThoiGian });
-            b.HasIndex(x => x.MaPK);   // chưa có khóa ngoại tới PhieuKiem vì bảng đó do nhóm Kiểm tra hàng hóa tạo sau
+            b.HasIndex(x => x.MaPK);
+            b.HasOne<PhieuKiem>().WithMany().HasForeignKey(x => x.MaPK).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(x => x.Kho).WithMany().HasForeignKey(x => x.MaKho).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(x => x.NhaCungCap).WithMany().HasForeignKey(x => x.MaNCC).OnDelete(DeleteBehavior.Restrict);
             b.HasOne<NguoiDung>().WithMany().HasForeignKey(x => x.MaNguoiLap).OnDelete(DeleteBehavior.Restrict);

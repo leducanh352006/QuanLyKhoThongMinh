@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: "Ci_KiemThu#2026"
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Ci_KiemThu#2026' -C -Q 'SELECT 1' || exit 1"
+          --health-interval 10s --health-timeout 5s --health-retries 15
+    env:
+      KET_NOI: "Server=localhost,1433;Database=QuanLyKho_CI;User ID=sa;Password=Ci_KiemThu#2026;Encrypt=True;TrustServerCertificate=True"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Build
+        run: dotnet build -c Release
+
+      - name: Kiểm thử không cần CSDL
+        run: dotnet test -c Release --no-build
+
+      - name: Tạo CSDL, chạy migration và nạp dữ liệu mẫu
+        env:
+          ConnectionStrings__KhoDb: ${{ env.KET_NOI }}
+          Database__MigrateOnStartup: "true"
+          Database__SeedOnStartup: "true"
+          Auth__SeedPassword: "CiDemo2026"
+          ASPNETCORE_ENVIRONMENT: Development
+        run: |
+          dotnet run -c Release --no-build --project src/QuanLyKho.Web --no-launch-profile --urls http://localhost:5199 > app.log 2>&1 &
+          for i in $(seq 1 60); do grep -q "Now listening" app.log && break; sleep 2; done
+          cat app.log | grep -E "seeder|migration|fail" || true
+          grep -q "Now listening" app.log
+          kill %1 || true
+
+      - name: Kiểm thử trên SQL Server
+        env:
+          QLK_TEST_DB: ${{ env.KET_NOI }}
+          KHO_TEST_CONN: ${{ env.KET_NOI }}
+        run: dotnet test -c Release --no-build -- xUnit.ParallelizeTestCollections=false

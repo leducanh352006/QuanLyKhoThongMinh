@@ -30,8 +30,6 @@ public sealed class CanSqlServerFactAttribute : FactAttribute
 /// <summary>Kiểm thử việc T1-8 (hàm cho nhóm khác gọi: phiếu Thừa và phiếu nháp, vốn dành cho G3 đã bỏ).</summary>
 public class NhapKhoServiceTests
 {
-    private const int MaPKThu = 987654;
-
     // ---- Không cần SQL Server ----
 
     [Fact]
@@ -92,7 +90,7 @@ public class NhapKhoServiceTests
 
     // ---- Cần SQL Server đã seed: mỗi bài chạy trong một giao dịch rồi hoàn tác, không để lại dữ liệu ----
 
-    private sealed record MoiTruong(KhoDbContext Db, NhapKhoService Nhap, ViTri O, LoHang Lo);
+    private sealed record MoiTruong(KhoDbContext Db, NhapKhoService Nhap, ViTri O, LoHang Lo, int MaPK);
 
     private static async Task DungAsync(Func<MoiTruong, Task> chay)
     {
@@ -101,7 +99,11 @@ public class NhapKhoServiceTests
         await using var giaoDich = await db.Database.BeginTransactionAsync();   // không commit: hủy hết khi kết thúc
         var o = await db.ViTri.AsNoTracking().FirstAsync(v => v.CapViTri == CapViTriGiaTri.O && v.LoaiViTri == LoaiViTriGiaTri.LuuTru);
         var lo = await db.LoHang.AsNoTracking().FirstAsync();
-        var moiTruong = new MoiTruong(db, new NhapKhoService(db, new StockService(db), new NhatKyGia()), o, lo);
+        var phieuKiem = new PhieuKiem { SoPhieu = "KKTHU" + Guid.NewGuid().ToString("N")[..10], MaKho = o.MaKho, ThoiGianBatDau = DateTime.UtcNow, MaNguoiLap = TonKhoSeeder.MaNguoiGhiTonMau };
+        db.PhieuKiem.Add(phieuKiem);
+        await db.SaveChangesAsync();   // MaPK của phiếu Thừa/Thiếu có khóa ngoại tới PhieuKiem nên cần phiếu kiểm thật
+        db.ChangeTracker.Clear();
+        var moiTruong = new MoiTruong(db, new NhapKhoService(db, new StockService(db), new NhatKyGia()), o, lo, phieuKiem.MaPK);
         await chay(moiTruong);
     }
 
@@ -115,13 +117,13 @@ public class NhapKhoServiceTests
         var truoc = await TonAsync(e.Db, e.Lo.MaLo, e.O.MaViTri);
         var dong = new[] { new DongPhieu(e.Lo.MaBT, 3, e.Lo.MaLo, e.O.MaViTri), new DongPhieu(e.Lo.MaBT, 2, e.Lo.MaLo, e.O.MaViTri) };
 
-        var kq = await e.Nhap.TaoPhieuNhapThua(e.O.MaKho, MaPKThu, dong, nguoi);
+        var kq = await e.Nhap.TaoPhieuNhapThua(e.O.MaKho, e.MaPK, dong, nguoi);
 
         Assert.True(kq.ThanhCong, kq.ThongBao);
         var p = await e.Db.PhieuNhap.AsNoTracking().Include(x => x.ChiTiet).SingleAsync(x => x.MaPN == kq.GiaTri!.MaPhieu);
         Assert.Equal(PhieuNhap.HoanTat, p.TrangThai);
         Assert.Equal(PhieuNhap.LoaiThua, p.LoaiPhieu);
-        Assert.Equal(MaPKThu, p.MaPK);
+        Assert.Equal(e.MaPK, p.MaPK);
         Assert.Null(p.MaNCC);
         Assert.Equal(kq.GiaTri!.SoPhieu, p.SoPhieu);
         Assert.StartsWith("NK", p.SoPhieu);
@@ -129,7 +131,7 @@ public class NhapKhoServiceTests
         Assert.All(p.ChiTiet, d => { Assert.Equal(e.Lo.MaLo, d.MaLo); Assert.Equal(d.SLDuKien, d.SLThucNhan); Assert.Equal(d.SLDuKien, d.SLDat); });
         Assert.Equal(truoc + 5, await TonAsync(e.Db, e.Lo.MaLo, e.O.MaViTri));
 
-        var lai = await e.Nhap.TaoPhieuNhapThua(e.O.MaKho, MaPKThu, dong, nguoi);   // một phiếu kiểm chỉ có một phiếu Thừa
+        var lai = await e.Nhap.TaoPhieuNhapThua(e.O.MaKho, e.MaPK, dong, nguoi);   // một phiếu kiểm chỉ có một phiếu Thừa
         Assert.False(lai.ThanhCong);
         Assert.Equal(MaLoiDichVu.SaiTrangThai, lai.MaLoi);
         Assert.Equal(truoc + 5, await TonAsync(e.Db, e.Lo.MaLo, e.O.MaViTri));
@@ -142,13 +144,13 @@ public class NhapKhoServiceTests
         var truoc = await TonAsync(e.Db, e.Lo.MaLo, e.O.MaViTri);
         var khoKhac = await e.Db.Kho.Where(k => k.MaKho != e.O.MaKho && k.TrangThai == TrangThaiHoatDong.HoatDong).Select(k => k.MaKho).FirstAsync();
 
-        var saiKho = await e.Nhap.TaoPhieuNhapThua(khoKhac, MaPKThu, new[] { new DongPhieu(e.Lo.MaBT, 3, e.Lo.MaLo, e.O.MaViTri) }, nguoi);
+        var saiKho = await e.Nhap.TaoPhieuNhapThua(khoKhac, e.MaPK, new[] { new DongPhieu(e.Lo.MaBT, 3, e.Lo.MaLo, e.O.MaViTri) }, nguoi);
         var bienTheKhac = await e.Db.BienThe.Where(b => b.MaBT != e.Lo.MaBT).Select(b => b.MaBT).FirstAsync();
-        var saiBienThe = await e.Nhap.TaoPhieuNhapThua(e.O.MaKho, MaPKThu, new[] { new DongPhieu(bienTheKhac, 3, e.Lo.MaLo, e.O.MaViTri) }, nguoi);
+        var saiBienThe = await e.Nhap.TaoPhieuNhapThua(e.O.MaKho, e.MaPK, new[] { new DongPhieu(bienTheKhac, 3, e.Lo.MaLo, e.O.MaViTri) }, nguoi);
 
         Assert.False(saiKho.ThanhCong);
         Assert.False(saiBienThe.ThanhCong);
-        Assert.False(await e.Db.PhieuNhap.AnyAsync(x => x.MaPK == MaPKThu));
+        Assert.False(await e.Db.PhieuNhap.AnyAsync(x => x.MaPK == e.MaPK));
         Assert.Equal(truoc, await TonAsync(e.Db, e.Lo.MaLo, e.O.MaViTri));
     });
 

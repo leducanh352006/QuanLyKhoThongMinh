@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tên bản phát hành (ví dụ v1.0.0)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Kiểm thử
+        run: dotnet test -c Release
+
+      - name: Đóng gói ứng dụng
+        run: |
+          for rid in win-x64 linux-x64; do
+            dotnet publish src/QuanLyKho.Web -c Release -r $rid --self-contained false -o out/$rid
+            (cd out/$rid && zip -qr ../../QuanLyKho-$TAG-$rid.zip .)
+          done
+
+      - name: Xuất script tạo CSDL (chạy được nhiều lần)
+        run: |
+          dotnet tool install --global dotnet-ef --version 10.*
+          dotnet ef migrations script --idempotent --project src/QuanLyKho.Web -o tmp.sql
+          # sqlcmd mặc định tắt QUOTED_IDENTIFIER, chỉ mục có bộ lọc cần bật
+          { printf 'SET ANSI_NULLS ON;\nSET QUOTED_IDENTIFIER ON;\nGO\n\n'; cat tmp.sql; } > QuanLyKho-$TAG-csdl.sql
+
+      - name: Tạo bản phát hành trên GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$TAG" QuanLyKho-$TAG-*.zip QuanLyKho-$TAG-csdl.sql \
+            --title "Quản lý kho thông minh $TAG" --generate-notes --target "$GITHUB_SHA"

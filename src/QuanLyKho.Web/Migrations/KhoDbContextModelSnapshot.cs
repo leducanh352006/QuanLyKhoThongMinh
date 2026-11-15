@@ -1499,6 +1499,11 @@ namespace QuanLyKho.Web.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("QuanLyKho.Web.Areas.HangHoa.Models.PhieuKiem", null)
+                        .WithMany()
+                        .HasForeignKey("MaPK")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Kho");
 
                     b.Navigation("NhaCungCap");
@@ -1578,6 +1583,11 @@ namespace QuanLyKho.Web.Migrations
                         .HasForeignKey("MaNguoiLap")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("QuanLyKho.Web.Areas.HangHoa.Models.PhieuKiem", null)
+                        .WithMany()
+                        .HasForeignKey("MaPK")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("QuanLyKho.Web.Areas.NhapKho.Models.PhieuNhap", "PhieuNhapGoc")
                         .WithMany()

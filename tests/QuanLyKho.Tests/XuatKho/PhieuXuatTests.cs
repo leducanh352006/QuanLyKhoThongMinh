@@ -127,7 +127,7 @@ public class PhieuXuatTests
         Assert.Equal("PhieuXuat", phieu.GetTableName());
         Assert.Equal("varchar(20)", phieu.FindProperty("SoPhieu")!.GetColumnType());
         Assert.Contains(phieu.GetIndexes(), i => i.IsUnique && i.Properties.Any(c => c.Name == "SoPhieu"));
-        Assert.Equal(new[] { "Kho", "NguoiDung", "PhieuNhap" },
+        Assert.Equal(new[] { "Kho", "NguoiDung", "PhieuKiem", "PhieuNhap" },
             phieu.GetForeignKeys().Select(f => f.PrincipalEntityType.GetTableName()!).Distinct().OrderBy(x => x).ToArray());
 
         var dong = db.Model.FindEntityType(typeof(ChiTietPhieuXuat))!;

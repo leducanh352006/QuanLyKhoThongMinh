@@ -15,7 +15,8 @@ Hai cách: máy chủ Windows chạy IIS (trong mạng nội bộ của công ty
   | `Database__MigrateOnStartup` | `true` nếu muốn ứng dụng tự áp migration khi khởi động | Không |
 
 - Không đặt `Database__SeedOnStartup` ở máy chủ thật: dữ liệu mẫu chỉ dành cho máy phát triển.
-- Database: tạo database rỗng `QuanLyKho`, chạy tệp `QuanLyKho-<phiên bản>-csdl.sql` trong bản phát hành (SSMS hoặc `sqlcmd -I -i`). Script chạy lại được nhiều lần, chỉ áp phần còn thiếu, nên dùng luôn cho các lần nâng cấp sau.
+- Database: tạo database rỗng `QuanLyKho`, chạy tệp `QuanLyKho-<phiên bản>-csdl.sql` trong bản phát hành (SSMS hoặc `sqlcmd -I -i`). Script chạy lại được nhiều lần, chỉ áp phần còn thiếu, nên dùng luôn cho các lần nâng cấp sau. Khi nâng cấp CSDL cũ, migration `KhoaNgoaiPhieuKiem` sẽ lỗi nếu `PhieuNhap.MaPK` hoặc `PhieuXuat.MaPK` trỏ tới phiếu kiểm không tồn tại: tìm bằng `SELECT MaPN FROM PhieuNhap WHERE MaPK IS NOT NULL AND MaPK NOT IN (SELECT MaPK FROM PhieuKiem)` (tương tự với `PhieuXuat`), sửa về `NULL` rồi chạy lại.
+- `TrustServerCertificate=True` trong các chuỗi kết nối mẫu chỉ dùng khi chạy thử với chứng chỉ tự ký của SQL Server. Máy chủ thật nên cài chứng chỉ hợp lệ cho SQL Server và bỏ tham số này.
 - Tài khoản SQL dùng cho ứng dụng nên là tài khoản riêng chỉ có quyền `db_datareader`, `db_datawriter` trên `QuanLyKho`, không dùng `sa`.
 
 ## Cách 1: IIS trên Windows Server hoặc Windows 10/11

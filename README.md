@@ -8,9 +8,9 @@ Trạng thái khi đóng dự án (11/2026): đã xong nhập kho (T1-1 đến T
 
 ## Cơ sở dữ liệu và bản phát hành
 
-- `database/QuanLyKho_TaoCSDL.sql`: script tạo đủ 25 bảng từ các migration, chạy được nhiều lần. Tạo database rỗng `QuanLyKho` rồi chạy file này trong SSMS (hoặc `sqlcmd -i`). Cách khác: `dotnet ef database update --project src/QuanLyKho.Web`.
+- `database/QuanLyKho_TaoCSDL.sql`: script tạo đủ 25 bảng từ các migration, chạy được nhiều lần. Tạo database rỗng `QuanLyKho` rồi chạy file này trong SSMS (hoặc `sqlcmd -i`). Cách khác: `dotnet ef database update --project src/QuanLyKho.Web`. Bản chuẩn là tệp `-csdl.sql` trong Releases (sinh từ migration lúc phát hành); bản trong `database/` có thể cũ hơn, tạo lại bằng `dotnet ef migrations script --idempotent --project src/QuanLyKho.Web -o database/QuanLyKho_TaoCSDL.sql`.
 - GitHub Actions: `CI` build và chạy toàn bộ kiểm thử (kể cả kiểm thử trên SQL Server) ở mỗi pull request; `Release` chạy khi đẩy tag `v*` (ví dụ `git tag v1.0.0 && git push origin v1.0.0`), tạo bản phát hành gồm gói chạy cho Windows, Linux và script CSDL.
-- Chạy bản đã đóng gói: giải nén, đặt biến môi trường `ConnectionStrings__KhoDb` và `Auth__SeedPassword`, rồi chạy `QuanLyKho.Web.exe --urls https://localhost:5001` (cần .NET 10 Runtime; ở Production phải dùng HTTPS). Triển khai lên IIS hoặc Azure: xem [docs/TrienKhai.md](docs/TrienKhai.md).
+- Chạy bản đã đóng gói: giải nén, đặt biến môi trường `ConnectionStrings__KhoDb` và `Auth__SeedPassword`, rồi chạy `QuanLyKho.Web.exe --urls https://localhost:5001` (cần .NET 10 Runtime; ở Production phải dùng HTTPS). Máy không cài .NET SDK sẽ không có chứng chỉ phát triển, cần đặt thêm `Kestrel__Certificates__Default__Path` (tệp `.pfx`) và `Kestrel__Certificates__Default__Password`, hoặc chạy sau IIS. Triển khai lên IIS hoặc Azure: xem [docs/TrienKhai.md](docs/TrienKhai.md).
 
 ## Chạy lần đầu
 

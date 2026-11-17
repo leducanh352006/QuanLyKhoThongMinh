@@ -1,0 +1,30 @@
+# Môi trường chạy thử trên GitHub Codespaces: ứng dụng (.NET 10) và SQL Server 2022 chạy cạnh nhau.
+# Mật khẩu dưới đây chỉ dùng cho bản chạy thử, không dùng cho máy chủ thật.
+services:
+  app:
+    image: mcr.microsoft.com/devcontainers/dotnet:10.0
+    command: sleep infinity
+    volumes:
+      - ../..:/workspaces:cached
+    environment:
+      ConnectionStrings__KhoDb: "Server=db,1433;Database=QuanLyKho;User ID=sa;Password=Codespace_Thu#2026;Encrypt=True;TrustServerCertificate=True"
+      Auth__SeedPassword: "Thu12345"
+      Database__MigrateOnStartup: "true"
+      Database__SeedOnStartup: "true"
+      # Codespaces nhận HTTPS ở cổng chuyển tiếp rồi gửi HTTP vào ứng dụng
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Codespace_Thu#2026"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Codespace_Thu#2026' -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15

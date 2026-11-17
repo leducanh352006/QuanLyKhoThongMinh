@@ -1,0 +1,21 @@
+@model TongQuanArea
+
+<header class="trang-dau">
+    <h1>@Model.TieuDe</h1>
+    <p class="mota">@Model.MoTa</p>
+</header>
+
+<section aria-labelledby="tieuDeChucNang">
+    <h2 id="tieuDeChucNang" class="h5">Chức năng</h2>
+    <ul class="danh-sach-viec">
+        @foreach (var m in Model.ChucNang)
+        {
+            <li>
+                <a asp-area="@m.Area" asp-controller="@m.Controller" asp-action="@m.Action">
+                    <span class="viec-ten">@m.Ten</span>
+                    <span class="viec-mota">@m.MoTa</span>
+                </a>
+            </li>
+        }
+    </ul>
+</section>

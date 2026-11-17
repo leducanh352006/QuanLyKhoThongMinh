@@ -94,4 +94,12 @@ public class MenuVaAreaTests
         var ten = TaoMenu().LayMenu(VaiTroTen.QuanLyKho).Select(g => g.Ten).ToArray();
         Assert.Equal(new[] { "Hệ thống", "Nhập kho", "Xuất kho", "Hàng hóa", "Điều chuyển kho" }, ten);
     }
+
+    [Fact]
+    public void TongQuanArea_ChiLayMucCuaAreaDo_BoMucTongQuan()
+    {
+        var muc = TaoMenu().LayChucNangArea(VaiTroTen.ThuKho, "NhapKho");
+        Assert.Equal(new[] { "Phiếu nhập", "Sắp xếp vào ô", "Tra cứu vị trí và tồn", "Báo cáo tổng hợp tồn" }, muc.Select(m => m.Ten).ToArray());
+        Assert.Empty(TaoMenu().LayChucNangArea(VaiTroTen.NhanVienBanHang, "NhapKho"));
+    }
 }

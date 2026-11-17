@@ -1,17 +1,16 @@
 using Microsoft.AspNetCore.Mvc;
+using QuanLyKho.Web.Contracts;
+using QuanLyKho.Web.Infrastructure.Menu;
 
 namespace QuanLyKho.Web.Areas.HangHoa.Controllers;
 
-/// <summary>Trang tổng quan tạm của Area. TV3 Dương Tuấn Anh thay bằng màn hình thật của nhóm khi làm việc của mình.</summary>
+/// <summary>Tổng quan Area: các chức năng theo vai trò (lấy từ menu của Area), dùng view chung TongQuanArea.</summary>
 [Area("HangHoa")]
-public class TrangChuController : Controller
+public class TrangChuController(IMenuService menu, INguoiDungHienTai hienTai) : Controller
 {
     public IActionResult Index()
     {
         ViewData["Title"] = "Hàng hóa";
-        ViewData["MoTa"] = "Sản phẩm, biến thể, lô, hạn dùng và kiểm kê.";
-        ViewData["Nhom"] = "Nhóm 4 – Danh mục hàng hóa và kiểm tra hàng hóa";
-        ViewData["NguoiPhuTrach"] = "TV3 Dương Tuấn Anh";
-        return View();
+        return View("TongQuanArea", new TongQuanArea("Hàng hóa", "Sản phẩm, biến thể, lô, hạn dùng và kiểm kê.", menu.LayChucNangArea(hienTai.Lay()?.TenVaiTro, "HangHoa")));
     }
 }

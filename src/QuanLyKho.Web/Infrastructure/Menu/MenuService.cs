@@ -20,3 +20,12 @@ public sealed class MenuService(IEnumerable<IMenuNguon> nguon) : IMenuService
             .ToList();
     }
 }
+
+/// <summary>Trang tổng quan của một Area: các mục menu của Area đó mà vai trò được thấy, bỏ chính mục Tổng quan.</summary>
+public sealed record TongQuanArea(string TieuDe, string MoTa, IReadOnlyList<MenuMuc> ChucNang);
+
+public static class MenuServiceExtensions
+{
+    public static IReadOnlyList<MenuMuc> LayChucNangArea(this IMenuService menu, string? tenVaiTro, string area) =>
+        menu.LayMenu(tenVaiTro).SelectMany(n => n.Muc).Where(m => m.Area == area && m.Controller != "TrangChu").ToList();
+}

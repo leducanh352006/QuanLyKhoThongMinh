@@ -16,9 +16,7 @@ public class TrangChuController(IMenuService menu, INguoiDungHienTai hienTai, IK
     public async Task<IActionResult> Index(CancellationToken ct)
     {
         ViewData["Title"] = "Hệ thống";
-        var chucNang = menu.LayMenu(hienTai.Lay()?.TenVaiTro)
-            .Where(n => n.Muc.Any(m => m.Area == "HeThong")).SelectMany(n => n.Muc)
-            .Where(m => m.Area == "HeThong" && m.Controller != "TrangChu").ToList();
+        var chucNang = menu.LayChucNangArea(hienTai.Lay()?.TenVaiTro, "HeThong");
         var dsKho = await kho.LayDanhSach(ct);
 
         int? chenhLech = null;

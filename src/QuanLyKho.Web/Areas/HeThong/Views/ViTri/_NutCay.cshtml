@@ -18,7 +18,7 @@
                 }
                 @if (Model.Dai is not null)
                 {
-                    <span class="nut-cay-kich-thuoc">@Model.Dai×@Model.Rong×@Model.Cao cm, tối đa @Model.KhoiLuongToiDa kg</span>
+                    <span class="nut-cay-kich-thuoc">@Model.Dai?.ToString("0.##")×@Model.Rong?.ToString("0.##")×@Model.Cao?.ToString("0.##") cm · tối đa @Model.KhoiLuongToiDa?.ToString("0.##") kg</span>
                 }
             }
             @if (Model.LaO)
@@ -68,15 +68,15 @@
                 @if (Model.DangHoatDong)
                 {
                     <form method="post" asp-controller="ViTri" asp-action="Khoa" asp-route-id="@Model.MaViTri" asp-route-maKho="@Model.MaKho" class="d-inline"
-                          data-confirm="Khóa (xóa mềm) '@Model.TenViTri'?"
+                          data-confirm="Ngừng dùng '@Model.TenViTri'? Vị trí sẽ không nhận hàng nữa, có thể dùng lại sau."
                           onsubmit="return confirm(this.dataset.confirm);">
-                        <button type="submit" class="btn btn-sm btn-outline-danger">Khóa</button>
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Ngừng dùng</button>
                     </form>
                 }
                 else
                 {
                     <form method="post" asp-controller="ViTri" asp-action="MoLai" asp-route-id="@Model.MaViTri" asp-route-maKho="@Model.MaKho" class="d-inline">
-                        <button type="submit" class="btn btn-sm btn-outline-success">Mở lại</button>
+                        <button type="submit" class="btn btn-sm btn-outline-success">Dùng lại</button>
                     </form>
                     @if (Model.Con.Count == 0)
                     {

@@ -182,7 +182,7 @@ public sealed class ViTriService(IKhoViTriStore store, IStockService stock, IAud
         await store.LuuThayDoi(ct);
 
         await audit.Ghi(maNguoiThucHien, hoatDong ? "Mở lại vị trí" : "Khóa vị trí", chiTiet: v.TenViTri, ct: ct);
-        return KetQua.Ok(hoatDong ? $"Đã mở lại '{v.TenViTri}'." : $"Đã khóa '{v.TenViTri}'.");
+        return KetQua.Ok(hoatDong ? $"Đã dùng lại '{v.TenViTri}'." : $"Đã ngừng dùng '{v.TenViTri}'.");
     }
 
     public async Task<KetQua> Xoa(int maViTri, int maNguoiThucHien, CancellationToken ct = default)
@@ -195,7 +195,7 @@ public sealed class ViTriService(IKhoViTriStore store, IStockService stock, IAud
             return KetQua.Loi("Còn vị trí con bên dưới; hãy xóa hoặc khóa các vị trí con trước.", MaLoiDichVu.DuLieuKhongHopLe);
 
         if (v.LaO && (await stock.LayTonTheoViTri(maViTri, ct)).Count > 0)
-            return KetQua.Loi("Ô còn tồn kho ghi nhận, không thể xóa cứng; hãy khóa (xóa mềm) thay vào đó.", MaLoiDichVu.DuLieuKhongHopLe);
+            return KetQua.Loi("Ô còn tồn kho ghi nhận, không xóa được; hãy chọn Ngừng dùng.", MaLoiDichVu.DuLieuKhongHopLe);
 
         var ten = v.TenViTri;
         try

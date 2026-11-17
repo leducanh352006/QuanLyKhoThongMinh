@@ -1,15 +1,17 @@
 @model QuanLyKho.Web.Areas.HeThong.Controllers.GoiYDanhSachViewModel
 @using QuanLyKho.Web.Areas.HeThong.Services
 @using QuanLyKho.Web.Contracts
+@inject TenHienThiService TenHienThi
+@{ await TenHienThi.Nap(); }
 
 <header class="trang-dau">
     <h1>Gợi ý AI</h1>
     <p class="mota">
-        AI chỉ đề xuất; gợi ý có hiệu lực sau khi người có thẩm quyền duyệt, sửa rồi duyệt hoặc từ chối. Khi duyệt, hệ thống tự tạo thao tác
-        của nhóm sở hữu; AI lỗi hoặc chưa nối thao tác thì quy trình làm tay vẫn dùng bình thường.
+        Hệ thống chỉ đề xuất. Gợi ý có hiệu lực khi người có quyền duyệt (hoặc sửa rồi duyệt); từ chối thì không có gì thay đổi.
+        Duyệt xong, hệ thống tự lập lệnh lấy hàng hoặc lệnh xếp hàng. Nếu gợi ý bị lỗi, bạn vẫn làm tay như bình thường.
         @if (Model.LoaiDuocXuLy.Count > 0)
         {
-            <br /><text>Bạn được xử lý: @string.Join(", ", Model.LoaiDuocXuLy).</text>
+            <br /><text>Bạn được duyệt: @string.Join("; ", Model.LoaiDuocXuLy.Select(l => "gợi ý " + QuyTacGoiY.Ten(l).ToLowerInvariant())).</text>
         }
     </p>
 </header>
@@ -24,7 +26,7 @@
             <option value="">Tất cả</option>
             @foreach (var l in Enum.GetValues<LoaiGoiY>())
             {
-                <option value="@l" selected="@(Model.Loai == l.ToString())">@l - @QuyTacGoiY.Ten(l)</option>
+                <option value="@l" selected="@(Model.Loai == l.ToString())">@QuyTacGoiY.Ten(l)</option>
             }
         </select>
     </div>
@@ -53,26 +55,26 @@ else
 @if (Model.LaPhatTrien)
 {
     <section class="mt-4" aria-labelledby="tieuDeMau">
-        <h2 id="tieuDeMau" class="h5">Thử khung (chỉ môi trường Development)</h2>
-        <p class="text-secondary small">Tạo gợi ý giả từ dữ liệu mẫu chung rồi duyệt để xem thao tác được sinh ra; hoặc giả lập AI lỗi.</p>
+        <h2 id="tieuDeMau" class="h5">Công cụ thử (chỉ hiện trên máy phát triển)</h2>
+        <p class="text-secondary small">Tạo gợi ý mẫu rồi duyệt để xem hệ thống lập lệnh thế nào, hoặc giả lập gợi ý bị lỗi.</p>
         @if (User.IsInRole(VaiTroTen.QuanTriVien) || User.IsInRole(VaiTroTen.QuanLyKho))
         {
             <div class="d-flex flex-wrap gap-2 align-items-end mb-3">
                 <form method="post" asp-action="TaoMau" class="d-flex flex-wrap gap-2 align-items-end">
                     <div>
-                        <label for="mauMaPN" class="form-label small">Mã phiếu nhập cho G2 (không bắt buộc)</label>
+                        <label for="mauMaPN" class="form-label small">Mã phiếu nhập cho gợi ý xếp hàng (không bắt buộc)</label>
                         <input id="mauMaPN" name="maPN" type="number" min="1" class="form-control form-control-sm" />
                     </div>
                     <button type="submit" class="btn btn-outline-primary btn-sm">Tạo gợi ý mẫu</button>
                 </form>
                 <form method="post" asp-action="TaoMau">
                     <input type="hidden" name="aiLoi" value="true" />
-                    <button type="submit" class="btn btn-outline-secondary btn-sm">Giả lập AI lỗi</button>
+                    <button type="submit" class="btn btn-outline-secondary btn-sm">Giả lập gợi ý lỗi</button>
                 </form>
             </div>
         }
 
-        <h3 class="h6">Thao tác mẫu đã sinh sau khi duyệt</h3>
+        <h3 class="h6">Lệnh mẫu đã lập sau khi duyệt</h3>
         @if (Model.ThaoTacMau.Count == 0)
         {
             <p class="text-secondary small">Chưa có.</p>
@@ -88,7 +90,7 @@ else
                             <tr>
                                 <td><a asp-action="ChiTiet" asp-route-id="@t.MaGoiY">@t.Loai #@t.MaGoiY</a></td>
                                 <td>@t.MoTa</td>
-                                <td>@string.Join("; ", t.Dong.Select(d => $"#{d.MaBT} × {d.SoLuong}"))</td>
+                                <td>@string.Join("; ", t.Dong.Select(d => $"{TenHienThi.BienThe(d.MaBT)} × {d.SoLuong}"))</td>
                             </tr>
                         }
                     </tbody>

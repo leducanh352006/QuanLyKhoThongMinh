@@ -11,7 +11,7 @@
     <div>
         <h1>Sơ đồ vị trí &amp; Sức chứa kho</h1>
         <p class="mota">
-            Trực quan hóa cấu trúc kệ – ô lưu trữ của <strong>@Model.TenKho</strong>, theo dõi mức lấp đầy thể tích, tải trọng và kiểm tra lọt lòng kích thước 3 chiều (Dài × Rộng × Cao).
+            Các kệ, ô của <strong>@Model.TenKho</strong>: ô nào còn chỗ, ô nào sắp đầy, và thử xem một mặt hàng có xếp vừa ô không (theo dài × rộng × cao và sức nặng).
         </p>
     </div>
     <div class="d-flex flex-wrap align-items-center gap-2">
@@ -28,12 +28,12 @@
                asp-action="Index" asp-route-maKho="@maKho" asp-route-maBTThu="@Model.BienTheDangThu?.MaBT" asp-route-soLuongThu="@Model.SoLuongDangThu" asp-route-cheDo="cay"
                data-che-do="cay">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
-                <span>Cây phân cấp</span>
+                <span>Cây vị trí</span>
             </a>
         </div>
         @if (duocSua)
         {
-            <a class="btn btn-primary" asp-action="Them" asp-route-maKho="@maKho">Thêm vị trí gốc</a>
+            <a class="btn btn-primary" asp-action="Them" asp-route-maKho="@maKho">Thêm vị trí mới</a>
         }
     </div>
 </header>
@@ -104,7 +104,7 @@
         <div class="ket-qua-thu-banner @(Model.SoODuChoThu > 0 ? "thu-tot" : "thu-canh-bao") mt-3" role="status">
             <div>
                 <strong>Kết quả ướm thử @slDangThu × @Model.BienTheDangThu.TenHienThi</strong>
-                <span class="text-muted ms-1">(@Model.BienTheDangThu.KichThuocText — kiểm xoay hộp 6 hướng <code>sort(d,r,c) ≤ sort(D,R,C)</code>):</span>
+                <span class="text-muted ms-1">(@Model.BienTheDangThu.KichThuocText — hệ thống thử xoay hộp theo mọi hướng để xem có lọt ô không):</span>
                 @if (Model.SoODuChoThu > 0)
                 {
                     <span>Có <strong>@Model.SoODuChoThu / @Model.TongOLuuTru ô lưu trữ</strong> nhận đủ ngay @slDangThu đơn vị (tổng sức chứa còn nhận thêm của toàn kho: <strong>+@Model.TongSucChuaThemDuocThu</strong> đơn vị).</span>
@@ -123,7 +123,7 @@
     <div class="the-kpi">
         <span class="kpi-nhan">Tổng ô lưu trữ</span>
         <strong class="kpi-so so-bang">@Model.TongOLuuTru</strong>
-        <span class="kpi-phu">Tổng số ô cấp lưu trữ</span>
+        <span class="kpi-phu">Không tính khu tiếp nhận</span>
     </div>
     <div class="the-kpi">
         <span class="kpi-nhan">Ô trống (0%)</span>
@@ -141,9 +141,9 @@
         <span class="kpi-phu">Theo thể tích hoặc tải trọng</span>
     </div>
     <div class="the-kpi">
-        <span class="kpi-nhan">Khóa / Ngừng / Tiếp nhận</span>
-        <strong class="kpi-so so-bang">@Model.OKhoaHoacNgung / @Model.KhuTiepNhan.Count</strong>
-        <span class="kpi-phu">Ô tạm dừng &amp; cửa nhận</span>
+        <span class="kpi-nhan">Ô đang khóa hoặc ngừng dùng</span>
+        <strong class="kpi-so so-bang">@Model.OKhoaHoacNgung</strong>
+        <span class="kpi-phu">Không nhận hàng lúc này · @Model.KhuTiepNhan.Count khu tiếp nhận</span>
     </div>
 </section>
 
@@ -151,7 +151,7 @@
 {
     <div class="khung-trong">
         <h2>Kho chưa có vị trí nào</h2>
-        <p>Bấm "Thêm vị trí gốc" để bắt đầu dựng sơ đồ, ví dụ một Dãy lưu trữ hoặc Khu tiếp nhận.</p>
+        <p>Bấm "Thêm vị trí mới" để bắt đầu, ví dụ một tòa, một dãy kệ hoặc khu tiếp nhận.</p>
     </div>
 }
 else
@@ -273,8 +273,8 @@ else
                                                     };
                                                     var (nhanTrangThai, lopNhan) = o.TrangThaiHienThi switch
                                                     {
-                                                        TrangThaiHienThiO.DangKhoa => ("Đang khóa KK", "nhan-loi"),
-                                                        TrangThaiHienThiO.NgungHoatDong => ("Ngừng HĐ", "nhan-xam"),
+                                                        TrangThaiHienThiO.DangKhoa => ("Đang khóa kiểm kê", "nhan-loi"),
+                                                        TrangThaiHienThiO.NgungHoatDong => ("Ngừng dùng", "nhan-xam"),
                                                         TrangThaiHienThiO.SapDay => ("Sắp đầy", "nhan-chu-y"),
                                                         TrangThaiHienThiO.ConCho => ("Còn chỗ", "nhan-lam"),
                                                         _ => ("Ô trống", "nhan-tot")
@@ -362,7 +362,7 @@ else
                                                                 @if (o.Nut.DangKhoa)
                                                                 {
                                                                     <form method="post" asp-action="MoKhoaKiemKe" asp-route-id="@o.Nut.MaViTri" asp-route-maKho="@maKho" class="d-inline">
-                                                                        <button type="submit" class="nut-nho nut-nho-xanh">Mở khóa KK</button>
+                                                                        <button type="submit" class="nut-nho nut-nho-xanh">Mở khóa kiểm kê</button>
                                                                     </form>
                                                                 }
                                                                 else if (o.Nut.DangHoatDong)
@@ -370,7 +370,7 @@ else
                                                                     <form method="post" asp-action="KhoaKiemKe" asp-route-id="@o.Nut.MaViTri" asp-route-maKho="@maKho" class="d-inline"
                                                                           data-confirm="Khóa ô '@o.Nut.TenViTri' để kiểm kê?"
                                                                           onsubmit="return confirm(this.dataset.confirm);">
-                                                                        <button type="submit" class="nut-nho nut-nho-vang">Khóa KK</button>
+                                                                        <button type="submit" class="nut-nho nut-nho-vang">Khóa kiểm kê</button>
                                                                     </form>
                                                                 }
                                                             </div>
@@ -390,11 +390,19 @@ else
     </div>
 
     <!-- CHẾ ĐỘ 2: CÂY PHÂN CẤP CHI TIẾT (GIỮ ĐẦY ĐỦ THAO TÁC QUẢN TRỊ 7 CẤP) -->
+        var capCo = new HashSet<string>();
+        void GomCap(IEnumerable<QuanLyKho.Web.Areas.HeThong.Services.ViTriCayDto> ds) { foreach (var n in ds) { capCo.Add(n.CapViTri); GomCap(n.Con); } }
+        GomCap(Model.CayGoc);
+        var capDangDung = QuanLyKho.Web.Areas.HeThong.Models.CapViTriGiaTri.ThuTu.Where(capCo.Contains).ToList();
     <div id="khungCay" role="tabpanel" aria-labelledby="tabCay" class="khung-the @(xemCay ? "" : "d-none")">
         <div class="mb-2 pb-2 border-bottom d-flex justify-content-between align-items-center">
-            <strong class="small text-uppercase text-muted">Cây phân cấp đầy đủ (Tòa → Tầng → Phòng → Dãy → Hàng → Kệ → Ô)</strong>
-            <span class="small text-muted">Hỗ trợ thêm/sửa/khóa mềm/xóa từng nút ở mọi cấp</span>
+            <strong class="small text-uppercase text-muted">Cây vị trí của kho</strong>
+            <span class="small text-muted">Kho này đang dùng các cấp: @(capDangDung.Count > 0 ? string.Join(" → ", capDangDung) : "chưa có")</span>
         </div>
+        <p class="small text-muted mb-2">
+            Có thể khai báo đủ 7 cấp Tòa → Tầng → Phòng → Dãy → Hàng → Kệ → Ô, hoặc bỏ bớt cấp không cần (kho nhỏ thường chỉ dùng Dãy → Kệ → Ô).
+            Chỉ ô mới chứa hàng.
+        </p>
         <ul class="nut-cay-goc">
             @foreach (var nut in Model.CayGoc)
             {

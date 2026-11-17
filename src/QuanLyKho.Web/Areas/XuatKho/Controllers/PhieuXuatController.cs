@@ -145,8 +145,8 @@ public class PhieuXuatController(
 
         var daCo = (await goiY.DanhSachChoDuyet(LoaiGoiY.G1)).Any(g => g.ThamChieu.MaPX == id);
         var tuChoi = p.TrangThai != PhieuXuat.Nhap ? "Phiếu không còn ở trạng thái Nháp."
-            : p.LoaiPhieu == PhieuXuat.TraLaiHangMua ? "Trả lại hàng mua lấy từ khu tiếp nhận, không áp dụng gợi ý G1."
-            : daCo ? "Phiếu đã có một gợi ý G1 đang Chờ duyệt; hãy duyệt, sửa rồi duyệt hoặc từ chối gợi ý đó trước khi tạo gợi ý mới."
+            : p.LoaiPhieu == PhieuXuat.TraLaiHangMua ? "Trả lại hàng mua lấy từ khu tiếp nhận, không dùng gợi ý lấy hàng."
+            : daCo ? "Phiếu đã có một gợi ý lấy hàng đang chờ duyệt; hãy duyệt, sửa rồi duyệt hoặc từ chối gợi ý đó trước khi tạo gợi ý mới."
             : p.KiemTra() ?? await KiemTraDanhMuc(p) ?? await KiemTraTonKhaDung(p);
         if (tuChoi is not null)
         {
@@ -163,7 +163,7 @@ public class PhieuXuatController(
 
         var kq = await GoiYAnToan.Chay(ct => goiY.Tao(LoaiGoiY.G1, new ThamChieuGoiY(MaPX: id), chiTiet, ct));
         TempData[kq.ThanhCong ? "ThongBao" : "Loi"] = kq.ThanhCong
-            ? "Đã tạo gợi ý lấy hàng (G1); mời quản lý kho duyệt ở khung bên dưới."
+            ? "Đã tạo gợi ý lấy hàng; mời quản lý kho duyệt ở khung bên dưới."
             : (kq.ThongBao ?? "Không tạo được gợi ý.") + " Bạn vẫn duyệt tay được bằng nút \"Duyệt phiếu\".";
         if (kq.ThanhCong) await audit.Ghi(MaNguoiDung(), "Tạo gợi ý G1", LoaiChungTu.XK, id, p.SoPhieu);
         return RedirectToAction(nameof(Sua), new { id });

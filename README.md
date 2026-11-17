@@ -12,6 +12,15 @@ Trạng thái khi đóng dự án (11/2026): đã xong nhập kho (T1-1 đến T
 - GitHub Actions: `CI` build và chạy toàn bộ kiểm thử (kể cả kiểm thử trên SQL Server) ở mỗi pull request; `Release` chạy khi đẩy tag `v*` (ví dụ `git tag v1.0.0 && git push origin v1.0.0`), tạo bản phát hành gồm gói chạy cho Windows, Linux và script CSDL.
 - Chạy bản đã đóng gói: giải nén, đặt biến môi trường `ConnectionStrings__KhoDb` và `Auth__SeedPassword`, rồi chạy `QuanLyKho.Web.exe --urls https://localhost:5001` (cần .NET 10 Runtime; ở Production phải dùng HTTPS). Máy không cài .NET SDK sẽ không có chứng chỉ phát triển, cần đặt thêm `Kestrel__Certificates__Default__Path` (tệp `.pfx`) và `Kestrel__Certificates__Default__Password`, hoặc chạy sau IIS. Triển khai lên IIS hoặc Azure: xem [docs/TrienKhai.md](docs/TrienKhai.md).
 
+## Chạy thử trên GitHub Codespaces
+
+Không cần cài gì trên máy: trên trang GitHub của kho mã bấm **Code** > **Codespaces** > **Create codespace on main**. Lần đầu mất vài phút để dựng .NET 10 và SQL Server 2022 (cấu hình ở `.devcontainer/`); ứng dụng tự áp migration, nạp dữ liệu mẫu rồi chạy ở cổng 5141.
+
+- Đăng nhập bằng `quantri`, `quanlykho`, `thukho` hoặc `nhanvienbh`, mật khẩu `Thu12345` (chỉ dùng cho bản chạy thử).
+- Gửi đường dẫn cho người khác: tab **Ports**, chuột phải cổng 5141 > **Port Visibility** > **Public**. Ai có đường dẫn cũng đăng nhập được bằng tài khoản mẫu, nên tắt Public sau khi demo.
+- Ứng dụng không lên: xem `/tmp/quanlykho.log`, hoặc chạy tay `dotnet run --project src/QuanLyKho.Web --launch-profile http`.
+- Codespace tự dừng khi không dùng khoảng 30 phút; mở lại là ứng dụng tự chạy tiếp. Tài khoản GitHub cá nhân có hạn mức miễn phí theo giờ mỗi tháng.
+
 ## Chạy lần đầu
 
 Cần cài: [.NET 10 SDK](https://dotnet.microsoft.com/download), Git, và SQL Server (LocalDB đi kèm Visual Studio, hoặc SQL Server Express/Developer).

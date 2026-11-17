@@ -18,7 +18,12 @@ Không cần cài gì trên máy: trên trang GitHub của kho mã bấm **Code*
 
 - Đăng nhập bằng `quantri`, `quanlykho`, `thukho` hoặc `nhanvienbh`, mật khẩu `Thu12345` (chỉ dùng cho bản chạy thử).
 - Gửi đường dẫn cho người khác: tab **Ports**, chuột phải cổng 5141 > **Port Visibility** > **Public**. Ai có đường dẫn cũng đăng nhập được bằng tài khoản mẫu, nên tắt Public sau khi demo.
-- Ứng dụng không lên: xem `/tmp/quanlykho.log`, hoặc chạy tay `dotnet run --project src/QuanLyKho.Web --launch-profile http`.
+- Ứng dụng không lên: xem `/tmp/quanlykho.log`, hoặc chạy tay lệnh dưới. Lệnh `setsid` giữ ứng dụng chạy cả khi Terminal đóng hoặc VS Code mất kết nối; chạy `dotnet run` thường thì đóng Terminal là ứng dụng dừng và đường dẫn báo lỗi 502.
+
+  ```bash
+  setsid nohup dotnet run --project src/QuanLyKho.Web --launch-profile http --urls http://0.0.0.0:5141 > /tmp/quanlykho.log 2>&1 < /dev/null &
+  ```
+- Cổng có thể trở về Private khi codespace khởi động lại: kiểm tra lại tab **Ports** trước khi gửi đường dẫn.
 - Codespace tự dừng khi không dùng khoảng 30 phút; mở lại là ứng dụng tự chạy tiếp. Tài khoản GitHub cá nhân có hạn mức miễn phí theo giờ mỗi tháng.
 
 ## Chạy lần đầu

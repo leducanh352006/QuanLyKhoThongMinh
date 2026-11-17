@@ -33,6 +33,21 @@ public static class TenHienThiPhanQuyen
         _ => throw new ArgumentOutOfRangeException(nameof(q), q, null),
     };
 
+    /// <summary>Số chứng từ như trên phiếu (NK000012); mã 0 là tồn nạp sẵn từ dữ liệu mẫu.</summary>
+    public static string SoChungTu(string? loaiCT, int? maCT) =>
+        maCT is null or 0 ? "Tồn ban đầu" : $"{loaiCT}{maCT:D6}";
+
+    /// <summary>Đọc số phiếu người dùng gõ ("NK000012", "nk12" hoặc chỉ "12") thành loại và mã chứng từ; không đọc được thì trả false.</summary>
+    public static bool TachSoChungTu(string? soPhieu, out string? loaiCT, out int? maCT)
+    {
+        loaiCT = null; maCT = null;
+        var m = System.Text.RegularExpressions.Regex.Match(soPhieu?.Trim() ?? "", @"^([A-Za-z]{2})?\s*0*(\d+)$");
+        if (!m.Success || !int.TryParse(m.Groups[2].Value, out var ma)) return false;
+        loaiCT = m.Groups[1].Success ? m.Groups[1].Value.ToUpperInvariant() : null;
+        maCT = ma;
+        return true;
+    }
+
     public static string Ten(this LoaiChungTu c) => c switch
     {
         LoaiChungTu.NK => "phiếu nhập",

@@ -13,6 +13,9 @@ public sealed class NhatKyViewModel
     public string? HanhDong { get; set; }
     public string? LoaiCT { get; set; }
     public int? MaCT { get; set; }
+
+    /// <summary>Số phiếu người dùng gõ, ví dụ NK000012; đọc ra LoaiCT và MaCT.</summary>
+    public string? SoPhieu { get; set; }
     public DateOnly? TuNgay { get; set; }
     public DateOnly? DenNgay { get; set; }
     public int Trang { get; set; } = 1;
@@ -32,6 +35,11 @@ public class NhatKyController(INhatKyQuanLy nhatKy, IHeThongStore nguoiDung) : C
     public async Task<IActionResult> Index([FromQuery] NhatKyViewModel loc, CancellationToken ct)
     {
         ViewData["Title"] = "Nhật ký thao tác";
+        if (TenHienThiPhanQuyen.TachSoChungTu(loc.SoPhieu, out var loaiGo, out var maGo))
+        {
+            loc.LoaiCT = loaiGo ?? loc.LoaiCT;
+            loc.MaCT = maGo;
+        }
 
         LoaiChungTu? loai = Enum.TryParse<LoaiChungTu>(loc.LoaiCT, out var l) && Enum.IsDefined(l) ? l : null;
         var boLoc = new NhatKyLoc(

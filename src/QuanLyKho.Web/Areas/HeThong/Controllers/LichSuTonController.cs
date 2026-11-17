@@ -13,6 +13,9 @@ public sealed class LichSuTonViewModel
     public string? LoaiBienDong { get; set; }
     public string? LoaiCT { get; set; }
     public int? MaCT { get; set; }
+
+    /// <summary>Số phiếu người dùng gõ, ví dụ NK000012; đọc ra LoaiCT và MaCT.</summary>
+    public string? SoPhieu { get; set; }
     public DateOnly? TuNgay { get; set; }
     public DateOnly? DenNgay { get; set; }
     public int Trang { get; set; } = 1;
@@ -31,6 +34,11 @@ public class LichSuTonController(ILichSuTonQuanLy lichSu) : Controller
     public async Task<IActionResult> Index([FromQuery] LichSuTonViewModel loc, CancellationToken ct)
     {
         ViewData["Title"] = "Lịch sử biến động tồn";
+        if (TenHienThiPhanQuyen.TachSoChungTu(loc.SoPhieu, out var loaiGo, out var maGo))
+        {
+            loc.LoaiCT = loaiGo ?? loc.LoaiCT;
+            loc.MaCT = maGo;
+        }
 
         LoaiChungTu? loai = Enum.TryParse<LoaiChungTu>(loc.LoaiCT, out var l) && Enum.IsDefined(l) ? l : null;
         var boLoc = new LichSuTonLoc(

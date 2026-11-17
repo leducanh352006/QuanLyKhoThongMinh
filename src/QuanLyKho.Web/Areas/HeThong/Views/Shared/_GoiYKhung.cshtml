@@ -1,18 +1,20 @@
 @model QuanLyKho.Web.Areas.HeThong.Controllers.GoiYKhungViewModel
 @using QuanLyKho.Web.Areas.HeThong.Services
 @using QuanLyKho.Web.Contracts
+@inject TenHienThiService TenHienThi
 @{
+    await TenHienThi.Nap();
     var g = Model.GoiY;
     var id = $"gy{g.MaGoiY}";
     string Gio(DateTime utc) => TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), TimeZoneInfo.Local).ToString("dd/MM/yyyy HH:mm");
     string ViTriHang(ChiTietGoiYDto c)
     {
-        var phan = new List<string> { $"Biến thể #{c.MaBT}" };
-        if (c.MaLo is int lo) phan.Add($"lô #{lo}");
-        if (c.MaViTri is int vt) phan.Add($"ô #{vt}");
-        if (c.MaKhoNguon is int kn && c.MaKhoDich is int kd) phan.Add($"kho #{kn} → kho #{kd}");
-        else if (c.MaKhoNguon is int kn2) phan.Add($"từ kho #{kn2}");
-        else if (c.MaKhoDich is int kd2) phan.Add($"cho kho #{kd2}");
+        var phan = new List<string> { TenHienThi.BienThe(c.MaBT) };
+        if (c.MaLo is int lo) phan.Add($"lô {TenHienThi.Lo(lo)}");
+        if (c.MaViTri is int vt) phan.Add(TenHienThi.O(vt));
+        if (c.MaKhoNguon is int kn && c.MaKhoDich is int kd) phan.Add($"{TenHienThi.Kho(kn)} → {TenHienThi.Kho(kd)}");
+        else if (c.MaKhoNguon is int kn2) phan.Add($"từ {TenHienThi.Kho(kn2)}");
+        else if (c.MaKhoDich is int kd2) phan.Add($"cho {TenHienThi.Kho(kd2)}");
         return string.Join(", ", phan);
     }
     var (nhan, lop) = g.TrangThai switch
@@ -21,7 +23,8 @@
         TrangThaiGoiY.TuChoi => ("Từ chối", "nhan-loi"),
         _ => (g.TrangThai.ToCsdl(), "nhan-tot"),
     };
-    var phieu = g.ThamChieu.MaPX is int px ? $"Phiếu xuất #{px}" : g.ThamChieu.MaPN is int pn ? $"Phiếu nhập #{pn}" : g.ThamChieu.MaPC is int pc ? $"Phiếu chuyển #{pc}" : null;
+    var phieu = g.ThamChieu.MaPX is int px ? $"Phiếu xuất {TenHienThiPhanQuyen.SoChungTu("XK", px)}" : g.ThamChieu.MaPN is int pn ? $"Phiếu nhập {TenHienThiPhanQuyen.SoChungTu("NK", pn)}" : g.ThamChieu.MaPC is int pc ? $"Phiếu chuyển {TenHienThiPhanQuyen.SoChungTu("CK", pc)}" : null;
+    var coKho = g.ChiTiet.Any(c => c.MaKhoNguon is not null || c.MaKhoDich is not null);
     var choDuyet = g.TrangThai == TrangThaiGoiY.ChoDuyet;
 }
 
@@ -30,7 +33,7 @@
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
             <div>
                 <h3 id="@(id)Tieu" class="h6 mb-1">
-                    <span class="badge text-bg-secondary">Gợi ý AI · @g.Loai</span>
+                    <span class="badge text-bg-secondary">Gợi ý AI</span>
                     <a asp-area="HeThong" asp-controller="GoiY" asp-action="ChiTiet" asp-route-id="@g.MaGoiY">#@g.MaGoiY</a>
                     @QuyTacGoiY.Ten(g.Loai)
                 </h3>
@@ -38,7 +41,7 @@
                     Tạo lúc @Gio(g.ThoiGianTaoUtc)@(phieu is null ? "" : $" · {phieu}")
                     @if (g.ThoiGianDuyetUtc is DateTime duyet)
                     {
-                        <text> · Xử lý lúc @Gio(duyet) bởi người dùng #@g.MaNguoiDuyet</text>
+                        <text> · Xử lý lúc @Gio(duyet)@(g.MaNguoiDuyet is int nd ? " bởi " + TenHienThi.NguoiDung(nd) : "")</text>
                     }
                 </p>
             </div>
@@ -78,7 +81,7 @@
         {
             @if (!Model.CoXuLy)
             {
-                <p class="text-secondary small">Chưa nối thao tác tự động cho @g.Loai: duyệt sẽ báo lỗi và gợi ý vẫn Chờ duyệt. Bạn làm tay bình thường.</p>
+                <p class="text-secondary small">Loại gợi ý này chưa tự lập lệnh được: duyệt sẽ báo lỗi và gợi ý vẫn Chờ duyệt. Bạn làm tay bình thường.</p>
             }
             @if (!Model.DuocXuLy)
             {
@@ -100,8 +103,9 @@
                                 <table class="table table-sm align-middle">
                                     <thead>
                                         <tr>
-                                            <th scope="col">Giữ</th><th scope="col">Biến thể</th><th scope="col">Lô</th><th scope="col">Ô</th>
-                                            <th scope="col">Kho đi</th><th scope="col">Kho đến</th><th scope="col">Số lượng</th>
+                                            <th scope="col">Giữ</th><th scope="col">Hàng</th><th scope="col">Lô</th><th scope="col">Ô</th>
+                                            @if (coKho) { <th scope="col">Kho đi</th><th scope="col">Kho đến</th> }
+                                            <th scope="col">Số lượng</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -116,11 +120,14 @@
                                                     <input type="hidden" name="dong[@i].MaBT" value="@c.MaBT" />
                                                     <input type="hidden" name="dong[@i].LyDo" value="@c.LyDo" />
                                                 </td>
-                                                <td>#@c.MaBT</td>
-                                                <td><input type="number" min="1" class="form-control form-control-sm" name="dong[@i].MaLo" value="@c.MaLo" aria-label="Lô dòng @(i + 1)" /></td>
-                                                <td><input type="number" min="1" class="form-control form-control-sm" name="dong[@i].MaViTri" value="@c.MaViTri" aria-label="Ô dòng @(i + 1)" /></td>
-                                                <td><input type="number" min="1" class="form-control form-control-sm" name="dong[@i].MaKhoNguon" value="@c.MaKhoNguon" aria-label="Kho đi dòng @(i + 1)" /></td>
-                                                <td><input type="number" min="1" class="form-control form-control-sm" name="dong[@i].MaKhoDich" value="@c.MaKhoDich" aria-label="Kho đến dòng @(i + 1)" /></td>
+                                                <td>@TenHienThi.BienThe(c.MaBT)</td>
+                                                <td>@OChon($"dong[{i}].MaLo", c.MaLo, TenHienThi.DanhSachLo(c.MaBT), $"Lô dòng {i + 1}")</td>
+                                                <td>@OChon($"dong[{i}].MaViTri", c.MaViTri, TenHienThi.DanhSachO(), $"Ô dòng {i + 1}")</td>
+                                                @if (coKho)
+                                                {
+                                                    <td>@OChon($"dong[{i}].MaKhoNguon", c.MaKhoNguon, TenHienThi.DanhSachKho(), $"Kho đi dòng {i + 1}")</td>
+                                                    <td>@OChon($"dong[{i}].MaKhoDich", c.MaKhoDich, TenHienThi.DanhSachKho(), $"Kho đến dòng {i + 1}")</td>
+                                                }
                                                 <td><input type="number" min="1" required class="form-control form-control-sm" name="dong[@i].SoLuong" value="@c.SoLuong" aria-label="Số lượng dòng @(i + 1)" /></td>
                                             </tr>
                                         }
@@ -147,3 +154,17 @@
         }
     </div>
 </article>
+
+@functions {
+    private Microsoft.AspNetCore.Html.IHtmlContent OChon(string ten, int? giaTri, IReadOnlyList<LuaChon> ds, string nhan)
+    {
+        var enc = System.Text.Encodings.Web.HtmlEncoder.Default;
+        if (ds.Count == 0)
+            return new Microsoft.AspNetCore.Html.HtmlString(
+                $"<input type=\"number\" min=\"1\" class=\"form-control form-control-sm\" name=\"{enc.Encode(ten)}\" value=\"{giaTri}\" aria-label=\"{enc.Encode(nhan)}\" />");
+        var sb = new System.Text.StringBuilder($"<select class=\"form-select form-select-sm\" name=\"{enc.Encode(ten)}\" aria-label=\"{enc.Encode(nhan)}\"><option value=\"\">(không chọn)</option>");
+        foreach (var l in ds)
+            sb.Append($"<option value=\"{l.Ma}\"{(l.Ma == giaTri ? " selected" : "")}>{enc.Encode(l.Ten)}</option>");
+        return new Microsoft.AspNetCore.Html.HtmlString(sb.Append("</select>").ToString());
+    }
+}

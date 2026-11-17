@@ -37,7 +37,7 @@
 @if (!hoanTat && goiY.Count == 0 && Model.ChiTiet.Any(x => x.MaLo != null && (x.SLDat ?? 0) > 0))
 {
     <form method="post" asp-action="TaoGoiY" asp-route-id="@Model.MaPN" class="mb-3">
-        <button type="submit" class="btn btn-outline-primary">Gợi ý ô sắp xếp (G2)</button>
+        <button type="submit" class="btn btn-outline-primary">Gợi ý ô để xếp hàng</button>
         <span class="text-body-secondary">AI chỉ đề xuất, thủ kho duyệt rồi mới có lệnh xếp; vẫn lập lệnh tay được.</span>
     </form>
 }
@@ -118,7 +118,7 @@
             if (cacGoiY.Count > 0)
             {
                 <div class="text-body-secondary">
-                    <p class="mb-1">Gợi ý G2 đang chờ duyệt cho dòng này (@cacGoiY.Count ô):</p>
+                    <p class="mb-1">Gợi ý xếp hàng đang chờ duyệt cho dòng này (@cacGoiY.Count ô):</p>
                     <ul class="mb-2">
                         @foreach (var c in cacGoiY)
                         {

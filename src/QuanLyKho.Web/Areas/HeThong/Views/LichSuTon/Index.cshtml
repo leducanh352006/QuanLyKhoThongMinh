@@ -1,9 +1,11 @@
 @model QuanLyKho.Web.Areas.HeThong.Controllers.LichSuTonViewModel
+@inject QuanLyKho.Web.Areas.HeThong.Services.TenHienThiService TenHienThi
 @using QuanLyKho.Web.Areas.HeThong.Models
 @using QuanLyKho.Web.Contracts
 @{
     string Ngay(DateTime utc) => TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), TimeZoneInfo.Local).ToString("dd/MM/yyyy HH:mm:ss");
     var ket = Model.Ket;
+    await TenHienThi.Nap();
     object Tuyen(int trang) => new { Model.MaLo, Model.MaViTri, Model.LoaiBienDong, Model.LoaiCT, Model.MaCT, TuNgay = Model.TuNgay?.ToString("yyyy-MM-dd"), DenNgay = Model.DenNgay?.ToString("yyyy-MM-dd"), Trang = trang };
 }
 
@@ -15,12 +17,38 @@
 
 <form method="get" asp-action="Index" class="mb-3 row g-2 align-items-end">
     <div class="col-md-2">
-        <label for="loLo" class="form-label">Mã lô</label>
-        <input id="loLo" name="MaLo" type="number" min="1" class="form-control" value="@Model.MaLo" />
+        <label for="loLo" class="form-label">Lô</label>
+        @if (TenHienThi.CoDuLieu)
+        {
+            <select id="loLo" name="MaLo" class="form-select">
+                <option value="">Tất cả</option>
+                @foreach (var l in TenHienThi.DanhSachLo())
+                {
+                    <option value="@l.Ma" selected="@(Model.MaLo == l.Ma)">@l.Ten</option>
+                }
+            </select>
+        }
+        else
+        {
+            <input id="loLo" name="MaLo" type="number" min="1" class="form-control" value="@Model.MaLo" />
+        }
     </div>
     <div class="col-md-2">
-        <label for="loO" class="form-label">Mã ô (vị trí)</label>
-        <input id="loO" name="MaViTri" type="number" min="1" class="form-control" value="@Model.MaViTri" />
+        <label for="loO" class="form-label">Ô</label>
+        @if (TenHienThi.CoDuLieu)
+        {
+            <select id="loO" name="MaViTri" class="form-select">
+                <option value="">Tất cả</option>
+                @foreach (var o in TenHienThi.DanhSachO())
+                {
+                    <option value="@o.Ma" selected="@(Model.MaViTri == o.Ma)">@o.Ten</option>
+                }
+            </select>
+        }
+        else
+        {
+            <input id="loO" name="MaViTri" type="number" min="1" class="form-control" value="@Model.MaViTri" />
+        }
     </div>
     <div class="col-md-2">
         <label for="loBienDong" class="form-label">Loại biến động</label>
@@ -38,13 +66,14 @@
             <option value="">Tất cả</option>
             @foreach (var loai in Enum.GetValues<LoaiChungTu>())
             {
-                <option value="@loai" selected="@(Model.LoaiCT == loai.ToString())">@loai.ToString() - @loai.Ten()</option>
+                <option value="@loai" selected="@(Model.LoaiCT == loai.ToString())">@(char.ToUpper(loai.Ten()[0]) + loai.Ten()[1..])</option>
             }
         </select>
     </div>
     <div class="col-md-2">
-        <label for="loMaCT" class="form-label">Mã chứng từ</label>
-        <input id="loMaCT" name="MaCT" type="number" min="0" class="form-control" value="@Model.MaCT" />
+        <label for="loMaCT" class="form-label">Số phiếu</label>
+        <input id="loMaCT" name="SoPhieu" class="form-control" placeholder="VD: NK000012"
+               value="@(Model.MaCT is int maCT && maCT > 0 ? TenHienThiPhanQuyen.SoChungTu(Model.LoaiCT, maCT) : Model.SoPhieu)" />
     </div>
     <div class="col-md-2"></div>
     <div class="col-md-2">
@@ -87,18 +116,18 @@ else
                 {
                     <tr>
                         <td class="text-nowrap">@Ngay(d.ThoiGianUtc)</td>
-                        <td><a asp-action="Index" asp-route-MaLo="@d.MaLo" title="Chỉ xem lô này">@d.MaVachLo</a> <span class="text-secondary">(#@d.MaLo)</span></td>
-                        <td><a asp-action="Index" asp-route-MaViTri="@d.MaViTri" title="Chỉ xem ô này">@d.TenViTri</a> <span class="text-secondary">(#@d.MaViTri)</span></td>
+                        <td><a asp-action="Index" asp-route-MaLo="@d.MaLo" title="Chỉ xem lô này">@d.MaVachLo</a></td>
+                        <td><a asp-action="Index" asp-route-MaViTri="@d.MaViTri" title="Chỉ xem ô này">@d.TenViTri</a></td>
                         <td class="text-end text-nowrap @(d.SoLuong > 0 ? "text-success" : "text-danger")">@(d.SoLuong > 0 ? "+" : "")@d.SoLuong</td>
                         <td>@d.LoaiBienDong</td>
                         <td>
                             @if (User.IsInRole(VaiTroTen.QuanTriVien))
                             {
-                                <a asp-controller="NhatKy" asp-action="Index" asp-route-LoaiCT="@d.LoaiCT" asp-route-MaCT="@d.MaCT" title="Xem nhật ký thao tác của chứng từ này">@d.LoaiCT #@d.MaCT</a>
+                                <a asp-controller="NhatKy" asp-action="Index" asp-route-LoaiCT="@d.LoaiCT" asp-route-MaCT="@d.MaCT" title="Xem nhật ký thao tác của chứng từ này">@TenHienThiPhanQuyen.SoChungTu(d.LoaiCT, d.MaCT)</a>
                             }
                             else
                             {
-                                @:@d.LoaiCT #@d.MaCT
+                                @TenHienThiPhanQuyen.SoChungTu(d.LoaiCT, d.MaCT)
                             }
                         </td>
                         <td>@d.NguoiThucHien</td>

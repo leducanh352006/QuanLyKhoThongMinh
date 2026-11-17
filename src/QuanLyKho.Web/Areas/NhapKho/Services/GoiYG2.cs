@@ -117,7 +117,7 @@ public sealed class GoiYG2Service(KhoDbContext db, ICapacityService sucChua, IGo
         if (p.TrangThai != PhieuNhap.DaKiemTra)
             return KetQua<int>.Loi($"Chỉ gợi ý cho phiếu Đã kiểm tra, phiếu {p.SoPhieu} đang {p.TrangThai}.", MaLoiDichVu.SaiTrangThai);
         if ((await goiY.DanhSachChoDuyet(LoaiGoiY.G2, ct)).Any(g => g.ThamChieu.MaPN == maPN))
-            return KetQua<int>.Loi("Phiếu này đã có gợi ý G2 đang chờ duyệt. Hãy duyệt hoặc từ chối gợi ý đó trước.", MaLoiDichVu.SaiTrangThai);
+            return KetQua<int>.Loi("Phiếu này đã có gợi ý xếp hàng đang chờ duyệt. Hãy duyệt hoặc từ chối gợi ý đó trước.", MaLoiDichVu.SaiTrangThai);
 
         // Dòng hàng đạt còn chưa lập lệnh xếp.
         var maCTN = p.ChiTiet.Select(d => d.MaCTN).ToList();
@@ -209,7 +209,7 @@ public sealed class GoiYG2Service(KhoDbContext db, ICapacityService sucChua, IGo
 
         await audit.Ghi(maND, "Tạo gợi ý G2", LoaiChungTu.NK, maPN, $"{p.SoPhieu}: {chiTiet.Count} dòng đề xuất", ct);
         var luu = khongXep.Count == 0 ? "" : " Chưa gợi ý được: " + string.Join("; ", khongXep) + " (xếp tay các dòng này).";
-        return KetQua<int>.Ok(kq.GiaTri, $"Đã tạo gợi ý G2 cho phiếu {p.SoPhieu}: {chiTiet.Count} dòng đề xuất, chờ duyệt.{luu}");
+        return KetQua<int>.Ok(kq.GiaTri, $"Đã tạo gợi ý xếp hàng cho phiếu {p.SoPhieu}: {chiTiet.Count} dòng đề xuất, chờ duyệt.{luu}");
     }
 
     private static string So(double v) => v.ToString("0.00", CultureInfo.InvariantCulture).Replace('.', ',');

@@ -2,7 +2,7 @@
 
 <header class="trang-dau trang-dau-hang">
     <div>
-        <h1>Bàn làm việc quản lý kho</h1>
+        <h1>@(Model.NguoiDung is null ? "Quản lý kho thông minh" : "Bàn làm việc " + Model.NguoiDung.TenVaiTro.ToLowerInvariant())</h1>
         @if (Model.NguoiDung is not null)
         {
             <p class="mota">
@@ -51,8 +51,11 @@
         <section class="khung-the mb-3" aria-labelledby="tieuDeTrangThai">
             <h2 id="tieuDeTrangThai" class="h6 fw-bold text-uppercase text-secondary mb-3 pb-2 border-bottom">Trạng thái hệ thống</h2>
             <dl class="trang-thai">
-                <dt>Môi trường</dt>
-                <dd><code>@Model.MoiTruong</code></dd>
+                @if (Model.LaDevelopment)
+                {
+                    <dt>Môi trường</dt>
+                    <dd><code>@Model.MoiTruong</code></dd>
+                }
 
                 <dt>Cơ sở dữ liệu</dt>
                 <dd>
@@ -83,16 +86,17 @@
         </section>
 
         <section class="khung-the mb-3" aria-labelledby="tieuDeAI">
-            <h2 id="tieuDeAI" class="h6 fw-bold text-uppercase text-secondary mb-2 pb-2 border-bottom">Hai gợi ý AI cốt lõi</h2>
+            <h2 id="tieuDeAI" class="h6 fw-bold text-uppercase text-secondary mb-2 pb-2 border-bottom">Hệ thống gợi ý giúp bạn</h2>
             <div class="small text-muted d-grid gap-2">
                 <div>
-                    <strong class="text-dark">G1 — Lấy hàng xuất kho:</strong>
-                    Lọc ràng buộc cứng + ưu tiên hạn dùng FEFO/FIFO + sắp lộ trình cây vị trí một chiều.
+                    <strong class="text-dark">Khi xuất kho:</strong>
+                    gợi ý lấy hàng ở lô, ô nào. Lô hết hạn sớm được lấy trước, các ô xếp theo thứ tự đi trong kho.
                 </div>
                 <div>
-                    <strong class="text-dark">G2 — Sắp xếp hàng nhập kho:</strong>
-                    Kiểm lọt lòng kích thước 3D (D×R×C), tải trọng + chấm điểm Heuristic đa tiêu chí (S = 0,5·Gần + 0,3·CùngLoại + 0,2·LấpĐầy).
+                    <strong class="text-dark">Khi nhập kho:</strong>
+                    gợi ý xếp hàng vào ô nào. Chỉ chọn ô còn đủ chỗ và chịu được sức nặng, ưu tiên ô gần khu tiếp nhận và cạnh hàng cùng loại.
                 </div>
+                <div>Gợi ý chỉ có hiệu lực khi người dùng bấm duyệt.</div>
             </div>
         </section>
 

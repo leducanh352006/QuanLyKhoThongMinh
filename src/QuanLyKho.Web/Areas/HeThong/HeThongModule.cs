@@ -40,6 +40,7 @@ public static class HeThongModule
             throw new InvalidOperationException("Chưa cấu hình ConnectionStrings:KhoDb nên không có nơi lưu người dùng. Xem README, mục \"Chạy lần đầu\".");
         });
         services.AddScoped<IDbSeeder, HeThongSeeder>();
+        services.AddScoped(sp => new TenHienThiService(sp.GetService<KhoDbContext>()));
         services.AddSingleton<BoNhoKhoViTriStore>();
         services.AddScoped<IKhoViTriStore>(sp =>
         {

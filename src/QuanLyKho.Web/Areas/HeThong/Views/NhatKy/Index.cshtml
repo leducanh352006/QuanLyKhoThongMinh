@@ -32,13 +32,14 @@
             <option value="">Tất cả</option>
             @foreach (var loai in Enum.GetValues<LoaiChungTu>())
             {
-                <option value="@loai" selected="@(Model.LoaiCT == loai.ToString())">@loai.ToString() - @loai.Ten()</option>
+                <option value="@loai" selected="@(Model.LoaiCT == loai.ToString())">@(char.ToUpper(loai.Ten()[0]) + loai.Ten()[1..])</option>
             }
         </select>
     </div>
     <div class="col-md-2">
-        <label for="loMa" class="form-label">Mã chứng từ</label>
-        <input id="loMa" name="MaCT" type="number" min="1" class="form-control" value="@Model.MaCT" />
+        <label for="loMa" class="form-label">Số phiếu</label>
+        <input id="loMa" name="SoPhieu" class="form-control" placeholder="VD: NK000012"
+               value="@(Model.MaCT is int maCT && maCT > 0 ? TenHienThiPhanQuyen.SoChungTu(Model.LoaiCT, maCT) : Model.SoPhieu)" />
     </div>
     <div class="col-md-2">
         <label for="loTu" class="form-label">Từ ngày</label>
@@ -87,7 +88,7 @@ else
                             }
                             else
                             {
-                                <a asp-controller="LichSuTon" asp-action="Index" asp-route-LoaiCT="@d.LoaiCT" asp-route-MaCT="@d.MaCT" title="Xem biến động tồn của chứng từ này">@d.LoaiCT #@d.MaCT</a>
+                                <a asp-controller="LichSuTon" asp-action="Index" asp-route-LoaiCT="@d.LoaiCT" asp-route-MaCT="@d.MaCT" title="Xem biến động tồn của chứng từ này">@TenHienThiPhanQuyen.SoChungTu(d.LoaiCT, d.MaCT)</a>
                             }
                         </td>
                         <td>@d.ChiTiet</td>

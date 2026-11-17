@@ -1,11 +1,13 @@
 @model QuanLyKho.Web.Areas.HeThong.Services.KetQuaDoiChieu
+@inject QuanLyKho.Web.Areas.HeThong.Services.TenHienThiService TenHienThi
 @{
+    await TenHienThi.Nap();
     string Ngay(DateTime utc) => TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), TimeZoneInfo.Local).ToString("dd/MM/yyyy HH:mm:ss");
 }
 
 <header class="trang-dau">
     <h1>Đối chiếu sổ cái</h1>
-    <p class="mota">So tồn hiện tại (TonKho) với tổng các dòng sổ cái của từng lô tại từng ô. Kiểm tra lúc @Ngay(Model.ThoiGianUtc) (giờ máy chủ).</p>
+    <p class="mota">So tồn hiện tại với tổng các dòng sổ cái của từng lô tại từng ô. Kiểm tra lúc @Ngay(Model.ThoiGianUtc) (giờ máy chủ).</p>
     <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Về lịch sử biến động tồn</a>
 </header>
 
@@ -37,8 +39,8 @@ else
                 {
                     var lech = c.TonHienTai - c.TonTheoSoCai;
                     <tr>
-                        <td>#@c.MaLo</td>
-                        <td>#@c.MaViTri</td>
+                        <td>@TenHienThi.Lo(c.MaLo)</td>
+                        <td>@TenHienThi.O(c.MaViTri)</td>
                         <td class="text-end">@c.TonHienTai</td>
                         <td class="text-end">@c.TonTheoSoCai</td>
                         <td class="text-end">@(lech > 0 ? "+" : "")@lech</td>

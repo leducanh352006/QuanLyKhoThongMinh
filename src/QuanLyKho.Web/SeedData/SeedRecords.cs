@@ -30,3 +30,9 @@ public sealed record BienTheSeed(
 public sealed record LoHangSeed(int MaLo, string MaVachLo, int MaBT, DateOnly? HanDung);
 
 public sealed record TonKhoSeed(int MaLo, int MaViTri, int SoLuongTon, int SoLuongGiu);
+
+/// <summary>DonGiaVC là c(i, j), PhiChuyen là F(i, j) — Bảng 1.2.</summary>
+public sealed record TuyenVanChuyenSeed(int MaKhoXuat, int MaKhoNhap, decimal DonGiaVC, decimal PhiChuyen);
+
+/// <summary>TonToiThieu là m, NgayAnToan là N — Bảng 1.2.</summary>
+public sealed record DinhMucKhoSeed(int MaKho, int MaBT, int TonToiThieu, int NgayAnToan);

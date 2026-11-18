@@ -1,0 +1,48 @@
+@model QuanLyKho.Web.Areas.DieuChuyen.Models.DinhMucKhoThemViewModel
+@{
+    var dsKho = (Dictionary<int, string>)ViewBag.Kho;
+    var dsBienThe = (Dictionary<int, string>)ViewBag.BienThe;
+}
+
+<header class="trang-dau">
+    <h1>Thêm định mức kho</h1>
+</header>
+
+<form method="post" asp-action="Them" class="khung-form" novalidate>
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger" role="alert" asp-validation-summary="All"></div>
+    }
+
+    <div class="mb-3">
+        <label asp-for="MaKho" class="form-label"></label>
+        <select asp-for="MaKho" class="form-select">
+            <option value="0">-- Chọn kho --</option>
+            @foreach (var k in dsKho)
+            {
+                <option value="@k.Key">@k.Value</option>
+            }
+        </select>
+    </div>
+    <div class="mb-3">
+        <label asp-for="MaBT" class="form-label"></label>
+        <select asp-for="MaBT" class="form-select">
+            <option value="0">-- Chọn biến thể --</option>
+            @foreach (var b in dsBienThe)
+            {
+                <option value="@b.Key">@b.Value</option>
+            }
+        </select>
+    </div>
+    <div class="mb-3">
+        <label asp-for="TonToiThieu" class="form-label"></label>
+        <input asp-for="TonToiThieu" class="form-control" type="number" min="0" />
+    </div>
+    <div class="mb-3">
+        <label asp-for="NgayAnToan" class="form-label"></label>
+        <input asp-for="NgayAnToan" class="form-control" type="number" min="0" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Thêm</button>
+    <a class="btn btn-outline-secondary" asp-action="Index">Hủy</a>
+</form>

@@ -1,0 +1,47 @@
+@model QuanLyKho.Web.Areas.DieuChuyen.Models.TuyenVanChuyenThemViewModel
+@{
+    var dsKho = (Dictionary<int, string>)ViewBag.Kho;
+}
+
+<header class="trang-dau">
+    <h1>Thêm tuyến vận chuyển</h1>
+</header>
+
+<form method="post" asp-action="Them" class="khung-form" novalidate>
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger" role="alert" asp-validation-summary="All"></div>
+    }
+
+    <div class="mb-3">
+        <label asp-for="MaKhoXuat" class="form-label"></label>
+        <select asp-for="MaKhoXuat" class="form-select">
+            <option value="0">-- Chọn kho xuất --</option>
+            @foreach (var k in dsKho)
+            {
+                <option value="@k.Key">@k.Value</option>
+            }
+        </select>
+    </div>
+    <div class="mb-3">
+        <label asp-for="MaKhoNhap" class="form-label"></label>
+        <select asp-for="MaKhoNhap" class="form-select">
+            <option value="0">-- Chọn kho nhập --</option>
+            @foreach (var k in dsKho)
+            {
+                <option value="@k.Key">@k.Value</option>
+            }
+        </select>
+    </div>
+    <div class="mb-3">
+        <label asp-for="DonGiaVC" class="form-label"></label>
+        <input asp-for="DonGiaVC" class="form-control" type="number" step="0.01" min="0" />
+    </div>
+    <div class="mb-3">
+        <label asp-for="PhiChuyen" class="form-label"></label>
+        <input asp-for="PhiChuyen" class="form-control" type="number" step="0.01" min="0" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Thêm</button>
+    <a class="btn btn-outline-secondary" asp-action="Index">Hủy</a>
+</form>

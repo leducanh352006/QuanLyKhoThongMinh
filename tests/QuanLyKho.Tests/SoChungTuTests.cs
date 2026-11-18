@@ -38,3 +38,14 @@ public class SoChungTuTests
         Assert.Null(m);
     }
 }
+
+/// <summary>Chuyển hướng đăng nhập không mang tên máy (tránh bị đưa tới https://localhost sau proxy, đường hầm).</summary>
+public class ChuyenHuongTuongDoiTests
+{
+    [Theory]
+    [InlineData("https://localhost:5141/HeThong/TaiKhoan/DangNhap?ReturnUrl=%2FDieuChuyen", "/HeThong/TaiKhoan/DangNhap?ReturnUrl=%2FDieuChuyen")]
+    [InlineData("http://x.app.github.dev/HeThong/TaiKhoan/TuChoi", "/HeThong/TaiKhoan/TuChoi")]
+    [InlineData("/HeThong/TaiKhoan/DangNhap", "/HeThong/TaiKhoan/DangNhap")]
+    public void DuongDanTuongDoi_BoTenMay(string vao, string ra) =>
+        Assert.Equal(ra, QuanLyKho.Web.Areas.HeThong.Services.XacThucCookie.DuongDanTuongDoi(vao));
+}

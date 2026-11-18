@@ -1,0 +1,126 @@
+@using QuanLyKho.Web.Areas.DieuChuyen.Controllers
+@using QuanLyKho.Web.Areas.DieuChuyen.Models
+@using QuanLyKho.Web.Models
+@model (PhieuChuyen Phieu, List<DongHienThi> Dong)
+@{
+    var p = Model.Phieu;
+    var chuaNhan = Model.Dong.Where(d => d.SLNhan is null).ToList();
+    var daNhan = Model.Dong.Where(d => d.SLNhan is not null).ToList();
+    var tuyChonQuet = new QuetMaOptions("oQuet", "Quét mã ô nhận hoặc mã lô", "Quét theo thứ tự: ô, lô");
+    ViewData["Title"] = $"Nhận hàng {p.SoPhieu}";
+}
+
+<header class="trang-dau">
+    <h1>Nhận hàng phiếu chuyển @p.SoPhieu</h1>
+    <p class="mota">
+        <span class="nhan @(chuaNhan.Count == 0 ? "nhan-tot" : "nhan-chu-y")">@p.TrangThai</span>
+        @p.KhoXuat?.TenKho → @p.KhoNhap?.TenKho. Quét ô nhận và lô của dòng trên cùng, đếm hàng rồi nhập số thực nhận. Hàng chỉ vào tồn kho đến sau khi bấm Xác nhận nhận. Nhận thiếu thì ghi lý do; quản lý kho xử lý phần chênh lệch sau.
+    </p>
+</header>
+
+@if (TempData["ThongBao"] is string tb) { <div class="alert alert-success" role="status">@tb</div> }
+@if (TempData["Loi"] is string loi) { <div class="alert alert-danger" role="alert">@loi</div> }
+
+@if (chuaNhan.Count > 0)
+{
+    <partial name="_QuetMa" model="tuyChonQuet" />
+
+    <h2 class="h5 mt-4">Còn chờ nhận (@chuaNhan.Count)</h2>
+    <div class="d-grid gap-3">
+        @foreach (var d in chuaNhan)
+        {
+            <div class="card dong-nhan" data-ma-o="@d.MaVachONhan" data-ma-lo="@d.MaVachLo">
+                <div class="card-body">
+                    <h3 class="h6 mb-1">@d.TenHang</h3>
+                    <p class="mb-2 text-body-secondary">
+                        Lô @d.MaVachLo @(d.HanDung is null ? "" : $"(hạn {d.HanDung})") · xếp vào <strong>@d.TenONhan</strong> · đã gửi <strong>@d.SoLuong</strong>
+                    </p>
+                    <div class="d-flex flex-wrap gap-2 mb-2">
+                        <span class="nhan nhan-chu-y" data-slot="o">Chưa quét ô</span>
+                        <span class="nhan nhan-chu-y" data-slot="lo">Chưa quét lô</span>
+                    </div>
+                    <form method="post" asp-action="NhanDong" asp-route-id="@p.MaPC" class="form-nhan" hidden>
+                        <input type="hidden" name="maCTC" value="@d.MaCTC" />
+                        <input type="hidden" class="f-o" name="maVachO" />
+                        <input type="hidden" class="f-lo" name="maVachLo" />
+                        <div class="row g-2 align-items-end">
+                            <div class="col-6 col-sm-4">
+                                <label class="form-label">Số thực nhận</label>
+                                <input type="number" class="form-control form-control-lg f-sl" name="slNhan" min="0" max="@d.SoLuong" value="@d.SoLuong" required />
+                            </div>
+                            <div class="col-12 col-sm-5 f-lydo-boc" hidden>
+                                <label class="form-label">Lý do nhận thiếu</label>
+                                <input type="text" class="form-control f-lydo" name="lyDoLech" maxlength="255" placeholder="VD: 2 hộp móp méo khi vận chuyển" />
+                            </div>
+                            <div class="col-6 col-sm-3">
+                                <button type="submit" class="btn btn-success btn-lg w-100">Xác nhận nhận</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <p class="khung-trong">Đã đếm xong mọi dòng. Hàng đã vào tồn kho @p.KhoNhap?.TenKho.@(p.TrangThai == PhieuChuyen.NhanMotPhan ? " Có dòng nhận thiếu: quản lý kho xử lý chênh lệch ở trang phiếu." : "")</p>
+}
+
+@if (daNhan.Count > 0)
+{
+    <h2 class="h5 mt-4">Đã nhận (@daNhan.Count)</h2>
+    <div class="khung-the bang-cuon">
+        <table class="table table-sm align-middle mb-0">
+            <thead><tr><th scope="col">Hàng</th><th scope="col">Lô</th><th scope="col">Ô</th><th scope="col" class="text-end">Gửi / nhận</th><th scope="col">Lý do lệch</th></tr></thead>
+            <tbody>
+                @foreach (var d in daNhan)
+                {
+                    <tr>
+                        <td>@d.TenHang</td><td>@d.MaVachLo</td><td>@d.TenONhan</td>
+                        <td class="text-end so-bang">@d.SoLuong / @d.SLNhan</td>
+                        <td>@(d.LyDoLech ?? "—")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<p class="mt-3"><a class="btn btn-outline-secondary" asp-action="Sua" asp-route-id="@p.MaPC">Quay lại phiếu</a></p>
+
+@section Scripts {
+    <script>
+        (function () {
+            var the = Array.prototype.slice.call(document.querySelectorAll('.dong-nhan'));
+            var oThongBao = document.querySelector('[data-quet-ma-thongbao]');
+            function bao(t) { setTimeout(function () { if (oThongBao) { oThongBao.textContent = t; } }, 0); }
+
+            // Chỉ dòng trên cùng nhận mã quét, đúng thứ tự: ô rồi lô.
+            document.addEventListener('quetma:them', function (e) {
+                var d = the[0];
+                if (!d) { return; }
+                var buoc = !d.querySelector('.f-o').value ? 'o' : !d.querySelector('.f-lo').value ? 'lo' : null;
+                if (!buoc) { bao('Dòng này đã quét đủ; nhập số thực nhận rồi bấm Xác nhận nhận.'); return; }
+                var can = (buoc === 'o' ? d.dataset.maO : d.dataset.maLo).toLowerCase();
+                if (e.detail.giaTri.toLowerCase() !== can) { bao('Mã "' + e.detail.giaTri + '" không khớp. Hãy quét đúng ' + (buoc === 'o' ? 'ô nhận' : 'lô') + ' của dòng trên cùng.'); return; }
+                d.querySelector('.f-' + buoc).value = e.detail.giaTri;
+                var nhan = d.querySelector('[data-slot="' + buoc + '"]');
+                nhan.textContent = buoc === 'o' ? 'Đã quét ô' : 'Đã quét lô'; nhan.className = 'nhan nhan-tot';
+                if (d.querySelector('.f-o').value && d.querySelector('.f-lo').value) {
+                    var form = d.querySelector('.form-nhan'); form.hidden = false; form.querySelector('.f-sl').focus();
+                    bao('Đúng ô và lô. Đếm hàng, nhập số thực nhận rồi bấm Xác nhận nhận.');
+                } else { bao('Đúng ô. Quét tiếp mã lô.'); }
+            });
+
+            the.forEach(function (d) {
+                var sl = d.querySelector('.f-sl'), boc = d.querySelector('.f-lydo-boc'), lyDo = d.querySelector('.f-lydo');
+                var du = parseInt(sl.max, 10);
+                sl.addEventListener('input', function () {
+                    var thieu = sl.value !== '' && parseInt(sl.value, 10) !== du;
+                    boc.hidden = !thieu; lyDo.required = thieu;
+                });
+            });
+        })();
+    </script>
+}

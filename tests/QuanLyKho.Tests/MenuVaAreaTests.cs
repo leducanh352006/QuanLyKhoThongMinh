@@ -54,7 +54,7 @@ public class MenuVaAreaTests
     [Fact]
     public void QuanTriVien_ThayHeThongVaHangHoa()
     {
-        Assert.Equal(new[] { "HangHoa", "HeThong" }, AreaThay(TaoMenu(), VaiTroTen.QuanTriVien));
+        Assert.Equal(new[] { "DieuChuyen", "HangHoa", "HeThong" }, AreaThay(TaoMenu(), VaiTroTen.QuanTriVien));
     }
 
     [Fact]

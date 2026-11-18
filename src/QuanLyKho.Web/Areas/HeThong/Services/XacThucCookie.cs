@@ -78,9 +78,16 @@ public static class XacThucCookie
     private static Task ChuyenHoacMa(HttpRequest req, HttpResponse res, int maTrangThai, string uri)
     {
         if (LaYeuCauAjax(req)) res.StatusCode = maTrangThai;
-        else res.Redirect(uri);
+        else res.Redirect(DuongDanTuongDoi(uri));
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// Bỏ phần máy chủ khỏi địa chỉ chuyển hướng (giữ đường dẫn và truy vấn). Sau proxy hoặc đường hầm (Codespaces, IIS) tên máy ứng
+    /// dụng nhận được có thể là localhost; chuyển hướng tuyệt đối sẽ đưa trình duyệt tới https://localhost:5141 không mở được.
+    /// </summary>
+    public static string DuongDanTuongDoi(string uri) =>
+        Uri.TryCreate(uri, UriKind.Absolute, out var u) && (u.Scheme == Uri.UriSchemeHttp || u.Scheme == Uri.UriSchemeHttps) ? u.PathAndQuery + u.Fragment : uri;
 
     public static bool LaYeuCauAjax(HttpRequest req)
         => string.Equals(req.Headers.XRequestedWith, "XMLHttpRequest", StringComparison.OrdinalIgnoreCase)

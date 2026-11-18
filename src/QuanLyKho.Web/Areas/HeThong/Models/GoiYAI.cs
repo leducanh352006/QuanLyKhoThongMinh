@@ -9,7 +9,7 @@ namespace QuanLyKho.Web.Areas.HeThong.Models;
 /// <summary>
 /// Bảng GoiYAI (việc T4-8): mỗi gợi ý của AI và quyết định của người dùng. LoaiGoiY là G1 hoặc G2, TrangThai theo Bảng 2.16
 /// (Chờ duyệt, Đã duyệt, Đã sửa và duyệt, Từ chối). MaPX, MaPN, MaPC cùng một lúc chỉ có tối đa một giá trị, theo loại (xem CHECK).
-/// MaPX có khóa ngoại tới PhieuXuat. MaPC chưa có khóa ngoại vì bảng PhieuChuyen chưa có trên main; thêm khi nhóm sở hữu có bảng thật.
+/// MaPX có khóa ngoại tới PhieuXuat; MaPC có khóa ngoại tới PhieuChuyen (cấu hình ở Areas/DieuChuyen/Models/PhieuChuyen.cs).
 /// </summary>
 public class GoiYAI
 {

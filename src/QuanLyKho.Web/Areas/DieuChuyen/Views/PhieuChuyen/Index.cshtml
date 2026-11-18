@@ -8,16 +8,17 @@
     var tuNgay = (DateOnly?)ViewBag.TuNgay;
     var denNgay = (DateOnly?)ViewBag.DenNgay;
     var trangThai = (string?)ViewBag.TrangThai;
-    var nguoi = (Dictionary<int, string>)ViewBag.NguoiVanChuyen;
     var dangTrenDuong = (int)ViewBag.DangTrenDuong;
     var soPhieuTrenDuong = (int)ViewBag.SoPhieuTrenDuong;
+    var chenhLechCho = (int)ViewBag.ChenhLechCho;
     var duocTao = await PhanQuyen.CoQuyenHienTai(LoaiChungTu.CK, QuyenThaoTac.Them);
     var duocHuy = await PhanQuyen.CoQuyenHienTai(LoaiChungTu.CK, QuyenThaoTac.Xoa);
     string Nhan(string tt) => tt switch
     {
         PhieuChuyen.Nhap => "nhan-chu-y",
         PhieuChuyen.DaDuyet => "nhan-lam",
-        PhieuChuyen.DaXuat => "nhan-chu-y",
+        PhieuChuyen.DangVanChuyen => "nhan-chu-y",
+        PhieuChuyen.NhanMotPhan => "nhan-loi",
         PhieuChuyen.DaNhan => "nhan-tot",
         _ => "nhan-xam",
     };
@@ -26,7 +27,7 @@
 <header class="trang-dau trang-dau-hang">
     <div>
         <h1>Phiếu chuyển kho</h1>
-        <p class="mota">Chuyển hàng giữa hai kho: lập phiếu → quản lý kho duyệt (giữ hàng) → kho xuất quét mã gửi đi → kho nhập quét mã nhận.</p>
+        <p class="mota">Chuyển hàng giữa hai kho: lập phiếu → quản lý kho duyệt (giữ hàng) → kho đi quét mã gửi đi → kho đến quét mã nhận → xử lý chênh lệch nếu nhận thiếu.</p>
     </div>
     @if (duocTao) { <a class="btn btn-primary" asp-action="Tao">Lập phiếu chuyển</a> }
 </header>
@@ -34,11 +35,16 @@
 @if (TempData["ThongBao"] is string tb) { <div class="alert alert-success" role="status">@tb</div> }
 @if (TempData["Loi"] is string loi) { <div class="alert alert-danger" role="alert">@loi</div> }
 
-<section class="luoi-kpi mb-3" aria-label="Hàng đang trên đường">
+<section class="luoi-kpi mb-3" aria-label="Hàng đang vận chuyển và chênh lệch">
     <div class="the-kpi">
-        <span class="kpi-nhan">Hàng đang trên đường</span>
+        <span class="kpi-nhan">Hàng đang vận chuyển</span>
         <strong class="kpi-so so-bang @(dangTrenDuong > 0 ? "kpi-vang" : "")">@dangTrenDuong.ToString("N0")</strong>
-        <span class="kpi-phu">đơn vị, thuộc @soPhieuTrenDuong phiếu đã xuất chưa nhận; không tính vào tồn kho nào</span>
+        <span class="kpi-phu">đơn vị, thuộc @soPhieuTrenDuong phiếu chưa nhận xong; không tính vào tồn kho nào</span>
+    </div>
+    <div class="the-kpi">
+        <span class="kpi-nhan">Chênh lệch chờ xử lý</span>
+        <strong class="kpi-so so-bang @(chenhLechCho > 0 ? "kpi-vang" : "")">@chenhLechCho.ToString("N0")</strong>
+        <span class="kpi-phu">đơn vị nhận thiếu, chờ quản lý kho chọn nhập tại kho đến hoặc trả về kho đi</span>
     </div>
 </section>
 
@@ -76,7 +82,7 @@ else
             <thead>
                 <tr>
                     <th scope="col">Số phiếu</th><th scope="col">Thời gian</th><th scope="col">Người vận chuyển</th>
-                    <th scope="col">Kho xuất → Kho nhập</th><th scope="col" class="text-end">Số lượng</th><th scope="col">Diễn giải</th>
+                    <th scope="col">Kho đi → Kho đến</th><th scope="col" class="text-end">Số lượng</th><th scope="col">Diễn giải</th>
                     <th scope="col">Trạng thái</th><th scope="col"><span class="visually-hidden">Thao tác</span></th>
                 </tr>
             </thead>
@@ -86,18 +92,19 @@ else
                     <tr>
                         <td><a asp-action="Sua" asp-route-id="@p.MaPC">@p.SoPhieu</a></td>
                         <td class="text-nowrap">@p.ThoiGian.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
-                        <td>@nguoi.GetValueOrDefault(p.MaDoiTuong, "—")</td>
+                        <td>@(p.NguoiVanChuyen ?? "—")</td>
                         <td>@p.KhoXuat?.TenKho → @p.KhoNhap?.TenKho</td>
                         <td class="text-end so-bang">@p.ChiTiet.Sum(d => d.SoLuong).ToString("N0")</td>
                         <td>@(p.DienGiai ?? "—")</td>
                         <td><span class="nhan @Nhan(p.TrangThai)">@p.TrangThai</span></td>
                         <td class="text-nowrap text-end">
                             @if (p.TrangThai == PhieuChuyen.DaDuyet) { <a class="btn btn-sm btn-outline-primary" asp-action="Xuat" asp-route-id="@p.MaPC">Xuất hàng</a> }
-                            @if (p.TrangThai == PhieuChuyen.DaXuat) { <a class="btn btn-sm btn-outline-primary" asp-action="Nhan" asp-route-id="@p.MaPC">Nhận hàng</a> }
+                            @if (p.TrangThai == PhieuChuyen.DangVanChuyen) { <a class="btn btn-sm btn-outline-primary" asp-action="Nhan" asp-route-id="@p.MaPC">Nhận hàng</a> }
+                            @if (p.TrangThai == PhieuChuyen.NhanMotPhan) { <a class="btn btn-sm btn-outline-warning" asp-action="Sua" asp-route-id="@p.MaPC">Xử lý chênh lệch</a> }
                             @if (p.HuyDuoc && duocHuy)
                             {
                                 <form method="post" asp-action="Huy" asp-route-id="@p.MaPC" asp-route-quayLai="ds" class="d-inline"
-                                      onsubmit="return confirm('Hủy phiếu @p.SoPhieu?@(p.TrangThai == PhieuChuyen.DaDuyet ? " Hàng đang giữ ở kho xuất sẽ được trả lại." : "") Không hoàn tác được.');">
+                                      onsubmit="return confirm('Hủy phiếu @p.SoPhieu?@(p.TrangThai == PhieuChuyen.DaDuyet ? " Hàng đang giữ ở kho đi sẽ được trả lại." : "") Không hoàn tác được.');">
                                     <button type="submit" class="btn btn-sm btn-outline-danger">Hủy</button>
                                 </form>
                             }

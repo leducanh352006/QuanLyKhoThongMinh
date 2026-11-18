@@ -18,13 +18,15 @@ public sealed record MaQuetDong(int MaCTC, string? MaVachO, string? MaVachLo, st
 /// <item>Lập (T5-2): kho xuất khác kho nhập, có tuyến; ô xuất là ô lưu trữ của kho xuất, ô nhận là ô lưu trữ của kho nhập, cả hai đang
 /// dùng và không khóa kiểm kê; không vượt tồn khả dụng tại (lô, ô xuất); ô nhận còn vừa kích thước, thể tích, khối lượng.</item>
 /// <item>Duyệt (T5-3): người duyệt khác người lập; giữ chỗ tại ô xuất.</item>
-/// <item>Xuất (T5-4): thủ kho kho xuất quét đúng ô, lô, mã vạch của mọi dòng; trừ tồn kho xuất (Chuyển đi, từ phần đã giữ). Hàng lúc này
-/// đang trên đường, không thuộc tồn khả dụng của kho nào.</item>
-/// <item>Nhận (T5-5): thủ kho kho nhập quét ô nhận và lô từng dòng, nhập số thực nhận (không vượt số gửi; thiếu phải ghi lý do); kiểm lại
-/// sức chứa ô nhận rồi cộng tồn kho nhập (Nhận chuyển). Nhận đủ mọi dòng thì phiếu Đã nhận.</item>
+/// <item>Xuất (T5-4): thủ kho kho đi quét đúng ô, lô, mã vạch của mọi dòng; trừ tồn kho đi (Chuyển đi, từ phần đã giữ). Phiếu Đang vận
+/// chuyển: hàng không thuộc tồn của kho nào.</item>
+/// <item>Nhận (T5-5): thủ kho kho đến quét ô xếp và lô từng dòng, nhập số thực nhận (không vượt số gửi; thiếu phải ghi lý do); kiểm lại
+/// sức chứa rồi cộng tồn kho đến (Nhận chuyển). Đếm hết mọi dòng: đủ thì Đã nhận, có thiếu thì Nhận một phần.</item>
+/// <item>Xử lý chênh lệch (báo cáo mục 2.1.5, Bảng 1.5): quản lý kho chọn nhập phần thiếu tại kho đến (ghi loại Nhận hàng) hoặc trả về
+/// kho đi (ghi loại Hoàn tác), bắt buộc ghi nguyên nhân; không sinh phiếu nhập. Xử lý hết thì Đã nhận. Hai loại biến động này khác
+/// "Nhận chuyển" để sổ cái không coi là ghi lặp khi số thiếu trùng số đã nhận.</item>
 /// <item>Hủy (T5-6): chỉ khi Nháp hoặc Đã duyệt; Đã duyệt thì trả chỗ đã giữ.</item>
 /// </list>
-/// Giả định: phần nhận thiếu chỉ ghi biên bản lệch (SLNhan, LyDoLech); không tự trả lại kho xuất.
 /// </summary>
 public sealed class PhieuChuyenService(KhoDbContext db, IStockService ton, ICapacityService sucChua, IAuditService audit)
 {
@@ -36,10 +38,9 @@ public sealed class PhieuChuyenService(KhoDbContext db, IStockService ton, ICapa
         if (p.KiemTra() is string loi) return loi;
 
         var kho = await db.Kho.AsNoTracking().Where(k => k.MaKho == p.MaKhoXuat || k.MaKho == p.MaKhoNhap).ToListAsync(ct);
-        if (kho.Count != 2 || kho.Any(k => k.TrangThai != TrangThaiHoatDong.HoatDong)) return "Kho xuất hoặc kho nhập không tồn tại hoặc đã ngừng hoạt động.";
+        if (kho.Count != 2 || kho.Any(k => k.TrangThai != TrangThaiHoatDong.HoatDong)) return "Kho đi hoặc kho đến không tồn tại hoặc đã ngừng hoạt động.";
         if (!await db.TuyenVanChuyen.AnyAsync(t => t.MaKhoXuat == p.MaKhoXuat && t.MaKhoNhap == p.MaKhoNhap, ct))
             return "Chưa có tuyến vận chuyển giữa hai kho này. Khai báo tuyến ở mục Tuyến vận chuyển trước.";
-        if (!await db.NguoiDung.AnyAsync(n => n.MaND == p.MaDoiTuong, ct)) return "Người vận chuyển không tồn tại.";
 
         var maO = p.ChiTiet.SelectMany(d => new[] { d.MaViTriXuat, d.MaViTriNhap }).Distinct().ToList();
         var o = await db.ViTri.AsNoTracking().Where(v => maO.Contains(v.MaViTri)).ToDictionaryAsync(v => v.MaViTri, ct);
@@ -50,8 +51,8 @@ public sealed class PhieuChuyenService(KhoDbContext db, IStockService ton, ICapa
         {
             var d = p.ChiTiet[i];
             if (!lo.ContainsKey(d.MaLo)) return $"Dòng {i + 1}: lô không tồn tại.";
-            if (LoiO(o.GetValueOrDefault(d.MaViTriXuat), p.MaKhoXuat, "xuất") is string loiX) return $"Dòng {i + 1}: {loiX}";
-            if (LoiO(o.GetValueOrDefault(d.MaViTriNhap), p.MaKhoNhap, "nhận") is string loiN) return $"Dòng {i + 1}: {loiN}";
+            if (LoiO(o.GetValueOrDefault(d.MaViTriXuat), p.MaKhoXuat, "lấy hàng", "kho đi") is string loiX) return $"Dòng {i + 1}: {loiX}";
+            if (LoiO(o.GetValueOrDefault(d.MaViTriNhap), p.MaKhoNhap, "xếp hàng", "kho đến") is string loiN) return $"Dòng {i + 1}: {loiN}";
 
             // Phiếu Nháp chưa giữ chỗ nên so với phần khả dụng hiện tại (tồn trừ phần đang giữ cho phiếu khác).
             var t = await ton.LayTon(d.MaLo, d.MaViTriXuat, ct);
@@ -65,15 +66,15 @@ public sealed class PhieuChuyenService(KhoDbContext db, IStockService ton, ICapa
         foreach (var (maViTri, maBT, soLuong) in theoO)
         {
             var kq = await sucChua.KiemTra(maViTri, maBT, soLuong, ct);
-            if (!kq.Du) return $"Ô nhận '{o[maViTri].TenViTri}': {kq.LyDo ?? "không đủ chỗ."}";
+            if (!kq.Du) return $"Ô xếp hàng '{o[maViTri].TenViTri}': {kq.LyDo ?? "không đủ chỗ."}";
         }
         return null;
     }
 
-    private static string? LoiO(ViTri? v, int maKho, string vaiTro)
+    private static string? LoiO(ViTri? v, int maKho, string vaiTro, string tenKho)
     {
         if (v is null) return $"ô {vaiTro} không tồn tại.";
-        if (v.MaKho != maKho) return $"ô {vaiTro} '{v.TenViTri}' không thuộc kho {vaiTro}.";
+        if (v.MaKho != maKho) return $"ô {vaiTro} '{v.TenViTri}' không thuộc {tenKho}.";
         if (!v.LaO || v.LoaiViTri != LoaiViTriGiaTri.LuuTru) return $"ô {vaiTro} '{v.TenViTri}' phải là ô lưu trữ.";
         if (!v.DangHoatDong) return $"ô {vaiTro} '{v.TenViTri}' đã ngừng dùng.";
         if (v.DangKhoa) return $"ô {vaiTro} '{v.TenViTri}' đang khóa kiểm kê.";
@@ -86,14 +87,15 @@ public sealed class PhieuChuyenService(KhoDbContext db, IStockService ton, ICapa
         var dong = p.ChiTiet.Select(d => new ChiTietChuyen { MaLo = d.MaLo, MaViTriXuat = d.MaViTriXuat, MaViTriNhap = d.MaViTriNhap, SoLuong = d.SoLuong }).ToList();
         p.ChiTiet = dong;
         if (await KiemTra(p, ct) is string loi) return KetQua<int>.Loi(loi, MaLoiDichVu.DuLieuKhongHopLe);
-        var dienGiai = string.IsNullOrWhiteSpace(p.DienGiai) ? null : p.DienGiai.Trim();
+        static string? Gon(string? x) => string.IsNullOrWhiteSpace(x) ? null : x.Trim();
+        var (dienGiai, nguoi, phuongTien) = (Gon(p.DienGiai), Gon(p.NguoiVanChuyen), Gon(p.PhuongTien));
 
         if (p.MaPC == 0)
         {
             var moi = new PhieuChuyen
             {
                 SoPhieu = "TAM" + Guid.NewGuid().ToString("N")[..12],   // số tạm, đổi thành CK + mã ngay bên dưới
-                ThoiGian = DateTime.UtcNow, MaKhoXuat = p.MaKhoXuat, MaKhoNhap = p.MaKhoNhap, MaDoiTuong = p.MaDoiTuong,
+                ThoiGian = DateTime.UtcNow, MaKhoXuat = p.MaKhoXuat, MaKhoNhap = p.MaKhoNhap, NguoiVanChuyen = nguoi, PhuongTien = phuongTien,
                 MaNguoiLap = maND, DienGiai = dienGiai, ChiTiet = dong,
             };
             await using var gd = await GiaoDich.Mo(db, ct);
@@ -113,7 +115,8 @@ public sealed class PhieuChuyenService(KhoDbContext db, IStockService ton, ICapa
         var cu = await db.PhieuChuyen.Include(x => x.ChiTiet).FirstAsync(x => x.MaPC == p.MaPC, ct);
         cu.MaKhoXuat = p.MaKhoXuat;
         cu.MaKhoNhap = p.MaKhoNhap;
-        cu.MaDoiTuong = p.MaDoiTuong;
+        cu.NguoiVanChuyen = nguoi;
+        cu.PhuongTien = phuongTien;
         cu.DienGiai = dienGiai;
         db.ChiTietChuyen.RemoveRange(cu.ChiTiet);
         await db.SaveChangesAsync(ct);   // xóa dòng cũ trước để chỉ mục duy nhất (lô, ô) không vướng dòng mới
@@ -145,7 +148,7 @@ public sealed class PhieuChuyenService(KhoDbContext db, IStockService ton, ICapa
         }
         await gd.Xong(ct);
         await audit.Ghi(maND, "Duyệt phiếu chuyển", LoaiChungTu.CK, maPC, p.SoPhieu, ct);
-        return KetQua.Ok("Đã duyệt phiếu và giữ chỗ hàng ở kho xuất. Thủ kho kho xuất có thể quét mã xuất hàng.");
+        return KetQua.Ok("Đã duyệt phiếu và giữ hàng ở kho đi. Thủ kho kho đi có thể quét mã xuất hàng.");
     }
 
     // ---- Hủy (T5-6) ----
@@ -154,7 +157,7 @@ public sealed class PhieuChuyenService(KhoDbContext db, IStockService ton, ICapa
     {
         var p = await db.PhieuChuyen.AsNoTracking().Include(x => x.ChiTiet).FirstOrDefaultAsync(x => x.MaPC == maPC, ct);
         if (p is null) return KetQua.Loi("Không tìm thấy phiếu.", MaLoiDichVu.KhongTimThay);
-        if (!p.HuyDuoc) return KetQua.Loi($"Phiếu đang {p.TrangThai}: hàng đã rời kho xuất nên không hủy được.", MaLoiDichVu.SaiTrangThai);
+        if (!p.HuyDuoc) return KetQua.Loi($"Phiếu đang {p.TrangThai}: hàng đã rời kho đi nên không hủy được.", MaLoiDichVu.SaiTrangThai);
 
         await using var gd = await GiaoDich.Mo(db, ct);
         var n = await db.PhieuChuyen.Where(x => x.MaPC == maPC && x.TrangThai == p.TrangThai)
@@ -169,7 +172,7 @@ public sealed class PhieuChuyenService(KhoDbContext db, IStockService ton, ICapa
             }
         await gd.Xong(ct);
         await audit.Ghi(maND, "Hủy phiếu chuyển", LoaiChungTu.CK, maPC, p.SoPhieu, ct);
-        return KetQua.Ok(p.TrangThai == PhieuChuyen.DaDuyet ? "Đã hủy phiếu và trả lại hàng đã giữ chỗ." : "Đã hủy phiếu.");
+        return KetQua.Ok(p.TrangThai == PhieuChuyen.DaDuyet ? "Đã hủy phiếu và trả lại hàng đang giữ ở kho đi." : "Đã hủy phiếu.");
     }
 
     // ---- Xuất khỏi kho xuất (T5-4) ----
@@ -196,7 +199,7 @@ public sealed class PhieuChuyenService(KhoDbContext db, IStockService ton, ICapa
 
         await using var gd = await GiaoDich.Mo(db, ct);
         var n = await db.PhieuChuyen.Where(x => x.MaPC == maPC && x.TrangThai == PhieuChuyen.DaDuyet)
-            .ExecuteUpdateAsync(s => s.SetProperty(x => x.TrangThai, PhieuChuyen.DaXuat), ct);
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.TrangThai, PhieuChuyen.DangVanChuyen), ct);
         if (n != 1) return KetQua.Loi("Phiếu vừa được xuất hoặc đổi trạng thái ở nơi khác.", MaLoiDichVu.SaiTrangThai);
 
         var chungTu = new ThamChieuChungTu(LoaiChungTu.CK, maPC);
@@ -207,7 +210,7 @@ public sealed class PhieuChuyenService(KhoDbContext db, IStockService ton, ICapa
         }
         await gd.Xong(ct);
         await audit.Ghi(maND, "Xuất hàng chuyển kho", LoaiChungTu.CK, maPC, $"{p.SoPhieu}: {p.ChiTiet.Sum(d => d.SoLuong)} đơn vị", ct);
-        return KetQua.Ok($"Đã xuất {p.ChiTiet.Sum(d => d.SoLuong)} đơn vị khỏi kho. Hàng đang trên đường tới kho nhập.");
+        return KetQua.Ok($"Đã xuất {p.ChiTiet.Sum(d => d.SoLuong)} đơn vị khỏi kho. Phiếu đang vận chuyển tới kho đến.");
     }
 
     // ---- Nhận tại kho nhập (T5-5) ----
@@ -218,7 +221,7 @@ public sealed class PhieuChuyenService(KhoDbContext db, IStockService ton, ICapa
         if (d is null) return KetQua.Loi("Không tìm thấy dòng hàng.", MaLoiDichVu.KhongTimThay);
         if (d.SLNhan is not null) return KetQua.Loi("Dòng này đã nhận rồi.", MaLoiDichVu.SaiTrangThai);
         var p = await db.PhieuChuyen.AsNoTracking().FirstAsync(x => x.MaPC == d.MaPC, ct);
-        if (p.TrangThai != PhieuChuyen.DaXuat) return KetQua.Loi($"Phiếu {p.SoPhieu} đang {p.TrangThai}, chỉ nhận được phiếu Đã xuất.", MaLoiDichVu.SaiTrangThai);
+        if (p.TrangThai != PhieuChuyen.DangVanChuyen) return KetQua.Loi($"Phiếu {p.SoPhieu} đang {p.TrangThai}, chỉ nhận được phiếu Đang vận chuyển.", MaLoiDichVu.SaiTrangThai);
 
         var (o, lo, _) = await MaVach(d, d.MaViTriNhap, ct);
         if (!Khop(maVachO, o.MaVachO)) return KetQua.Loi($"Quét sai ô: lô {lo.MaVachLo} phải xếp vào {o.TenViTri}. Chưa ghi nhận gì.", MaLoiDichVu.DuLieuKhongHopLe);
@@ -244,14 +247,61 @@ public sealed class PhieuChuyenService(KhoDbContext db, IStockService ton, ICapa
             var kq = await ton.GhiTang(new DongTon(d.MaLo, d.MaViTriNhap, slNhan), LoaiBienDong.NhanChuyen, new ThamChieuChungTu(LoaiChungTu.CK, d.MaPC), maND, ct);
             if (!kq.ThanhCong) return kq;
         }
-        // Dòng cuối cùng được nhận thì cả phiếu Đã nhận.
+        // Đếm xong dòng cuối: đủ hết thì Đã nhận, có dòng thiếu thì Nhận một phần (chờ quản lý kho xử lý chênh lệch).
         if (!await db.ChiTietChuyen.AnyAsync(x => x.MaPC == d.MaPC && x.SLNhan == null, ct))
-            await db.PhieuChuyen.Where(x => x.MaPC == d.MaPC && x.TrangThai == PhieuChuyen.DaXuat)
-                .ExecuteUpdateAsync(s => s.SetProperty(x => x.TrangThai, PhieuChuyen.DaNhan), ct);
+        {
+            var coThieu = await db.ChiTietChuyen.AnyAsync(x => x.MaPC == d.MaPC && x.SLNhan < x.SoLuong, ct);
+            await db.PhieuChuyen.Where(x => x.MaPC == d.MaPC && x.TrangThai == PhieuChuyen.DangVanChuyen)
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.TrangThai, coThieu ? PhieuChuyen.NhanMotPhan : PhieuChuyen.DaNhan), ct);
+        }
         await gd.Xong(ct);
 
         var ketQua = slNhan == d.SoLuong ? $"Đã nhận đủ {slNhan} vào {o.TenViTri}." : $"Đã ghi nhận thiếu: nhận {slNhan}/{d.SoLuong} ({lyDo}).";
         await audit.Ghi(maND, "Nhận hàng chuyển kho", LoaiChungTu.CK, d.MaPC, $"{p.SoPhieu}: lô {lo.MaVachLo} — {ketQua}", ct);
+        return KetQua.Ok(ketQua);
+    }
+
+    // ---- Xử lý chênh lệch khi nhận thiếu (báo cáo mục 2.1.5, Bảng 1.5) ----
+
+    /// <summary>
+    /// Quản lý kho chọn nhập phần thiếu tại kho đến (đã tìm thấy hàng) hoặc trả về kho đi (hàng chưa rời kho, xuất nhầm số), bắt buộc
+    /// ghi nguyên nhân. Ghi sổ cái phần thiếu vào đúng ô của dòng (ô xếp hoặc ô lấy), kiểm sức chứa trước; không sinh phiếu nhập.
+    /// </summary>
+    public async Task<KetQua> XuLyLech(int maCTC, string? cach, string? nguyenNhan, int maND, CancellationToken ct = default)
+    {
+        var d = await db.ChiTietChuyen.AsNoTracking().FirstOrDefaultAsync(x => x.MaCTC == maCTC, ct);
+        if (d is null) return KetQua.Loi("Không tìm thấy dòng hàng.", MaLoiDichVu.KhongTimThay);
+        var p = await db.PhieuChuyen.AsNoTracking().FirstAsync(x => x.MaPC == d.MaPC, ct);
+        if (p.TrangThai != PhieuChuyen.NhanMotPhan) return KetQua.Loi($"Phiếu {p.SoPhieu} đang {p.TrangThai}, không có chênh lệch chờ xử lý.", MaLoiDichVu.SaiTrangThai);
+        if (!d.ChoXuLyLech) return KetQua.Loi("Dòng này không có phần thiếu chờ xử lý.", MaLoiDichVu.SaiTrangThai);
+        if (cach is not (ChiTietChuyen.NhapTaiKhoDen or ChiTietChuyen.TraVeKhoDi)) return KetQua.Loi("Chọn cách xử lý: nhập tại kho đến hoặc trả về kho đi.", MaLoiDichVu.DuLieuKhongHopLe);
+        var lyDo = string.IsNullOrWhiteSpace(nguyenNhan) ? null : nguyenNhan.Trim();
+        if (lyDo is null) return KetQua.Loi("Ghi nguyên nhân chênh lệch.", MaLoiDichVu.DuLieuKhongHopLe);
+        if (lyDo.Length > 255) return KetQua.Loi("Nguyên nhân tối đa 255 ký tự.", MaLoiDichVu.DuLieuKhongHopLe);
+
+        var thieu = d.SoThieu;
+        var veKhoDen = cach == ChiTietChuyen.NhapTaiKhoDen;
+        var maViTri = veKhoDen ? d.MaViTriNhap : d.MaViTriXuat;
+        var (o, lo, _) = await MaVach(d, maViTri, ct);
+        var sc = await sucChua.KiemTra(maViTri, lo.MaBT, thieu, ct);
+        if (!sc.Du) return KetQua.Loi($"{o.TenViTri} không nhận thêm được {thieu}: {sc.LyDo ?? "không đủ chỗ."}", sc.MaLoi ?? MaLoiDichVu.DuLieuKhongHopLe);
+
+        await using var gd = await GiaoDich.Mo(db, ct);
+        var n = await db.ChiTietChuyen.Where(x => x.MaCTC == maCTC && x.XuLyLech == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.XuLyLech, cach).SetProperty(x => x.NguyenNhanLech, lyDo), ct);
+        if (n != 1) return KetQua.Loi("Dòng này vừa được xử lý ở nơi khác.", MaLoiDichVu.SaiTrangThai);
+
+        var kq = await ton.GhiTang(new DongTon(d.MaLo, maViTri, thieu), veKhoDen ? LoaiBienDong.NhanHang : LoaiBienDong.HoanTac,
+            new ThamChieuChungTu(LoaiChungTu.CK, d.MaPC), maND, ct);
+        if (!kq.ThanhCong) return kq;
+
+        if (!await db.ChiTietChuyen.AnyAsync(x => x.MaPC == d.MaPC && x.SLNhan < x.SoLuong && x.XuLyLech == null, ct))
+            await db.PhieuChuyen.Where(x => x.MaPC == d.MaPC && x.TrangThai == PhieuChuyen.NhanMotPhan)
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.TrangThai, PhieuChuyen.DaNhan), ct);
+        await gd.Xong(ct);
+
+        var ketQua = veKhoDen ? $"Đã nhập {thieu} còn thiếu của lô {lo.MaVachLo} vào {o.TenViTri} (kho đến)." : $"Đã trả {thieu} của lô {lo.MaVachLo} về {o.TenViTri} (kho đi).";
+        await audit.Ghi(maND, "Xử lý chênh lệch chuyển kho", LoaiChungTu.CK, d.MaPC, $"{p.SoPhieu}: {ketQua} Nguyên nhân: {lyDo}", ct);
         return KetQua.Ok(ketQua);
     }
 

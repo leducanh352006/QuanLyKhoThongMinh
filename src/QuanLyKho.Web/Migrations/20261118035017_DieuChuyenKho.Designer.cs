@@ -12,7 +12,7 @@ using QuanLyKho.Web.Data;
 namespace QuanLyKho.Web.Migrations
 {
     [DbContext(typeof(KhoDbContext))]
-    [Migration("20261118030632_DieuChuyenKho")]
+    [Migration("20261118035017_DieuChuyenKho")]
     partial class DieuChuyenKho
     {
         /// <inheritdoc />
@@ -49,11 +49,19 @@ namespace QuanLyKho.Web.Migrations
                     b.Property<int>("MaViTriXuat")
                         .HasColumnType("int");
 
+                    b.Property<string>("NguyenNhanLech")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
                     b.Property<int?>("SLNhan")
                         .HasColumnType("int");
 
                     b.Property<int>("SoLuong")
                         .HasColumnType("int");
+
+                    b.Property<string>("XuLyLech")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.HasKey("MaCTC");
 
@@ -78,6 +86,8 @@ namespace QuanLyKho.Web.Migrations
                             t.HasCheckConstraint("CK_ChiTietChuyen_SLNhan", "[SLNhan] >= 0 AND [SLNhan] <= [SoLuong]");
 
                             t.HasCheckConstraint("CK_ChiTietChuyen_SoLuong", "[SoLuong] > 0");
+
+                            t.HasCheckConstraint("CK_ChiTietChuyen_XuLyLech", "[XuLyLech] IS NULL OR ([XuLyLech] IN (N'Nhập tại kho đến', N'Trả về kho đi') AND [SLNhan] < [SoLuong] AND [NguyenNhanLech] IS NOT NULL)");
                         });
                 });
 
@@ -117,9 +127,6 @@ namespace QuanLyKho.Web.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<int>("MaDoiTuong")
-                        .HasColumnType("int");
-
                     b.Property<int>("MaKhoNhap")
                         .HasColumnType("int");
 
@@ -131,6 +138,14 @@ namespace QuanLyKho.Web.Migrations
 
                     b.Property<int>("MaNguoiLap")
                         .HasColumnType("int");
+
+                    b.Property<string>("NguoiVanChuyen")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("PhuongTien")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("SoPhieu")
                         .IsRequired()
@@ -149,8 +164,6 @@ namespace QuanLyKho.Web.Migrations
                         .HasDefaultValue("Nháp");
 
                     b.HasKey("MaPC");
-
-                    b.HasIndex("MaDoiTuong");
 
                     b.HasIndex("MaKhoNhap");
 
@@ -171,7 +184,7 @@ namespace QuanLyKho.Web.Migrations
 
                             t.HasCheckConstraint("CK_PhieuChuyen_NguoiDuyet", "[TrangThai] IN (N'Nháp', N'Đã hủy') OR [MaNguoiDuyet] IS NOT NULL");
 
-                            t.HasCheckConstraint("CK_PhieuChuyen_TrangThai", "[TrangThai] IN (N'Nháp', N'Đã duyệt', N'Đã xuất', N'Đã nhận', N'Đã hủy')");
+                            t.HasCheckConstraint("CK_PhieuChuyen_TrangThai", "[TrangThai] IN (N'Nháp', N'Đã duyệt', N'Đang vận chuyển', N'Nhận một phần', N'Đã nhận', N'Đã hủy')");
                         });
                 });
 
@@ -1443,12 +1456,6 @@ namespace QuanLyKho.Web.Migrations
 
             modelBuilder.Entity("QuanLyKho.Web.Areas.DieuChuyen.Models.PhieuChuyen", b =>
                 {
-                    b.HasOne("QuanLyKho.Web.Areas.HeThong.Models.NguoiDung", null)
-                        .WithMany()
-                        .HasForeignKey("MaDoiTuong")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("QuanLyKho.Web.Areas.HeThong.Models.Kho", "KhoNhap")
                         .WithMany()
                         .HasForeignKey("MaKhoNhap")

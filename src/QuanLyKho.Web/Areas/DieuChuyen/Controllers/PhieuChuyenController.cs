@@ -17,7 +17,14 @@ public sealed record ONhan(int MaViTri, int MaKho, string Ten);
 /// <summary>Dữ liệu hiển thị một dòng của phiếu (tên đọc được thay cho mã số).</summary>
 public sealed record DongHienThi(
     int MaCTC, string TenHang, string MaVachBT, string MaVachLo, string? HanDung, string TenOXuat, string MaVachOXuat,
-    string TenONhan, string MaVachONhan, int SoLuong, int? SLNhan, string? LyDoLech);
+    string TenONhan, string MaVachONhan, int SoLuong, int? SLNhan, string? LyDoLech, string? XuLyLech, string? NguyenNhanLech)
+{
+    public int SoThieu => SLNhan is int n ? SoLuong - n : 0;
+    public bool ChoXuLyLech => SoThieu > 0 && XuLyLech is null;
+}
+
+/// <summary>Một tuyến để chọn khi lập phiếu: kho đi, kho đến suy ra từ tuyến.</summary>
+public sealed record TuyenChon(int MaKhoXuat, int MaKhoNhap, string Ten, decimal DonGiaVC, decimal PhiChuyen);
 
 /// <summary>
 /// Phiếu chuyển kho (việc T5-2 đến T5-6): danh sách, lập và sửa phiếu nháp, duyệt (giữ chỗ), hủy, quét mã xuất ở kho xuất và quét mã
@@ -49,13 +56,17 @@ public class PhieuChuyenController(
         ViewBag.TuNgay = tuNgay;
         ViewBag.DenNgay = denNgay;
         ViewBag.TrangThai = trangThai;
-        ViewBag.NguoiVanChuyen = await Db.NguoiDung.AsNoTracking().ToDictionaryAsync(n => n.MaND, n => n.HoTen);
-        // Hàng đang trên đường: đã xuất khỏi kho xuất nhưng chưa nhận (không thuộc tồn của kho nào).
+        // Hàng đang vận chuyển: đã rời kho đi nhưng chưa đếm nhận (không thuộc tồn của kho nào).
         ViewBag.DangTrenDuong = await (from d in Db.ChiTietChuyen
                                        join p in Db.PhieuChuyen on d.MaPC equals p.MaPC
-                                       where p.TrangThai == PhieuChuyen.DaXuat && d.SLNhan == null
+                                       where p.TrangThai == PhieuChuyen.DangVanChuyen && d.SLNhan == null
                                        select (int?)d.SoLuong).SumAsync() ?? 0;
-        ViewBag.SoPhieuTrenDuong = await Db.PhieuChuyen.CountAsync(p => p.TrangThai == PhieuChuyen.DaXuat);
+        ViewBag.SoPhieuTrenDuong = await Db.PhieuChuyen.CountAsync(p => p.TrangThai == PhieuChuyen.DangVanChuyen);
+        // Phần nhận thiếu chưa được quản lý kho xử lý.
+        ViewBag.ChenhLechCho = await (from d in Db.ChiTietChuyen
+                                      join p in Db.PhieuChuyen on d.MaPC equals p.MaPC
+                                      where p.TrangThai == PhieuChuyen.NhanMotPhan && d.SLNhan < d.SoLuong && d.XuLyLech == null
+                                      select (int?)(d.SoLuong - d.SLNhan)).SumAsync() ?? 0;
         return View(await truy.OrderByDescending(p => p.MaPC).Take(200).ToListAsync());
     }
 
@@ -138,9 +149,9 @@ public class PhieuChuyenController(
     {
         var p = await Db.PhieuChuyen.AsNoTracking().Include(x => x.KhoXuat).Include(x => x.KhoNhap).FirstOrDefaultAsync(x => x.MaPC == id);
         if (p is null) return NotFound();
-        if (p.TrangThai is not (PhieuChuyen.DaXuat or PhieuChuyen.DaNhan))
+        if (p.TrangThai is not (PhieuChuyen.DangVanChuyen or PhieuChuyen.NhanMotPhan or PhieuChuyen.DaNhan))
         {
-            TempData["Loi"] = $"Phiếu đang {p.TrangThai}: chỉ nhận hàng cho phiếu Đã xuất.";
+            TempData["Loi"] = $"Phiếu đang {p.TrangThai}: chỉ nhận hàng cho phiếu Đang vận chuyển.";
             return RedirectToAction(nameof(Sua), new { id });
         }
         return View((p, await LayDong(id)));
@@ -149,6 +160,12 @@ public class PhieuChuyenController(
     [HttpPost, ValidateAntiForgeryToken, CanQuyen(LoaiChungTu.CK, QuyenThaoTac.Sua)]
     public async Task<IActionResult> NhanDong(int id, int maCTC, string? maVachO, string? maVachLo, int slNhan, string? lyDoLech) =>
         Ve(await Dv.Nhan(maCTC, maVachO, maVachLo, slNhan, lyDoLech, MaNguoiDung()), nameof(Nhan), id);
+
+    // ---- Xử lý chênh lệch khi nhận thiếu (quản lý kho) ----
+
+    [HttpPost, ValidateAntiForgeryToken, CanQuyen(LoaiChungTu.CK, QuyenThaoTac.Duyet)]
+    public async Task<IActionResult> XuLyLech(int id, int maCTC, string? cach, string? nguyenNhan) =>
+        Ve(await Dv.XuLyLech(maCTC, cach, nguyenNhan, MaNguoiDung()), nameof(Sua), id);
 
     // ---- Dùng chung ----
 
@@ -170,7 +187,8 @@ public class PhieuChuyenController(
                 select new { d, l, b, s, ox, vn }).ToListAsync())
         .Select(x => new DongHienThi(
             x.d.MaCTC, $"{x.s.TenSP} ({x.b.ThuocTinh})", x.b.MaVach, x.l.MaVachLo, x.l.HanDung?.ToString("dd/MM/yyyy"),
-            x.ox.TenViTri, x.ox.MaVachO ?? "", x.vn.TenViTri, x.vn.MaVachO ?? "", x.d.SoLuong, x.d.SLNhan, x.d.LyDoLech))
+            x.ox.TenViTri, x.ox.MaVachO ?? "", x.vn.TenViTri, x.vn.MaVachO ?? "", x.d.SoLuong, x.d.SLNhan, x.d.LyDoLech,
+            x.d.XuLyLech, x.d.NguyenNhanLech))
         .ToList();
 
     /// <summary>Form dùng cho lập, sửa phiếu nháp và xem phiếu đã khóa; nạp các danh sách để chọn.</summary>
@@ -179,8 +197,13 @@ public class PhieuChuyenController(
         ViewBag.Kho = await Db.Kho.AsNoTracking().Where(k => k.TrangThai == TrangThaiHoatDong.HoatDong || k.MaKho == p.MaKhoXuat || k.MaKho == p.MaKhoNhap)
             .OrderBy(k => k.TenKho).ToDictionaryAsync(k => k.MaKho, k => k.TenKho);
         ViewBag.NguoiDung = await Db.NguoiDung.AsNoTracking().OrderBy(n => n.HoTen).ToDictionaryAsync(n => n.MaND, n => n.HoTen);
-        ViewBag.Tuyen = await Db.TuyenVanChuyen.AsNoTracking()
-            .ToDictionaryAsync(t => $"{t.MaKhoXuat}-{t.MaKhoNhap}", t => new[] { t.DonGiaVC, t.PhiChuyen });
+        var tenKho = await Db.Kho.AsNoTracking().ToDictionaryAsync(k => k.MaKho, k => k.TenKho);
+        ViewBag.Tuyen = (await Db.TuyenVanChuyen.AsNoTracking().ToListAsync())
+            .Select(t => new TuyenChon(t.MaKhoXuat, t.MaKhoNhap, $"{tenKho.GetValueOrDefault(t.MaKhoXuat)} → {tenKho.GetValueOrDefault(t.MaKhoNhap)}", t.DonGiaVC, t.PhiChuyen))
+            .OrderBy(t => t.Ten).ToList();
+        // Mở từ trang Định mức kho (chỉ biết kho đến): chọn sẵn tuyến nếu chỉ có một tuyến tới kho đó.
+        if (p.MaKhoXuat == 0 && p.MaKhoNhap > 0 && ((List<TuyenChon>)ViewBag.Tuyen).Where(t => t.MaKhoNhap == p.MaKhoNhap).ToList() is [var duyNhat])
+            p.MaKhoXuat = duyNhat.MaKhoXuat;
 
         if (!p.DaKhoa)
         {

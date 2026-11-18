@@ -76,7 +76,8 @@ namespace QuanLyKho.Web.Migrations
                     ThoiGian = table.Column<DateTime>(type: "datetime2(0)", nullable: false, defaultValueSql: "SYSUTCDATETIME()"),
                     MaKhoXuat = table.Column<int>(type: "int", nullable: false),
                     MaKhoNhap = table.Column<int>(type: "int", nullable: false),
-                    MaDoiTuong = table.Column<int>(type: "int", nullable: false),
+                    NguoiVanChuyen = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    PhuongTien = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     MaNguoiLap = table.Column<int>(type: "int", nullable: false),
                     MaNguoiDuyet = table.Column<int>(type: "int", nullable: true),
                     DienGiai = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
@@ -87,7 +88,7 @@ namespace QuanLyKho.Web.Migrations
                     table.PrimaryKey("PK_PhieuChuyen", x => x.MaPC);
                     table.CheckConstraint("CK_PhieuChuyen_KhacKho", "[MaKhoXuat] <> [MaKhoNhap]");
                     table.CheckConstraint("CK_PhieuChuyen_NguoiDuyet", "[TrangThai] IN (N'Nháp', N'Đã hủy') OR [MaNguoiDuyet] IS NOT NULL");
-                    table.CheckConstraint("CK_PhieuChuyen_TrangThai", "[TrangThai] IN (N'Nháp', N'Đã duyệt', N'Đã xuất', N'Đã nhận', N'Đã hủy')");
+                    table.CheckConstraint("CK_PhieuChuyen_TrangThai", "[TrangThai] IN (N'Nháp', N'Đã duyệt', N'Đang vận chuyển', N'Nhận một phần', N'Đã nhận', N'Đã hủy')");
                     table.ForeignKey(
                         name: "FK_PhieuChuyen_Kho_MaKhoNhap",
                         column: x => x.MaKhoNhap,
@@ -99,12 +100,6 @@ namespace QuanLyKho.Web.Migrations
                         column: x => x.MaKhoXuat,
                         principalTable: "Kho",
                         principalColumn: "MaKho",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_PhieuChuyen_NguoiDung_MaDoiTuong",
-                        column: x => x.MaDoiTuong,
-                        principalTable: "NguoiDung",
-                        principalColumn: "MaND",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_PhieuChuyen_NguoiDung_MaNguoiDuyet",
@@ -138,7 +133,9 @@ namespace QuanLyKho.Web.Migrations
                     MaViTriNhap = table.Column<int>(type: "int", nullable: false),
                     SoLuong = table.Column<int>(type: "int", nullable: false),
                     SLNhan = table.Column<int>(type: "int", nullable: true),
-                    LyDoLech = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true)
+                    LyDoLech = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
+                    XuLyLech = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    NguyenNhanLech = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -147,6 +144,7 @@ namespace QuanLyKho.Web.Migrations
                     table.CheckConstraint("CK_ChiTietChuyen_LyDoLech", "[SLNhan] IS NULL OR [SLNhan] = [SoLuong] OR [LyDoLech] IS NOT NULL");
                     table.CheckConstraint("CK_ChiTietChuyen_SLNhan", "[SLNhan] >= 0 AND [SLNhan] <= [SoLuong]");
                     table.CheckConstraint("CK_ChiTietChuyen_SoLuong", "[SoLuong] > 0");
+                    table.CheckConstraint("CK_ChiTietChuyen_XuLyLech", "[XuLyLech] IS NULL OR ([XuLyLech] IN (N'Nhập tại kho đến', N'Trả về kho đi') AND [SLNhan] < [SoLuong] AND [NguyenNhanLech] IS NOT NULL)");
                     table.ForeignKey(
                         name: "FK_ChiTietChuyen_LoHang_MaLo",
                         column: x => x.MaLo,
@@ -209,11 +207,6 @@ namespace QuanLyKho.Web.Migrations
                 name: "IX_DinhMucKho_MaBT",
                 table: "DinhMucKho",
                 column: "MaBT");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PhieuChuyen_MaDoiTuong",
-                table: "PhieuChuyen",
-                column: "MaDoiTuong");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PhieuChuyen_MaKhoNhap",

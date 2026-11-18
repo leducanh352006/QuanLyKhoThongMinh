@@ -41,7 +41,7 @@ public class PhieuChuyenServiceTests
 
     private static PhieuChuyen PhieuMau(int soLuong = SoLuong, int oNhan = ONhan) => new()
     {
-        MaKhoXuat = KhoXuat, MaKhoNhap = KhoNhap, MaDoiTuong = ThuKho,
+        MaKhoXuat = KhoXuat, MaKhoNhap = KhoNhap, NguoiVanChuyen = "Nguyễn Văn An", PhuongTien = "Xe tải 29C-123.45",
         ChiTiet = { new ChiTietChuyen { MaLo = MaLo, MaViTriXuat = OXuat, MaViTriNhap = oNhan, SoLuong = soLuong } },
     };
 
@@ -85,7 +85,7 @@ public class PhieuChuyenServiceTests
         var kq = await e.Dv.Luu(p, NguoiLap);
 
         Assert.False(kq.ThanhCong);
-        Assert.Contains("khác kho nhập", kq.ThongBao);
+        Assert.Contains("khác kho đến", kq.ThongBao);
     });
 
     [CanSqlServerFact]
@@ -114,7 +114,7 @@ public class PhieuChuyenServiceTests
         var kq = await e.Dv.Luu(PhieuMau(oNhan: nho.MaViTri), NguoiLap);
 
         Assert.False(kq.ThanhCong);
-        Assert.Contains("Ô nhận 'Ô thử nhỏ'", kq.ThongBao);
+        Assert.Contains("Ô xếp hàng 'Ô thử nhỏ'", kq.ThongBao);
     });
 
     [CanSqlServerFact]
@@ -123,7 +123,7 @@ public class PhieuChuyenServiceTests
         await e.Db.TuyenVanChuyen.Where(t => t.MaKhoXuat == KhoNhap && t.MaKhoNhap == KhoXuat).ExecuteDeleteAsync();
         var p = new PhieuChuyen
         {
-            MaKhoXuat = KhoNhap, MaKhoNhap = KhoXuat, MaDoiTuong = ThuKho,
+            MaKhoXuat = KhoNhap, MaKhoNhap = KhoXuat,
             ChiTiet = { new ChiTietChuyen { MaLo = MaLo, MaViTriXuat = ONhan, MaViTriNhap = OXuat, SoLuong = 1 } },
         };
 
@@ -203,7 +203,7 @@ public class PhieuChuyenServiceTests
         Assert.True(kq.ThanhCong, kq.ThongBao);
         Assert.Equal((tonXTruoc - SoLuong, giuXTruoc), await TonTai(e, OXuat));
         Assert.Equal(tonNTruoc, (await TonTai(e, ONhan)).Ton);   // đang trên đường: chưa thuộc kho nhập
-        Assert.Equal(PhieuChuyen.DaXuat, (await e.Db.PhieuChuyen.AsNoTracking().SingleAsync(x => x.MaPC == maPC)).TrangThai);
+        Assert.Equal(PhieuChuyen.DangVanChuyen, (await e.Db.PhieuChuyen.AsNoTracking().SingleAsync(x => x.MaPC == maPC)).TrangThai);
         Assert.True(await e.Db.BienDongTon.AnyAsync(b => b.LoaiCT == "CK" && b.MaCT == maPC && b.SoLuong == -SoLuong));
     });
 
@@ -230,7 +230,7 @@ public class PhieuChuyenServiceTests
         var kq = await e.Dv.Huy(maPC, QuanLyKho);
 
         Assert.False(kq.ThanhCong);
-        Assert.Equal(PhieuChuyen.DaXuat, (await e.Db.PhieuChuyen.AsNoTracking().SingleAsync(x => x.MaPC == maPC)).TrangThai);
+        Assert.Equal(PhieuChuyen.DangVanChuyen, (await e.Db.PhieuChuyen.AsNoTracking().SingleAsync(x => x.MaPC == maPC)).TrangThai);
     });
 
     // ---- Nhận tại kho nhập (T5-5) ----
@@ -296,7 +296,83 @@ public class PhieuChuyenServiceTests
         Assert.Equal(SoLuong - 2, d.SLNhan);
         Assert.Equal("2 hộp rách khi vận chuyển", d.LyDoLech);
         Assert.Equal(tonNTruoc + SoLuong - 2, (await TonTai(e, ONhan)).Ton);
+        Assert.Equal(PhieuChuyen.NhanMotPhan, (await e.Db.PhieuChuyen.AsNoTracking().SingleAsync(x => x.MaPC == maPC)).TrangThai);
+    });
+
+    // ---- Xử lý chênh lệch (báo cáo mục 2.1.5, Bảng 1.5) ----
+
+    private static async Task<(int MaPC, int MaCTC)> NhanThieu(MoiTruong e, int slNhan)
+    {
+        var (maPC, maCTC) = await DenLucNhan(e);
+        var kq = await e.Dv.Nhan(maCTC, e.MaVachONhan, e.MaVachLo, slNhan, "Thiếu khi đếm", ThuKho);
+        Assert.True(kq.ThanhCong, kq.ThongBao);
+        return (maPC, maCTC);
+    }
+
+    [CanSqlServerFact]
+    public async Task XuLyLech_ThieuNguyenNhan_BiTuChoi() => await DungAsync(async e =>
+    {
+        var (maPC, maCTC) = await NhanThieu(e, SoLuong - 1);
+
+        var kq = await e.Dv.XuLyLech(maCTC, ChiTietChuyen.NhapTaiKhoDen, "  ", QuanLyKho);
+
+        Assert.False(kq.ThanhCong);
+        Assert.Equal(PhieuChuyen.NhanMotPhan, (await e.Db.PhieuChuyen.AsNoTracking().SingleAsync(x => x.MaPC == maPC)).TrangThai);
+    });
+
+    [CanSqlServerFact]
+    public async Task XuLyLech_NhapTaiKhoDen_CongPhanThieuVaoONhanVaDaNhan() => await DungAsync(async e =>
+    {
+        var (tonNTruoc, _) = await TonTai(e, ONhan);
+        var (maPC, maCTC) = await NhanThieu(e, SoLuong - 2);
+
+        var kq = await e.Dv.XuLyLech(maCTC, ChiTietChuyen.NhapTaiKhoDen, "Tìm thấy 2 hộp kẹt dưới sàn xe", QuanLyKho);
+
+        Assert.True(kq.ThanhCong, kq.ThongBao);
+        Assert.Equal(tonNTruoc + SoLuong, (await TonTai(e, ONhan)).Ton);
+        var d = await e.Db.ChiTietChuyen.AsNoTracking().SingleAsync(x => x.MaCTC == maCTC);
+        Assert.Equal(ChiTietChuyen.NhapTaiKhoDen, d.XuLyLech);
         Assert.Equal(PhieuChuyen.DaNhan, (await e.Db.PhieuChuyen.AsNoTracking().SingleAsync(x => x.MaPC == maPC)).TrangThai);
+        Assert.Empty(await e.Ton.DoiChieuSoCai());
+    });
+
+    [CanSqlServerFact]
+    public async Task XuLyLech_TraVeKhoDi_CongPhanThieuVaoOLay() => await DungAsync(async e =>
+    {
+        var (tonXTruoc, _) = await TonTai(e, OXuat);
+        var (maPC, maCTC) = await NhanThieu(e, SoLuong - 2);
+
+        var kq = await e.Dv.XuLyLech(maCTC, ChiTietChuyen.TraVeKhoDi, "Xuất nhầm số, 2 hộp còn ở kệ", QuanLyKho);
+
+        Assert.True(kq.ThanhCong, kq.ThongBao);
+        Assert.Equal(tonXTruoc - SoLuong + 2, (await TonTai(e, OXuat)).Ton);
+        Assert.Equal(PhieuChuyen.DaNhan, (await e.Db.PhieuChuyen.AsNoTracking().SingleAsync(x => x.MaPC == maPC)).TrangThai);
+    });
+
+    [CanSqlServerFact]
+    public async Task XuLyLech_SoThieuBangSoDaNhan_VanGhiDuSoCai() => await DungAsync(async e =>
+    {
+        // Gửi 5, nhận 0 rồi nhập tại kho đến 5: số ghi lần sau bằng số gửi, khác loại biến động nên sổ cái không coi là ghi lặp.
+        var (tonNTruoc, _) = await TonTai(e, ONhan);
+        var (_, maCTC) = await NhanThieu(e, 0);
+
+        var kq = await e.Dv.XuLyLech(maCTC, ChiTietChuyen.NhapTaiKhoDen, "Hàng đến muộn chuyến sau", QuanLyKho);
+
+        Assert.True(kq.ThanhCong, kq.ThongBao);
+        Assert.Equal(tonNTruoc + SoLuong, (await TonTai(e, ONhan)).Ton);
+    });
+
+    [CanSqlServerFact]
+    public async Task XuLyLech_GoiLaiLanHai_BiTuChoi() => await DungAsync(async e =>
+    {
+        var (_, maCTC) = await NhanThieu(e, SoLuong - 1);
+        Assert.True((await e.Dv.XuLyLech(maCTC, ChiTietChuyen.NhapTaiKhoDen, "Tìm thấy", QuanLyKho)).ThanhCong);
+        var (tonN, _) = await TonTai(e, ONhan);
+
+        var lan2 = await e.Dv.XuLyLech(maCTC, ChiTietChuyen.TraVeKhoDi, "Bấm lại", QuanLyKho);
+
+        Assert.False(lan2.ThanhCong);
+        Assert.Equal(tonN, (await TonTai(e, ONhan)).Ton);
     });
 }
 
@@ -305,7 +381,7 @@ public class PhieuChuyenQuyTacTests
 {
     private static PhieuChuyen Mau() => new()
     {
-        MaKhoXuat = 1, MaKhoNhap = 2, MaDoiTuong = 3,
+        MaKhoXuat = 1, MaKhoNhap = 2,
         ChiTiet = { new ChiTietChuyen { MaLo = 1, MaViTriXuat = 3, MaViTriNhap = 10, SoLuong = 5 } },
     };
 
@@ -317,15 +393,16 @@ public class PhieuChuyenQuyTacTests
     {
         var p = Mau();
         p.MaKhoNhap = 1;
-        Assert.Equal("Kho xuất phải khác kho nhập.", p.KiemTra());
+        Assert.Equal("Kho đi phải khác kho đến.", p.KiemTra());
     }
 
     [Fact]
-    public void ThieuNguoiVanChuyen_BaoLoi()
+    public void NguoiVanChuyenVaPhuongTien_KhongBatBuoc()
     {
         var p = Mau();
-        p.MaDoiTuong = 0;
-        Assert.Equal("Chọn người vận chuyển.", p.KiemTra());
+        p.NguoiVanChuyen = null;
+        p.PhuongTien = null;
+        Assert.Null(p.KiemTra());
     }
 
     [Fact]
@@ -348,7 +425,7 @@ public class PhieuChuyenQuyTacTests
     public void HuyDuoc_ChiKhiNhapHoacDaDuyet()
     {
         var p = Mau();
-        foreach (var (tt, mong) in new[] { (PhieuChuyen.Nhap, true), (PhieuChuyen.DaDuyet, true), (PhieuChuyen.DaXuat, false), (PhieuChuyen.DaNhan, false), (PhieuChuyen.DaHuy, false) })
+        foreach (var (tt, mong) in new[] { (PhieuChuyen.Nhap, true), (PhieuChuyen.DaDuyet, true), (PhieuChuyen.DangVanChuyen, false), (PhieuChuyen.NhanMotPhan, false), (PhieuChuyen.DaNhan, false), (PhieuChuyen.DaHuy, false) })
         {
             p.TrangThai = tt;
             Assert.Equal(mong, p.HuyDuoc);

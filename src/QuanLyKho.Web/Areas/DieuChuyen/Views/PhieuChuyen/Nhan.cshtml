@@ -14,7 +14,7 @@
     <h1>Nhận hàng phiếu chuyển @p.SoPhieu</h1>
     <p class="mota">
         <span class="nhan @(chuaNhan.Count == 0 ? "nhan-tot" : "nhan-chu-y")">@p.TrangThai</span>
-        @p.KhoXuat?.TenKho → @p.KhoNhap?.TenKho. Quét ô nhận và lô của dòng trên cùng, đếm hàng rồi nhập số thực nhận. Hàng chỉ vào tồn kho nhập sau khi bấm Xác nhận nhận.
+        @p.KhoXuat?.TenKho → @p.KhoNhap?.TenKho. Quét ô nhận và lô của dòng trên cùng, đếm hàng rồi nhập số thực nhận. Hàng chỉ vào tồn kho đến sau khi bấm Xác nhận nhận. Nhận thiếu thì ghi lý do; quản lý kho xử lý phần chênh lệch sau.
     </p>
 </header>
 
@@ -64,7 +64,7 @@
 }
 else
 {
-    <p class="khung-trong">Đã nhận xong mọi dòng. Hàng đã vào tồn kho @p.KhoNhap?.TenKho.</p>
+    <p class="khung-trong">Đã đếm xong mọi dòng. Hàng đã vào tồn kho @p.KhoNhap?.TenKho.@(p.TrangThai == PhieuChuyen.NhanMotPhan ? " Có dòng nhận thiếu: quản lý kho xử lý chênh lệch ở trang phiếu." : "")</p>
 }
 
 @if (daNhan.Count > 0)

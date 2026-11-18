@@ -6,7 +6,10 @@ using QuanLyKho.Web.Data;
 namespace QuanLyKho.Web.Areas.DieuChuyen.Services;
 
 /// <summary>Một dòng hiển thị: định mức kho kèm tên kho và tên biến thể.</summary>
-public sealed record DinhMucKhoDong(int MaKho, int MaBT, string TenKho, string TenBienThe, int TonToiThieu, int NgayAnToan);
+public sealed record DinhMucKhoDong(int MaKho, int MaBT, string TenKho, string TenBienThe, int TonToiThieu, int NgayAnToan, int TonKhaDung = 0)
+{
+    public bool DuoiDinhMuc => TonKhaDung < TonToiThieu;
+}
 
 /// <summary>
 /// CRUD định mức kho (màn hình Định mức kho, việc T5-1): tồn tối thiểu (m) và số ngày an toàn (N) của một biến thể tại một kho,
@@ -25,7 +28,21 @@ public interface IDinhMucKhoQuanLy
 
 public sealed class DinhMucKhoService(KhoDbContext db, IAuditService audit) : IDinhMucKhoQuanLy
 {
-    public async Task<IReadOnlyList<DinhMucKhoDong>> LayDanhSach(CancellationToken ct = default) =>
+    public async Task<IReadOnlyList<DinhMucKhoDong>> LayDanhSach(CancellationToken ct = default)
+    {
+        var ds = await LayDinhMuc(ct);
+        // Tồn khả dụng (tồn trừ phần đang giữ) ở các ô lưu trữ của kho, theo biến thể; hàng ở khu tiếp nhận chưa tính.
+        var ton = await (from t in db.TonKho.AsNoTracking()
+                         join v in db.ViTri.AsNoTracking() on t.MaViTri equals v.MaViTri
+                         join l in db.LoHang.AsNoTracking() on t.MaLo equals l.MaLo
+                         where v.LoaiViTri == QuanLyKho.Web.Areas.HeThong.Models.LoaiViTriGiaTri.LuuTru
+                         group t by new { v.MaKho, l.MaBT } into g
+                         select new { g.Key.MaKho, g.Key.MaBT, KhaDung = g.Sum(x => x.SoLuongTon - x.SoLuongGiu) })
+            .ToDictionaryAsync(x => (x.MaKho, x.MaBT), x => x.KhaDung, ct);
+        return ds.Select(d => d with { TonKhaDung = ton.GetValueOrDefault((d.MaKho, d.MaBT)) }).ToList();
+    }
+
+    private async Task<List<DinhMucKhoDong>> LayDinhMuc(CancellationToken ct) =>
         await db.DinhMucKho.AsNoTracking()
             .Join(db.Kho.AsNoTracking(), d => d.MaKho, k => k.MaKho, (d, k) => new { d, k })
             .Join(db.BienThe.AsNoTracking().Join(db.SanPham.AsNoTracking(), b => b.MaSP, s => s.MaSP, (b, s) => new { b.MaBT, Ten = s.TenSP + " (" + b.ThuocTinh + ")" }),

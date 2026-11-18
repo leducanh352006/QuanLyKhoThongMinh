@@ -109,12 +109,12 @@ public static class SeedDataSet
 
     public static readonly IReadOnlyList<TuyenVanChuyenSeed> TuyenVanChuyen = new TuyenVanChuyenSeed[]
     {
-        new(1, 2, 5000m, 150000m),   // Kho tổng → Kho quầy cửa hàng: tuyến G4 dùng để bổ sung hàng sắp hết ở Kho 2
+        new(1, 2, 5000m, 150000m),   // Kho tổng → Kho quầy cửa hàng: bổ sung hàng sắp hết ở cửa hàng
     };
 
     public static readonly IReadOnlyList<DinhMucKhoSeed> DinhMucKho = new DinhMucKhoSeed[]
     {
-        new(2, 4, 10, 3),   // tai nghe tại Kho 2 đang gần hết (tồn khả dụng 5, xem TonKho) — dùng demo G3
+        new(2, 4, 10, 3),   // tai nghe tại Kho 2 đang gần hết (tồn khả dụng 5, xem TonKho): trang Định mức kho báo dưới định mức
     };
 
     public static ViTriSeed? TimViTri(int maViTri) => ViTri.FirstOrDefault(v => v.MaViTri == maViTri);

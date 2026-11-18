@@ -50,11 +50,11 @@ public class DinhMucKhoThemViewModel
     public int MaBT { get; set; }
 
     [Range(0, int.MaxValue, ErrorMessage = "Tồn tối thiểu không được âm.")]
-    [Display(Name = "Tồn tối thiểu (m)")]
+    [Display(Name = "Tồn tối thiểu")]
     public int TonToiThieu { get; set; }
 
     [Range(0, int.MaxValue, ErrorMessage = "Số ngày an toàn không được âm.")]
-    [Display(Name = "Số ngày an toàn (N)")]
+    [Display(Name = "Số ngày an toàn")]
     public int NgayAnToan { get; set; }
 }
 
@@ -66,10 +66,10 @@ public sealed class DinhMucKhoSuaViewModel
     public string TenBienThe { get; set; } = "";
 
     [Range(0, int.MaxValue, ErrorMessage = "Tồn tối thiểu không được âm.")]
-    [Display(Name = "Tồn tối thiểu (m)")]
+    [Display(Name = "Tồn tối thiểu")]
     public int TonToiThieu { get; set; }
 
     [Range(0, int.MaxValue, ErrorMessage = "Số ngày an toàn không được âm.")]
-    [Display(Name = "Số ngày an toàn (N)")]
+    [Display(Name = "Số ngày an toàn")]
     public int NgayAnToan { get; set; }
 }

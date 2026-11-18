@@ -1,0 +1,302 @@
+@using QuanLyKho.Web.Areas.DieuChuyen.Controllers
+@using QuanLyKho.Web.Areas.DieuChuyen.Models
+@using QuanLyKho.Web.Contracts
+@using QuanLyKho.Web.Models
+@model PhieuChuyen
+@inject IPhanQuyenService PhanQuyen
+@inject INguoiDungHienTai HienTai
+@{
+    // Một form cho lập mới, sửa phiếu nháp và xem phiếu đã khóa.
+    var laMoi = Model.MaPC == 0;
+    var khoa = Model.DaKhoa;
+    var dsKho = (Dictionary<int, string>)ViewBag.Kho;
+    var dsNguoi = (Dictionary<int, string>)ViewBag.NguoiDung;
+    var tuyen = (Dictionary<string, decimal[]>)ViewBag.Tuyen;
+    var nguon = (List<NguonHang>?)ViewBag.Nguon ?? new();
+    var oNhan = (List<ONhan>?)ViewBag.ONhan ?? new();
+    var dong = (List<DongHienThi>?)ViewBag.Dong ?? new();
+    var duocSua = await PhanQuyen.CoQuyenHienTai(LoaiChungTu.CK, laMoi ? QuyenThaoTac.Them : QuyenThaoTac.Sua);
+    var duocDuyet = await PhanQuyen.CoQuyenHienTai(LoaiChungTu.CK, QuyenThaoTac.Duyet);
+    var duocHuy = await PhanQuyen.CoQuyenHienTai(LoaiChungTu.CK, QuyenThaoTac.Xoa);
+    var laNguoiLap = !laMoi && HienTai.Lay()?.MaND == Model.MaNguoiLap;
+    var tongSL = khoa ? dong.Sum(d => d.SoLuong) : Model.ChiTiet.Sum(d => d.SoLuong);
+    var tuyenPhieu = tuyen.GetValueOrDefault($"{Model.MaKhoXuat}-{Model.MaKhoNhap}");
+    var tuyChonQuet = new QuetMaOptions("oQuet", "Quét mã lô để thêm dòng hàng", "Quét hoặc gõ mã lô rồi nhấn Enter");
+    ViewData["Title"] = laMoi ? "Lập phiếu chuyển kho" : $"Phiếu chuyển {Model.SoPhieu}";
+    string NhanTT(string tt) => tt switch
+    {
+        PhieuChuyen.DaNhan => "nhan-tot", PhieuChuyen.DaHuy => "nhan-xam", PhieuChuyen.DaDuyet => "nhan-lam", _ => "nhan-chu-y",
+    };
+    string BuocTiep(string tt) => tt switch
+    {
+        PhieuChuyen.Nhap => "Phiếu nháp, còn sửa được. Bước tiếp: quản lý kho duyệt để giữ hàng ở kho xuất.",
+        PhieuChuyen.DaDuyet => "Đã giữ hàng ở kho xuất. Bước tiếp: thủ kho kho xuất quét mã xuất hàng.",
+        PhieuChuyen.DaXuat => "Hàng đang trên đường, đã trừ khỏi kho xuất. Bước tiếp: thủ kho kho nhập quét mã nhận hàng.",
+        PhieuChuyen.DaNhan => "Đã nhận xong, hàng đã vào tồn kho nhập. Phiếu đã khóa.",
+        _ => "Phiếu đã hủy.",
+    };
+}
+
+<header class="trang-dau trang-dau-hang">
+    <div>
+        <h1>@ViewData["Title"]</h1>
+        @if (!laMoi)
+        {
+            <p class="mota"><span class="nhan @NhanTT(Model.TrangThai)">@Model.TrangThai</span> @BuocTiep(Model.TrangThai)</p>
+        }
+        else
+        {
+            <p class="mota">Chọn kho xuất, kho nhập và hàng cần chuyển. Lưu nháp xong, quản lý kho duyệt thì hàng mới được giữ ở kho xuất.</p>
+        }
+    </div>
+</header>
+
+@if (TempData["ThongBao"] is string tb) { <div class="alert alert-success" role="status">@tb</div> }
+@if ((TempData["Loi"] ?? ViewData["Loi"]) is string loi) { <div class="alert alert-danger" role="alert">@loi</div> }
+
+@if (!khoa)
+{
+    <form method="post" asp-action="@(laMoi ? "Tao" : "Sua")" id="formPhieu" class="khung-form">
+        <input type="hidden" name="MaPC" value="@Model.MaPC" />
+        <div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <label for="MaKhoXuat" class="form-label">Kho xuất</label>
+                <select id="MaKhoXuat" name="MaKhoXuat" class="form-select" required>
+                    <option value="0">-- Chọn kho xuất --</option>
+                    @foreach (var k in dsKho) { <option value="@k.Key" selected="@(Model.MaKhoXuat == k.Key)">@k.Value</option> }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="MaKhoNhap" class="form-label">Kho nhập</label>
+                <select id="MaKhoNhap" name="MaKhoNhap" class="form-select" required>
+                    <option value="0">-- Chọn kho nhập --</option>
+                    @foreach (var k in dsKho) { <option value="@k.Key" selected="@(Model.MaKhoNhap == k.Key)">@k.Value</option> }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="MaDoiTuong" class="form-label">Người vận chuyển</label>
+                <select id="MaDoiTuong" name="MaDoiTuong" class="form-select" required>
+                    <option value="0">-- Chọn người vận chuyển --</option>
+                    @foreach (var n in dsNguoi) { <option value="@n.Key" selected="@(Model.MaDoiTuong == n.Key)">@n.Value</option> }
+                </select>
+            </div>
+            <div class="col-12">
+                <label for="DienGiai" class="form-label">Diễn giải (không bắt buộc)</label>
+                <input id="DienGiai" name="DienGiai" class="form-control" maxlength="500" value="@Model.DienGiai" placeholder="VD: Bổ sung hàng cho kho cửa hàng trước đợt khuyến mãi" />
+            </div>
+        </div>
+
+        <p id="chiPhi" class="small mb-3" role="status"></p>
+
+        <partial name="_QuetMa" model="tuyChonQuet" />
+
+        <div class="bang-cuon mt-3">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">Hàng ở kho xuất (lô, ô, còn chuyển được)</th>
+                        <th scope="col" style="width:14rem">Xếp vào ô (kho nhập)</th>
+                        <th scope="col" style="width:8rem">Số lượng</th>
+                        <th scope="col" style="width:5rem"><span class="visually-hidden">Thao tác</span></th>
+                    </tr>
+                </thead>
+                <tbody id="dongHang">
+                    @foreach (var d in Model.ChiTiet)
+                    {
+                        <tr>
+                            <td>
+                                <select class="form-select chon-nguon" aria-label="Hàng ở kho xuất">
+                                    <option value="">-- Chọn hàng --</option>
+                                    @foreach (var n in nguon)
+                                    {
+                                        <option value="@n.MaLo-@n.MaViTri" data-kho="@n.MaKho" data-lo="@n.MaVachLo" data-con="@n.KhaDung"
+                                                selected="@(d.MaLo == n.MaLo && d.MaViTriXuat == n.MaViTri)">@n.Ten</option>
+                                    }
+                                </select>
+                                <input type="hidden" data-ten="MaLo" value="@d.MaLo" />
+                                <input type="hidden" data-ten="MaViTriXuat" value="@d.MaViTriXuat" />
+                            </td>
+                            <td>
+                                <select class="form-select chon-o-nhan" data-ten="MaViTriNhap" aria-label="Ô nhận ở kho nhập">
+                                    <option value="0">-- Chọn ô --</option>
+                                    @foreach (var o in oNhan) { <option value="@o.MaViTri" data-kho="@o.MaKho" selected="@(d.MaViTriNhap == o.MaViTri)">@o.Ten</option> }
+                                </select>
+                            </td>
+                            <td><input class="form-control so-luong" type="number" min="1" required data-ten="SoLuong" value="@(d.SoLuong > 0 ? d.SoLuong.ToString() : "")" aria-label="Số lượng" /></td>
+                            <td><button type="button" class="btn btn-outline-secondary btn-sm" data-xoa>Xóa</button></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            @if (duocSua)
+            {
+                <button type="button" class="btn btn-outline-primary" id="themDong">Thêm dòng</button>
+                <button type="submit" class="btn btn-primary">Lưu phiếu nháp</button>
+            }
+            @if (!laMoi && duocDuyet)
+            {
+                <button type="submit" class="btn btn-success" form="formDuyet" disabled="@laNguoiLap"
+                        onclick="return confirm('Duyệt phiếu? Hàng sẽ được giữ ở kho xuất và phiếu không sửa được nữa. Thay đổi chưa lưu sẽ mất.');">Duyệt và giữ hàng</button>
+            }
+            @if (!laMoi && duocHuy)
+            {
+                <button type="submit" class="btn btn-outline-danger" form="formHuy" onclick="return confirm('Hủy phiếu @Model.SoPhieu? Không hoàn tác được.');">Hủy phiếu</button>
+            }
+            <a class="btn btn-outline-secondary" asp-action="Index">Quay lại danh sách</a>
+        </div>
+        @if (laNguoiLap && duocDuyet)
+        {
+            <p class="small text-muted mt-2">Bạn là người lập phiếu này nên không tự duyệt được; nhờ một quản lý kho khác duyệt.</p>
+        }
+    </form>
+}
+else
+{
+    <section class="khung-the mb-3">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">Kho xuất → Kho nhập</dt><dd class="col-sm-9">@Model.KhoXuat?.TenKho → @Model.KhoNhap?.TenKho</dd>
+            <dt class="col-sm-3">Người vận chuyển</dt><dd class="col-sm-9">@dsNguoi.GetValueOrDefault(Model.MaDoiTuong, "—")</dd>
+            <dt class="col-sm-3">Người lập / duyệt</dt>
+            <dd class="col-sm-9">@dsNguoi.GetValueOrDefault(Model.MaNguoiLap, "—") / @(Model.MaNguoiDuyet is int nd ? dsNguoi.GetValueOrDefault(nd, "—") : "chưa duyệt")</dd>
+            <dt class="col-sm-3">Thời gian lập</dt><dd class="col-sm-9">@Model.ThoiGian.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</dd>
+            <dt class="col-sm-3">Chi phí ước tính</dt>
+            <dd class="col-sm-9 so-bang">@(tuyenPhieu is null ? "—" : $"{tuyenPhieu[1] + tuyenPhieu[0] * tongSL:N0} ₫ (phí chuyến {tuyenPhieu[1]:N0} ₫ + {tuyenPhieu[0]:N0} ₫ × {tongSL} đơn vị)")</dd>
+            @if (Model.DienGiai is not null) { <dt class="col-sm-3">Diễn giải</dt><dd class="col-sm-9">@Model.DienGiai</dd> }
+        </dl>
+    </section>
+
+    <div class="khung-the bang-cuon mb-3">
+        <table class="table table-sm align-middle mb-0">
+            <thead>
+                <tr>
+                    <th scope="col">Hàng</th><th scope="col">Lô</th><th scope="col">Lấy ở ô</th><th scope="col">Xếp vào ô</th>
+                    <th scope="col" class="text-end">Gửi</th><th scope="col" class="text-end">Nhận</th><th scope="col">Lý do lệch</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var d in dong)
+                {
+                    <tr>
+                        <td>@d.TenHang</td>
+                        <td>@d.MaVachLo @(d.HanDung is null ? "" : $"(hạn {d.HanDung})")</td>
+                        <td>@d.TenOXuat</td>
+                        <td>@d.TenONhan</td>
+                        <td class="text-end so-bang">@d.SoLuong</td>
+                        <td class="text-end so-bang">@(d.SLNhan?.ToString() ?? "—")</td>
+                        <td>@(d.LyDoLech ?? "—")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+        @if (Model.TrangThai == PhieuChuyen.DaDuyet) { <a class="btn btn-primary btn-lg" asp-action="Xuat" asp-route-id="@Model.MaPC">Xuất hàng (quét mã)</a> }
+        @if (Model.TrangThai == PhieuChuyen.DaXuat) { <a class="btn btn-primary btn-lg" asp-action="Nhan" asp-route-id="@Model.MaPC">Nhận hàng (quét mã)</a> }
+        @if (Model.HuyDuoc && duocHuy)
+        {
+            <button type="submit" class="btn btn-outline-danger" form="formHuy"
+                    onclick="return confirm('Hủy phiếu @Model.SoPhieu? Hàng đang giữ ở kho xuất sẽ được trả lại. Không hoàn tác được.');">Hủy phiếu</button>
+        }
+        <a class="btn btn-outline-secondary" asp-action="Index">Quay lại danh sách</a>
+    </div>
+}
+
+@if (!laMoi)
+{
+    <form method="post" asp-action="Duyet" asp-route-id="@Model.MaPC" id="formDuyet"></form>
+    <form method="post" asp-action="Huy" asp-route-id="@Model.MaPC" id="formHuy"></form>
+    <div class="mt-4">
+        @await Component.InvokeAsync("DinhKem", new { loai = LoaiChungTu.CK, maCT = Model.MaPC })
+    </div>
+}
+
+@section Scripts {
+    @if (!khoa)
+    {
+        <script>
+            (function () {
+                var bang = document.getElementById('dongHang');
+                var khoXuat = document.getElementById('MaKhoXuat'), khoNhap = document.getElementById('MaKhoNhap');
+                var chiPhi = document.getElementById('chiPhi');
+                var tuyen = @Json.Serialize(tuyen);
+                var mau = bang.querySelector('tr').cloneNode(true);   // dòng mẫu để thêm dòng mới
+
+                // Đặt lại tên ô nhập theo thứ tự dòng: ChiTiet[0].MaLo, ChiTiet[0].SoLuong...
+                function danhSo() {
+                    bang.querySelectorAll('tr').forEach(function (tr, i) {
+                        tr.querySelectorAll('[data-ten]').forEach(function (o) { o.name = 'ChiTiet[' + i + '].' + o.dataset.ten; });
+                    });
+                }
+                // Chỉ hiện hàng của kho xuất và ô của kho nhập đang chọn.
+                function locTheoKho(tr) {
+                    tr.querySelectorAll('.chon-nguon option[data-kho]').forEach(function (o) { o.hidden = o.dataset.kho !== khoXuat.value; });
+                    tr.querySelectorAll('.chon-o-nhan option[data-kho]').forEach(function (o) { o.hidden = o.dataset.kho !== khoNhap.value; });
+                    var n = tr.querySelector('.chon-nguon'); if (n.selectedOptions[0] && n.selectedOptions[0].hidden) { n.value = ''; ganNguon(tr); }
+                    var o = tr.querySelector('.chon-o-nhan'); if (o.selectedOptions[0] && o.selectedOptions[0].hidden) { o.value = '0'; }
+                }
+                function ganNguon(tr) {
+                    var chon = tr.querySelector('.chon-nguon'), op = chon.selectedOptions[0];
+                    var phan = chon.value ? chon.value.split('-') : ['0', '0'];
+                    tr.querySelector('[data-ten="MaLo"]').value = phan[0];
+                    tr.querySelector('[data-ten="MaViTriXuat"]').value = phan[1];
+                    var sl = tr.querySelector('.so-luong');
+                    if (op && op.dataset.con) { sl.max = op.dataset.con; } else { sl.removeAttribute('max'); }
+                }
+                function tinhChiPhi() {
+                    var t = tuyen[khoXuat.value + '-' + khoNhap.value];
+                    var tong = 0; bang.querySelectorAll('.so-luong').forEach(function (s) { tong += parseInt(s.value || '0', 10); });
+                    var dinhDang = function (x) { return Number(x).toLocaleString('vi-VN'); };
+                    if (khoXuat.value === '0' || khoNhap.value === '0') { chiPhi.textContent = ''; chiPhi.className = 'small mb-3'; return; }
+                    if (khoXuat.value === khoNhap.value) { chiPhi.textContent = 'Kho xuất và kho nhập phải khác nhau.'; chiPhi.className = 'small mb-3 text-danger'; return; }
+                    if (!t) { chiPhi.textContent = 'Chưa có tuyến vận chuyển giữa hai kho này — khai báo ở mục Tuyến vận chuyển trước khi lập phiếu.'; chiPhi.className = 'small mb-3 text-danger'; return; }
+                    chiPhi.textContent = 'Chi phí ước tính: ' + dinhDang(t[1] + t[0] * tong) + ' ₫ (phí chuyến ' + dinhDang(t[1]) + ' ₫ + ' + dinhDang(t[0]) + ' ₫ × ' + tong + ' đơn vị)';
+                    chiPhi.className = 'small mb-3 text-muted';
+                }
+                function tatCa() { bang.querySelectorAll('tr').forEach(locTheoKho); tinhChiPhi(); }
+
+                function themDong() {
+                    var tr = mau.cloneNode(true);
+                    tr.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
+                    tr.querySelectorAll('input').forEach(function (i) { i.value = i.type === 'hidden' ? '0' : ''; });
+                    bang.appendChild(tr); danhSo(); locTheoKho(tr);
+                    return tr;
+                }
+
+                bang.addEventListener('change', function (e) {
+                    if (e.target.classList.contains('chon-nguon')) { ganNguon(e.target.closest('tr')); }
+                });
+                bang.addEventListener('input', function (e) { if (e.target.classList.contains('so-luong')) { tinhChiPhi(); } });
+                bang.addEventListener('click', function (e) {
+                    if (!e.target.matches('[data-xoa]')) { return; }
+                    if (bang.querySelectorAll('tr').length > 1) { e.target.closest('tr').remove(); } else { themDong(); e.target.closest('tr').remove(); }
+                    danhSo(); tinhChiPhi();
+                });
+                document.getElementById('themDong')?.addEventListener('click', function () { themDong().querySelector('.chon-nguon').focus(); });
+                khoXuat.addEventListener('change', tatCa);
+                khoNhap.addEventListener('change', tatCa);
+
+                // Quét mã lô: chọn đúng (lô, ô) đầu tiên còn hàng ở kho xuất; điền vào dòng trống hoặc thêm dòng mới.
+                var oThongBao = document.querySelector('[data-quet-ma-thongbao]');
+                // quet-ma.js ghi "Đã thêm: ..." ngay sau sự kiện; ghi thông báo của trang sau đó để không bị đè.
+                var thongBao = { set textContent(t) { setTimeout(function () { oThongBao.textContent = t; }, 0); } };
+                document.addEventListener('quetma:them', function (e) {
+                    var ma = e.detail.giaTri.trim().toLowerCase();
+                    if (khoXuat.value === '0') { thongBao.textContent = 'Chọn kho xuất trước khi quét.'; return; }
+                    var tr = Array.prototype.find.call(bang.querySelectorAll('tr'), function (r) { return !r.querySelector('.chon-nguon').value; }) || themDong();
+                    var op = Array.prototype.find.call(tr.querySelectorAll('.chon-nguon option[data-kho]'),
+                        function (o) { return o.dataset.kho === khoXuat.value && o.dataset.lo.toLowerCase() === ma; });
+                    if (!op) { thongBao.textContent = 'Không có lô "' + e.detail.giaTri + '" còn hàng ở kho xuất.'; return; }
+                    tr.querySelector('.chon-nguon').value = op.value; ganNguon(tr);
+                    tr.querySelector('.so-luong').focus();
+                    thongBao.textContent = 'Đã thêm lô ' + op.dataset.lo + '. Nhập số lượng và chọn ô nhận.';
+                });
+
+                danhSo(); bang.querySelectorAll('tr').forEach(function (tr) { locTheoKho(tr); ganNguon(tr); }); tinhChiPhi();
+            })();
+        </script>
+    }
+}

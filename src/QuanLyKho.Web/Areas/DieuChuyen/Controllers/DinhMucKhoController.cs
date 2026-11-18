@@ -9,7 +9,7 @@ using QuanLyKho.Web.Data;
 namespace QuanLyKho.Web.Areas.DieuChuyen.Controllers;
 
 /// <summary>
-/// Định mức kho (việc T5-1, issue #28): tồn tối thiểu (m) và số ngày an toàn (N) của một biến thể tại một kho, dùng làm đầu vào
+/// Định mức kho (việc T5-1, issue #28): tồn tối thiểu và số ngày an toàn của một biến thể tại một kho; danh sách báo mặt hàng đang dưới định mức để chuyển bổ sung. Đầu vào
 /// cho gợi ý G3. Không phải chứng từ nên kiểm quyền bằng vai trò, không dùng CanQuyen.
 /// </summary>
 [Area("DieuChuyen")]

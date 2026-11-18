@@ -22,6 +22,182 @@ namespace QuanLyKho.Web.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("QuanLyKho.Web.Areas.DieuChuyen.Models.ChiTietChuyen", b =>
+                {
+                    b.Property<int>("MaCTC")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MaCTC"));
+
+                    b.Property<string>("LyDoLech")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<int>("MaLo")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaPC")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaViTriNhap")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaViTriXuat")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SLNhan")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SoLuong")
+                        .HasColumnType("int");
+
+                    b.HasKey("MaCTC");
+
+                    b.HasIndex("MaLo");
+
+                    b.HasIndex("MaViTriNhap");
+
+                    b.HasIndex("MaViTriXuat");
+
+                    b.HasIndex("MaPC", "MaLo", "MaViTriNhap")
+                        .IsUnique();
+
+                    b.HasIndex("MaPC", "MaLo", "MaViTriXuat")
+                        .IsUnique();
+
+                    b.ToTable("ChiTietChuyen", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ChiTietChuyen_KhacO", "[MaViTriXuat] <> [MaViTriNhap]");
+
+                            t.HasCheckConstraint("CK_ChiTietChuyen_LyDoLech", "[SLNhan] IS NULL OR [SLNhan] = [SoLuong] OR [LyDoLech] IS NOT NULL");
+
+                            t.HasCheckConstraint("CK_ChiTietChuyen_SLNhan", "[SLNhan] >= 0 AND [SLNhan] <= [SoLuong]");
+
+                            t.HasCheckConstraint("CK_ChiTietChuyen_SoLuong", "[SoLuong] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("QuanLyKho.Web.Areas.DieuChuyen.Models.DinhMucKho", b =>
+                {
+                    b.Property<int>("MaKho")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaBT")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NgayAnToan")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TonToiThieu")
+                        .HasColumnType("int");
+
+                    b.HasKey("MaKho", "MaBT");
+
+                    b.HasIndex("MaBT");
+
+                    b.ToTable("DinhMucKho", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_DinhMucKho_KhongAm", "[TonToiThieu] >= 0 AND [NgayAnToan] >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("QuanLyKho.Web.Areas.DieuChuyen.Models.PhieuChuyen", b =>
+                {
+                    b.Property<int>("MaPC")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MaPC"));
+
+                    b.Property<string>("DienGiai")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("MaDoiTuong")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaKhoNhap")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaKhoXuat")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MaNguoiDuyet")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaNguoiLap")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SoPhieu")
+                        .IsRequired()
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<DateTime>("ThoiGian")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2(0)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<string>("TrangThai")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Nháp");
+
+                    b.HasKey("MaPC");
+
+                    b.HasIndex("MaDoiTuong");
+
+                    b.HasIndex("MaKhoNhap");
+
+                    b.HasIndex("MaNguoiDuyet");
+
+                    b.HasIndex("MaNguoiLap");
+
+                    b.HasIndex("SoPhieu")
+                        .IsUnique();
+
+                    b.HasIndex("MaKhoXuat", "MaKhoNhap");
+
+                    b.HasIndex("MaKhoXuat", "ThoiGian");
+
+                    b.ToTable("PhieuChuyen", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PhieuChuyen_KhacKho", "[MaKhoXuat] <> [MaKhoNhap]");
+
+                            t.HasCheckConstraint("CK_PhieuChuyen_NguoiDuyet", "[TrangThai] IN (N'Nháp', N'Đã hủy') OR [MaNguoiDuyet] IS NOT NULL");
+
+                            t.HasCheckConstraint("CK_PhieuChuyen_TrangThai", "[TrangThai] IN (N'Nháp', N'Đã duyệt', N'Đã xuất', N'Đã nhận', N'Đã hủy')");
+                        });
+                });
+
+            modelBuilder.Entity("QuanLyKho.Web.Areas.DieuChuyen.Models.TuyenVanChuyen", b =>
+                {
+                    b.Property<int>("MaKhoXuat")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaKhoNhap")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("DonGiaVC")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("PhiChuyen")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("MaKhoXuat", "MaKhoNhap");
+
+                    b.HasIndex("MaKhoNhap");
+
+                    b.ToTable("TuyenVanChuyen", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_TuyenVanChuyen_KhacKho", "[MaKhoXuat] <> [MaKhoNhap]");
+
+                            t.HasCheckConstraint("CK_TuyenVanChuyen_KhongAm", "[DonGiaVC] >= 0 AND [PhiChuyen] >= 0");
+                        });
+                });
+
             modelBuilder.Entity("QuanLyKho.Web.Areas.HangHoa.Models.BienThe", b =>
                 {
                     b.Property<int>("MaBT")
@@ -505,6 +681,8 @@ namespace QuanLyKho.Web.Migrations
                     b.HasKey("MaGoiY");
 
                     b.HasIndex("MaNguoiDuyet");
+
+                    b.HasIndex("MaPC");
 
                     b.HasIndex("MaPN");
 
@@ -1214,6 +1392,113 @@ namespace QuanLyKho.Web.Migrations
                         });
                 });
 
+            modelBuilder.Entity("QuanLyKho.Web.Areas.DieuChuyen.Models.ChiTietChuyen", b =>
+                {
+                    b.HasOne("QuanLyKho.Web.Areas.HangHoa.Models.LoHang", null)
+                        .WithMany()
+                        .HasForeignKey("MaLo")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QuanLyKho.Web.Areas.DieuChuyen.Models.PhieuChuyen", null)
+                        .WithMany("ChiTiet")
+                        .HasForeignKey("MaPC")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QuanLyKho.Web.Areas.HeThong.Models.ViTri", null)
+                        .WithMany()
+                        .HasForeignKey("MaViTriNhap")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QuanLyKho.Web.Areas.HeThong.Models.ViTri", null)
+                        .WithMany()
+                        .HasForeignKey("MaViTriXuat")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QuanLyKho.Web.Areas.DieuChuyen.Models.DinhMucKho", b =>
+                {
+                    b.HasOne("QuanLyKho.Web.Areas.HangHoa.Models.BienThe", "BienThe")
+                        .WithMany()
+                        .HasForeignKey("MaBT")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QuanLyKho.Web.Areas.HeThong.Models.Kho", "Kho")
+                        .WithMany()
+                        .HasForeignKey("MaKho")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("BienThe");
+
+                    b.Navigation("Kho");
+                });
+
+            modelBuilder.Entity("QuanLyKho.Web.Areas.DieuChuyen.Models.PhieuChuyen", b =>
+                {
+                    b.HasOne("QuanLyKho.Web.Areas.HeThong.Models.NguoiDung", null)
+                        .WithMany()
+                        .HasForeignKey("MaDoiTuong")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QuanLyKho.Web.Areas.HeThong.Models.Kho", "KhoNhap")
+                        .WithMany()
+                        .HasForeignKey("MaKhoNhap")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QuanLyKho.Web.Areas.HeThong.Models.Kho", "KhoXuat")
+                        .WithMany()
+                        .HasForeignKey("MaKhoXuat")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QuanLyKho.Web.Areas.HeThong.Models.NguoiDung", null)
+                        .WithMany()
+                        .HasForeignKey("MaNguoiDuyet")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QuanLyKho.Web.Areas.HeThong.Models.NguoiDung", null)
+                        .WithMany()
+                        .HasForeignKey("MaNguoiLap")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QuanLyKho.Web.Areas.DieuChuyen.Models.TuyenVanChuyen", null)
+                        .WithMany()
+                        .HasForeignKey("MaKhoXuat", "MaKhoNhap")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("KhoNhap");
+
+                    b.Navigation("KhoXuat");
+                });
+
+            modelBuilder.Entity("QuanLyKho.Web.Areas.DieuChuyen.Models.TuyenVanChuyen", b =>
+                {
+                    b.HasOne("QuanLyKho.Web.Areas.HeThong.Models.Kho", "KhoNhap")
+                        .WithMany()
+                        .HasForeignKey("MaKhoNhap")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QuanLyKho.Web.Areas.HeThong.Models.Kho", "KhoXuat")
+                        .WithMany()
+                        .HasForeignKey("MaKhoXuat")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("KhoNhap");
+
+                    b.Navigation("KhoXuat");
+                });
+
             modelBuilder.Entity("QuanLyKho.Web.Areas.HangHoa.Models.BienThe", b =>
                 {
                     b.HasOne("QuanLyKho.Web.Areas.HangHoa.Models.SanPham", null)
@@ -1377,6 +1662,11 @@ namespace QuanLyKho.Web.Migrations
                     b.HasOne("QuanLyKho.Web.Areas.HeThong.Models.NguoiDung", null)
                         .WithMany()
                         .HasForeignKey("MaNguoiDuyet")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QuanLyKho.Web.Areas.DieuChuyen.Models.PhieuChuyen", null)
+                        .WithMany()
+                        .HasForeignKey("MaPC")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("QuanLyKho.Web.Areas.NhapKho.Models.PhieuNhap", null)
@@ -1597,6 +1887,11 @@ namespace QuanLyKho.Web.Migrations
                     b.Navigation("Kho");
 
                     b.Navigation("PhieuNhapGoc");
+                });
+
+            modelBuilder.Entity("QuanLyKho.Web.Areas.DieuChuyen.Models.PhieuChuyen", b =>
+                {
+                    b.Navigation("ChiTiet");
                 });
 
             modelBuilder.Entity("QuanLyKho.Web.Areas.HangHoa.Models.PhieuKiem", b =>

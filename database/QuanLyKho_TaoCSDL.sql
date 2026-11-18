@@ -1595,3 +1595,234 @@ END;
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261118030632_DieuChuyenKho'
+)
+BEGIN
+    CREATE TABLE [DinhMucKho] (
+        [MaKho] int NOT NULL,
+        [MaBT] int NOT NULL,
+        [TonToiThieu] int NOT NULL,
+        [NgayAnToan] int NOT NULL,
+        CONSTRAINT [PK_DinhMucKho] PRIMARY KEY ([MaKho], [MaBT]),
+        CONSTRAINT [CK_DinhMucKho_KhongAm] CHECK ([TonToiThieu] >= 0 AND [NgayAnToan] >= 0),
+        CONSTRAINT [FK_DinhMucKho_BienThe_MaBT] FOREIGN KEY ([MaBT]) REFERENCES [BienThe] ([MaBT]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_DinhMucKho_Kho_MaKho] FOREIGN KEY ([MaKho]) REFERENCES [Kho] ([MaKho]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261118030632_DieuChuyenKho'
+)
+BEGIN
+    CREATE TABLE [TuyenVanChuyen] (
+        [MaKhoXuat] int NOT NULL,
+        [MaKhoNhap] int NOT NULL,
+        [DonGiaVC] decimal(18,2) NOT NULL,
+        [PhiChuyen] decimal(18,2) NOT NULL,
+        CONSTRAINT [PK_TuyenVanChuyen] PRIMARY KEY ([MaKhoXuat], [MaKhoNhap]),
+        CONSTRAINT [CK_TuyenVanChuyen_KhacKho] CHECK ([MaKhoXuat] <> [MaKhoNhap]),
+        CONSTRAINT [CK_TuyenVanChuyen_KhongAm] CHECK ([DonGiaVC] >= 0 AND [PhiChuyen] >= 0),
+        CONSTRAINT [FK_TuyenVanChuyen_Kho_MaKhoNhap] FOREIGN KEY ([MaKhoNhap]) REFERENCES [Kho] ([MaKho]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_TuyenVanChuyen_Kho_MaKhoXuat] FOREIGN KEY ([MaKhoXuat]) REFERENCES [Kho] ([MaKho]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261118030632_DieuChuyenKho'
+)
+BEGIN
+    CREATE TABLE [PhieuChuyen] (
+        [MaPC] int NOT NULL IDENTITY,
+        [SoPhieu] varchar(20) NOT NULL,
+        [ThoiGian] datetime2(0) NOT NULL DEFAULT (SYSUTCDATETIME()),
+        [MaKhoXuat] int NOT NULL,
+        [MaKhoNhap] int NOT NULL,
+        [MaDoiTuong] int NOT NULL,
+        [MaNguoiLap] int NOT NULL,
+        [MaNguoiDuyet] int NULL,
+        [DienGiai] nvarchar(500) NULL,
+        [TrangThai] nvarchar(20) NOT NULL DEFAULT N'Nháp',
+        CONSTRAINT [PK_PhieuChuyen] PRIMARY KEY ([MaPC]),
+        CONSTRAINT [CK_PhieuChuyen_KhacKho] CHECK ([MaKhoXuat] <> [MaKhoNhap]),
+        CONSTRAINT [CK_PhieuChuyen_NguoiDuyet] CHECK ([TrangThai] IN (N'Nháp', N'Đã hủy') OR [MaNguoiDuyet] IS NOT NULL),
+        CONSTRAINT [CK_PhieuChuyen_TrangThai] CHECK ([TrangThai] IN (N'Nháp', N'Đã duyệt', N'Đã xuất', N'Đã nhận', N'Đã hủy')),
+        CONSTRAINT [FK_PhieuChuyen_Kho_MaKhoNhap] FOREIGN KEY ([MaKhoNhap]) REFERENCES [Kho] ([MaKho]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_PhieuChuyen_Kho_MaKhoXuat] FOREIGN KEY ([MaKhoXuat]) REFERENCES [Kho] ([MaKho]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_PhieuChuyen_NguoiDung_MaDoiTuong] FOREIGN KEY ([MaDoiTuong]) REFERENCES [NguoiDung] ([MaND]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_PhieuChuyen_NguoiDung_MaNguoiDuyet] FOREIGN KEY ([MaNguoiDuyet]) REFERENCES [NguoiDung] ([MaND]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_PhieuChuyen_NguoiDung_MaNguoiLap] FOREIGN KEY ([MaNguoiLap]) REFERENCES [NguoiDung] ([MaND]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_PhieuChuyen_TuyenVanChuyen_MaKhoXuat_MaKhoNhap] FOREIGN KEY ([MaKhoXuat], [MaKhoNhap]) REFERENCES [TuyenVanChuyen] ([MaKhoXuat], [MaKhoNhap]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261118030632_DieuChuyenKho'
+)
+BEGIN
+    CREATE TABLE [ChiTietChuyen] (
+        [MaCTC] int NOT NULL IDENTITY,
+        [MaPC] int NOT NULL,
+        [MaLo] int NOT NULL,
+        [MaViTriXuat] int NOT NULL,
+        [MaViTriNhap] int NOT NULL,
+        [SoLuong] int NOT NULL,
+        [SLNhan] int NULL,
+        [LyDoLech] nvarchar(255) NULL,
+        CONSTRAINT [PK_ChiTietChuyen] PRIMARY KEY ([MaCTC]),
+        CONSTRAINT [CK_ChiTietChuyen_KhacO] CHECK ([MaViTriXuat] <> [MaViTriNhap]),
+        CONSTRAINT [CK_ChiTietChuyen_LyDoLech] CHECK ([SLNhan] IS NULL OR [SLNhan] = [SoLuong] OR [LyDoLech] IS NOT NULL),
+        CONSTRAINT [CK_ChiTietChuyen_SLNhan] CHECK ([SLNhan] >= 0 AND [SLNhan] <= [SoLuong]),
+        CONSTRAINT [CK_ChiTietChuyen_SoLuong] CHECK ([SoLuong] > 0),
+        CONSTRAINT [FK_ChiTietChuyen_LoHang_MaLo] FOREIGN KEY ([MaLo]) REFERENCES [LoHang] ([MaLo]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_ChiTietChuyen_PhieuChuyen_MaPC] FOREIGN KEY ([MaPC]) REFERENCES [PhieuChuyen] ([MaPC]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_ChiTietChuyen_ViTri_MaViTriNhap] FOREIGN KEY ([MaViTriNhap]) REFERENCES [ViTri] ([MaViTri]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_ChiTietChuyen_ViTri_MaViTriXuat] FOREIGN KEY ([MaViTriXuat]) REFERENCES [ViTri] ([MaViTri]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261118030632_DieuChuyenKho'
+)
+BEGIN
+    CREATE INDEX [IX_GoiYAI_MaPC] ON [GoiYAI] ([MaPC]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261118030632_DieuChuyenKho'
+)
+BEGIN
+    CREATE INDEX [IX_ChiTietChuyen_MaLo] ON [ChiTietChuyen] ([MaLo]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261118030632_DieuChuyenKho'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_ChiTietChuyen_MaPC_MaLo_MaViTriNhap] ON [ChiTietChuyen] ([MaPC], [MaLo], [MaViTriNhap]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261118030632_DieuChuyenKho'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_ChiTietChuyen_MaPC_MaLo_MaViTriXuat] ON [ChiTietChuyen] ([MaPC], [MaLo], [MaViTriXuat]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261118030632_DieuChuyenKho'
+)
+BEGIN
+    CREATE INDEX [IX_ChiTietChuyen_MaViTriNhap] ON [ChiTietChuyen] ([MaViTriNhap]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261118030632_DieuChuyenKho'
+)
+BEGIN
+    CREATE INDEX [IX_ChiTietChuyen_MaViTriXuat] ON [ChiTietChuyen] ([MaViTriXuat]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261118030632_DieuChuyenKho'
+)
+BEGIN
+    CREATE INDEX [IX_DinhMucKho_MaBT] ON [DinhMucKho] ([MaBT]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261118030632_DieuChuyenKho'
+)
+BEGIN
+    CREATE INDEX [IX_PhieuChuyen_MaDoiTuong] ON [PhieuChuyen] ([MaDoiTuong]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261118030632_DieuChuyenKho'
+)
+BEGIN
+    CREATE INDEX [IX_PhieuChuyen_MaKhoNhap] ON [PhieuChuyen] ([MaKhoNhap]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261118030632_DieuChuyenKho'
+)
+BEGIN
+    CREATE INDEX [IX_PhieuChuyen_MaKhoXuat_MaKhoNhap] ON [PhieuChuyen] ([MaKhoXuat], [MaKhoNhap]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261118030632_DieuChuyenKho'
+)
+BEGIN
+    CREATE INDEX [IX_PhieuChuyen_MaKhoXuat_ThoiGian] ON [PhieuChuyen] ([MaKhoXuat], [ThoiGian]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261118030632_DieuChuyenKho'
+)
+BEGIN
+    CREATE INDEX [IX_PhieuChuyen_MaNguoiDuyet] ON [PhieuChuyen] ([MaNguoiDuyet]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261118030632_DieuChuyenKho'
+)
+BEGIN
+    CREATE INDEX [IX_PhieuChuyen_MaNguoiLap] ON [PhieuChuyen] ([MaNguoiLap]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261118030632_DieuChuyenKho'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_PhieuChuyen_SoPhieu] ON [PhieuChuyen] ([SoPhieu]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261118030632_DieuChuyenKho'
+)
+BEGIN
+    CREATE INDEX [IX_TuyenVanChuyen_MaKhoNhap] ON [TuyenVanChuyen] ([MaKhoNhap]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261118030632_DieuChuyenKho'
+)
+BEGIN
+    ALTER TABLE [GoiYAI] ADD CONSTRAINT [FK_GoiYAI_PhieuChuyen_MaPC] FOREIGN KEY ([MaPC]) REFERENCES [PhieuChuyen] ([MaPC]) ON DELETE NO ACTION;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261118030632_DieuChuyenKho'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261118030632_DieuChuyenKho', N'10.0.0');
+END;
+
+COMMIT;
+GO
+

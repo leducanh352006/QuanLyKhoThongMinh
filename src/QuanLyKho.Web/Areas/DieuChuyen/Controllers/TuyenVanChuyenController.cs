@@ -9,7 +9,7 @@ using QuanLyKho.Web.Data;
 namespace QuanLyKho.Web.Areas.DieuChuyen.Controllers;
 
 /// <summary>
-/// Tuyến vận chuyển (việc T5-1, issue #28): tham số chi phí giữa từng cặp kho, dùng làm đầu vào cho gợi ý G4. Không phải chứng
+/// Tuyến vận chuyển (việc T5-1, issue #28): tham số chi phí giữa từng cặp kho, phiếu chuyển kho chỉ lập được trên tuyến đã khai báo và dùng tuyến để ước tính chi phí. Không phải chứng
 /// từ (không có LoaiChungTu riêng) nên kiểm quyền bằng vai trò như Kho, Nhà cung cấp — không dùng CanQuyen.
 /// </summary>
 [Area("DieuChuyen")]

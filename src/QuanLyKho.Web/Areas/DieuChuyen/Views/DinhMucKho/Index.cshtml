@@ -1,15 +1,22 @@
 @model IReadOnlyList<QuanLyKho.Web.Areas.DieuChuyen.Services.DinhMucKhoDong>
+@using QuanLyKho.Web.Contracts
+@inject IPhanQuyenService PhanQuyen
+@{
+    var duocLapPhieu = await PhanQuyen.CoQuyenHienTai(LoaiChungTu.CK, QuyenThaoTac.Them);
+    var soDuoi = Model.Count(d => d.DuoiDinhMuc);
+}
 
 <header class="trang-dau d-flex flex-wrap justify-content-between align-items-end gap-2">
     <div>
         <h1>Định mức kho</h1>
-        <p class="mota">Tồn tối thiểu và số ngày an toàn của từng biến thể tại từng kho — tham số đầu vào cho gợi ý G3.</p>
+        <p class="mota">Tồn tối thiểu của từng mặt hàng ở từng kho. Mặt hàng có tồn khả dụng thấp hơn mức này được đánh dấu để chuyển bổ sung từ kho khác.</p>
     </div>
     <a class="btn btn-primary" asp-action="Them">Thêm định mức kho</a>
 </header>
 
 @if (TempData["ThongBao"] is string tb) { <div class="alert alert-success" role="status">@tb</div> }
 @if (TempData["Loi"] is string loi) { <div class="alert alert-danger" role="alert">@loi</div> }
+@if (soDuoi > 0) { <div class="alert alert-warning" role="status">Có @soDuoi mặt hàng đang dưới định mức.</div> }
 
 <div class="bang-cuon">
     <table class="table align-middle">
@@ -17,24 +24,32 @@
             <tr>
                 <th scope="col">Kho</th>
                 <th scope="col">Biến thể</th>
-                <th scope="col" class="text-end">Tồn tối thiểu (m)</th>
-                <th scope="col" class="text-end">Số ngày an toàn (N)</th>
+                <th scope="col" class="text-end">Tồn khả dụng</th>
+                <th scope="col" class="text-end">Tồn tối thiểu</th>
+                <th scope="col" class="text-end">Số ngày an toàn</th>
+                <th scope="col">Tình trạng</th>
                 <th scope="col"><span class="visually-hidden">Thao tác</span></th>
             </tr>
         </thead>
         <tbody>
             @if (Model.Count == 0)
             {
-                <tr><td colspan="5" class="text-center text-muted">Chưa có định mức kho nào.</td></tr>
+                <tr><td colspan="7" class="text-center text-muted">Chưa có định mức kho nào.</td></tr>
             }
             @foreach (var d in Model)
             {
                 <tr>
                     <td>@d.TenKho</td>
                     <td>@d.TenBienThe</td>
-                    <td class="text-end">@d.TonToiThieu</td>
-                    <td class="text-end">@d.NgayAnToan</td>
-                    <td class="text-end">
+                    <td class="text-end so-bang">@d.TonKhaDung</td>
+                    <td class="text-end so-bang">@d.TonToiThieu</td>
+                    <td class="text-end so-bang">@d.NgayAnToan</td>
+                    <td>@if (d.DuoiDinhMuc) { <span class="nhan nhan-loi">Dưới định mức (thiếu @(d.TonToiThieu - d.TonKhaDung))</span> } else { <span class="nhan nhan-tot">Đủ</span> }</td>
+                    <td class="text-end text-nowrap">
+                        @if (d.DuoiDinhMuc && duocLapPhieu)
+                        {
+                            <a class="btn btn-sm btn-outline-primary" asp-controller="PhieuChuyen" asp-action="Tao" asp-route-khoNhap="@d.MaKho">Lập phiếu chuyển</a>
+                        }
                         <a class="btn btn-sm btn-outline-secondary" asp-action="Sua" asp-route-maKho="@d.MaKho" asp-route-maBT="@d.MaBT">Sửa</a>
                     </td>
                 </tr>

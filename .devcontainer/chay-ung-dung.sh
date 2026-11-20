@@ -9,5 +9,22 @@ if ! pgrep -f '[Q]uanLyKho.Web' > /dev/null; then
     > /tmp/quanlykho.log 2>&1 < /dev/null &
 fi
 
-# Mỗi lần bật lại, Codespaces đưa cổng về Private (chỉ chủ codespace mở được); đặt lại Public sau khi ứng dụng lên.
-setsid nohup bash -c 'sleep 30; gh codespace ports visibility 5141:public -c "$CODESPACE_NAME"'   > /tmp/quanlykho-cong.log 2>&1 < /dev/null &
+# Mỗi lần bật lại, Codespaces đưa cổng về Private (chỉ chủ codespace mở được).
+# Chờ ứng dụng trả lời (tối đa 5 phút) rồi đặt cổng Public, thử lại 3 lần; không được thì ghi rõ cách làm tay.
+cat > /tmp/quanlykho-mo-cong.sh << 'EOF'
+for i in $(seq 1 60); do
+  curl -s -o /dev/null http://localhost:5141/ && break
+  sleep 5
+done
+for lan in 1 2 3; do
+  if gh codespace ports visibility 5141:public -c "$CODESPACE_NAME"; then
+    echo "Đã đặt cổng 5141 Public."
+    exit 0
+  fi
+  sleep 10
+done
+echo "KHÔNG đặt được cổng 5141 Public (xem lỗi ở trên). Làm tay: tab Cổng, chuột phải dòng 5141, Khả năng hiển thị cổng, Public."
+exit 1
+EOF
+setsid nohup bash /tmp/quanlykho-mo-cong.sh > /tmp/quanlykho-cong.log 2>&1 < /dev/null &
+echo "Ứng dụng đang khởi động ở cổng 5141. Kết quả mở cổng: cat /tmp/quanlykho-cong.log"

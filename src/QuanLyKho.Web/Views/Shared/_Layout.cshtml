@@ -16,10 +16,13 @@
     <a class="bo-qua" href="#noiDung">Bỏ qua menu, tới nội dung</a>
 
     <header class="thanh-tren">
-        <button class="btn nut-menu d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#thanhMenu"
-                aria-controls="thanhMenu" aria-label="Mở menu">
-            <span class="nut-menu-icon" aria-hidden="true"></span><span>Menu</span>
-        </button>
+        @if (nguoiDung is not null)
+        {
+            <button class="btn nut-menu d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#thanhMenu"
+                    aria-controls="thanhMenu" aria-label="Mở menu">
+                <span class="nut-menu-icon" aria-hidden="true"></span><span>Menu</span>
+            </button>
+        }
 
         <a class="thuong-hieu" asp-area="" asp-controller="Home" asp-action="Index">
             <span class="thuong-hieu-bieu-tuong" aria-hidden="true">
@@ -31,32 +34,32 @@
             <span>Quản lý kho thông minh</span>
         </a>
 
-        <div class="nguoi-dung">
-            @if (nguoiDung is not null)
-            {
+        @* Chưa đăng nhập thì chỉ có trang đăng nhập: không hiện menu, không hiện nút đăng nhập trùng với nút trong form. *@
+        @if (nguoiDung is not null)
+        {
+            <div class="nguoi-dung">
                 <span class="vai-tro-huy-hieu">@nguoiDung.TenVaiTro</span>
                 <span class="nguoi-dung-ten d-none d-sm-inline">@nguoiDung.HoTen</span>
                 <form method="post" asp-area="HeThong" asp-controller="TaiKhoan" asp-action="DangXuat" class="d-inline">
                     <button type="submit" class="btn btn-sm btn-outline-secondary">Đăng xuất</button>
                 </form>
-            }
-            else
-            {
-                <a class="btn btn-sm btn-primary" asp-area="HeThong" asp-controller="TaiKhoan" asp-action="DangNhap">Đăng nhập</a>
-            }
-        </div>
+            </div>
+        }
     </header>
 
-    <div class="khung">
-        <aside class="thanh-menu offcanvas-lg offcanvas-start" tabindex="-1" id="thanhMenu" aria-label="Menu chính">
-            <div class="offcanvas-header d-lg-none border-bottom border-secondary border-opacity-25">
-                <span class="offcanvas-title fw-semibold">Điều hướng hệ thống</span>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-target="#thanhMenu" aria-label="Đóng menu"></button>
-            </div>
-            <div class="offcanvas-body">
-                <vc:menu-vai-tro />
-            </div>
-        </aside>
+    <div class="khung@(nguoiDung is null ? " khung-mot-cot" : "")">
+        @if (nguoiDung is not null)
+        {
+            <aside class="thanh-menu offcanvas-lg offcanvas-start" tabindex="-1" id="thanhMenu" aria-label="Menu chính">
+                <div class="offcanvas-header d-lg-none border-bottom border-secondary border-opacity-25">
+                    <span class="offcanvas-title fw-semibold">Điều hướng hệ thống</span>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-target="#thanhMenu" aria-label="Đóng menu"></button>
+                </div>
+                <div class="offcanvas-body">
+                    <vc:menu-vai-tro />
+                </div>
+            </aside>
+        }
 
         <main id="noiDung" class="noi-dung" tabindex="-1">
             @RenderBody()

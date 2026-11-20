@@ -8,7 +8,11 @@
     "5141": { "label": "Ứng dụng", "onAutoForward": "openBrowser" }
   },
   "postCreateCommand": "dotnet build src/QuanLyKho.Web",
-  "postStartCommand": "setsid nohup dotnet run --no-build --project src/QuanLyKho.Web --launch-profile http --urls http://0.0.0.0:5141 > /tmp/quanlykho.log 2>&1 < /dev/null &",
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "postStartCommand": "bash .devcontainer/chay-ung-dung.sh",
+  "postAttachCommand": "bash .devcontainer/chay-ung-dung.sh",
   "customizations": {
     "vscode": {
       "extensions": ["ms-dotnettools.csharp"]

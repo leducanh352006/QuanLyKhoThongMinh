@@ -11,10 +11,7 @@
                     <path d="M9 20V12h6v8" />
                 </svg>
             </span>
-            <div>
-                <h1 id="tieuDeDangNhap" class="h4 mb-1 fw-bold">Đăng nhập hệ thống</h1>
-                <p class="text-muted small mb-0">Quản lý kho thông minh · Phân quyền theo vai trò</p>
-            </div>
+            <h1 id="tieuDeDangNhap" class="h4 mb-0 fw-bold">Đăng nhập</h1>
         </header>
 
         <form method="post" asp-area="HeThong" asp-controller="TaiKhoan" asp-action="DangNhap" class="khung-dang-nhap" novalidate>
@@ -27,19 +24,19 @@
 
             <div class="mb-3">
                 <label asp-for="TenDangNhap" class="form-label fw-semibold"></label>
-                <input asp-for="TenDangNhap" class="form-control" placeholder="Ví dụ: quanlykho" autocomplete="username" autocapitalize="none" spellcheck="false" autofocus />
+                <input asp-for="TenDangNhap" class="form-control" autocomplete="username" autocapitalize="none" spellcheck="false" autofocus />
             </div>
             <div class="mb-3">
                 <label asp-for="MatKhau" class="form-label fw-semibold"></label>
-                <input asp-for="MatKhau" class="form-control" placeholder="Nhập mật khẩu" autocomplete="current-password" />
+                <input asp-for="MatKhau" class="form-control" autocomplete="current-password" />
             </div>
-            <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">Đăng nhập vào bàn làm việc</button>
+            <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">Đăng nhập</button>
         </form>
 
         @if (Env.IsDevelopment())
         {
             <footer class="the-dang-nhap-chan small text-muted">
-                Tài khoản mẫu (Development): <code>quantri</code> · <code>quanlykho</code> · <code>thukho</code> · <code>nhanvienbh</code>
+                Tài khoản mẫu: <code>quantri</code> · <code>quanlykho</code> · <code>thukho</code> · <code>nhanvienbh</code>
             </footer>
         }
     </section>
